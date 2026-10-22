@@ -105,7 +105,7 @@ async function performBackup(){
   state.lastBackup=new Date().toISOString();unsavedBackup=false;await write('app',state);updateStatus();
  }catch(e){console.warn('Externe Sicherung fehlgeschlagen',e);unsavedBackup=true;updateStatus();notify('Lokale Daten gespeichert – externe Sicherung fehlgeschlagen!')}
 }
-async function pruneDailyBackups(dir){const files=[];for await(const [name,handle] of dir.entries()){if(handle.kind==='file'&&/^M-iCare_Tagesbackup_\\d{4}-\\d{2}-\\d{2}\\.json$/.test(name))files.push(name)}files.sort().reverse();for(const name of files.slice(30))await dir.removeEntry(name)}
+async function pruneDailyBackups(dir){const files=[];for await(const [name,handle] of dir.entries()){if(handle.kind==='file'&&/^M-iCare_Tagesbackup_\d{4}-\d{2}-\d{2}\.json$/.test(name))files.push(name)}files.sort().reverse();for(const name of files.slice(30))await dir.removeEntry(name)}
 async function snapshotNow(){if(!folder)return alert('Bitte zuerst einen Hauptordner wählen, z. B. C:\\M-iCare');await backupAutomatic();if(!unsavedBackup)notify('Aktueller Stand im Ordner gespeichert')}
 async function emailSnapshot(){ $('shareFormat').value='json';await emailBackup() }
 async function writeHandle(dir,name,data){const h=await dir.getFileHandle(name,{create:true}),w=await h.createWritable();await w.write(data);await w.close()}
