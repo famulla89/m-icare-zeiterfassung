@@ -102,16 +102,16 @@ function fillEmployees(){let old=$('employee').value;$('employee').replaceChildr
 function monthEntries(m){return state.entries.filter(e=>e.date.slice(0,7)===m).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start))}
 function render(){fillMonths();fillEmployees();let month=$('historyMonth').value||$('month').value;const list=monthEntries(month),tbody=$('records');tbody.replaceChildren();for(const e of list){const tr=document.createElement('tr');for(const value of [formatDate(e.date),e.employee,e.service,e.object, e.start+'–'+e.end+(e.endDate!==e.date?' ('+formatDate(e.endDate)+')':''),e.breakMinutes+' Min.',hours(e.minutes)])tr.append(el('td',value));let td=document.createElement('td');let edit=el('button','Bearbeiten');edit.className='secondary smallbtn';edit.onclick=()=>editEntry(e.id);let del=el('button','Löschen');del.className='danger smallbtn';del.style.marginLeft='5px';del.onclick=()=>deleteEntry(e.id);td.append(edit,del);tr.append(td);tbody.append(tr)}
 const total=list.reduce((s,e)=>s+e.minutes,0);$('historyTotals').textContent=list.length+' Einträge · '+hours(total)+' Stunden gesamt'+(list.length?' · inkl. aller Mitarbeiter':'');if(!list.length){let tr=document.createElement('tr'),td=el('td','Noch keine Einträge in diesem Monat.');td.colSpan=8;tr.append(td);tbody.append(tr)}updateStatus()}
-function updateStatus(){const x=$('backupStatus');let message=folder?'Sicherungsordner eingerichtet.':'Kein externer Sicherungsordner eingerichtet.';if(state.lastBackup&&!unsavedBackup)message+=' Letzte externe Sicherung: '+new Date(state.lastBackup).toLocaleString('de-DE')+'.';if(unsavedBackup)message+=' ACHTUNG: Neueste Änderungen wurden noch nicht extern gesichert. Bitte JSON und Excel herunterladen oder den Ordnerzugriff erneuern.';if(!folder)message+=' Lokale Daten können bei Browser-/App-Datenlöschung verloren gehen.';x.textContent=message;x.className='status '+(unsavedBackup||!folder?'warn':'good')}
+function updateStatus(){const x=$('backupStatus');let message=folder?'Sicherungsordner eingerichtet.':'Kein externer Sicherungsordner eingerichtet.';if(state.lastBackup&&!unsavedBackup)message+=' Letzte externe Sicherung: '+new Date(state.lastBackup).toLocaleString('de-DE')+'.';if(unsavedBackup)message+=' ACHTUNG: Neueste Änderungen wurden noch nicht extern gesichert. '+(backupError||'Bitte Ordnerzugriff prüfen.');if(!folder)message+=' Lokale Daten können bei Browser-/App-Datenlöschung verloren gehen.';x.textContent=message;x.className='status '+(unsavedBackup||!folder?'warn':'good')}
 async function saveState(){state.lastSave=new Date().toISOString();await write('app',state);unsavedBackup=true;updateStatus();await backupAutomatic();render();if(typeof captureCurrentScreen==='function')captureCurrentScreen()}
-let backupQueue=Promise.resolve();
+let backupError='';let backupQueue=Promise.resolve();
 function backupAutomatic(){const next=backupQueue.catch(()=>{}).then(()=>performBackup());backupQueue=next;return next}
 function compactBackupDate(){const d=new Date();return String(d.getDate()).padStart(2,'0')+String(d.getMonth()+1).padStart(2,'0')+d.getFullYear()}
 async function writeVersioned(dir,prefix,ext,data){const date=compactBackupDate();for(let i=1;i<=100000;i++){const name=prefix+'_'+date+'_'+i+'.'+ext;try{await dir.getFileHandle(name);continue}catch(e){if(e.name!=='NotFoundError')throw e}await writeHandle(dir,name,data);return name}throw Error('Zu viele Sicherungsdateien')}
 async function performBackup(){
  if(!folder){unsavedBackup=true;updateStatus();return}
  try{
-  if((await folder.queryPermission({mode:'readwrite'}))!=='granted'){unsavedBackup=true;updateStatus();return}
+  if((await folder.queryPermission({mode:'readwrite'}))!=='granted'){unsavedBackup=true;backupError='Schreibberechtigung abgelaufen. Bitte „Jetzt vollständig sichern“ drücken und Zugriff erlauben.';updateStatus();return}
   const backup=await folder.getDirectoryHandle('Backups',{create:true});
   const kd=await folder.getDirectoryHandle('Kundendaten',{create:true}),td=await folder.getDirectoryHandle('Termine',{create:true}),ad=await folder.getDirectoryHandle('Arbeitszeiten',{create:true});
   const contents=JSON.stringify(state,null,2);
@@ -126,11 +126,11 @@ async function performBackup(){
   let exists=false;
   try{await backup.getFileHandle(archive);exists=true}catch(e){if(e.name!=='NotFoundError')throw e}
   if(!exists){await writeHandle(backup,archive,contents);await pruneDailyBackups(backup)}
-  state.lastBackup=new Date().toISOString();unsavedBackup=false;await write('app',state);updateStatus();
- }catch(e){console.warn('Externe Sicherung fehlgeschlagen',e);unsavedBackup=true;updateStatus();notify('Lokale Daten gespeichert – externe Sicherung fehlgeschlagen!')}
+  state.lastBackup=new Date().toISOString();unsavedBackup=false;backupError='';await write('app',state);updateStatus();
+ }catch(e){console.warn('Externe Sicherung fehlgeschlagen',e);unsavedBackup=true;backupError='Fehler: '+(e?.name||'Unbekannt')+' – '+(e?.message||'Schreibvorgang fehlgeschlagen')+'. Bitte Ordnerzugriff prüfen.';updateStatus();notify('Lokale Daten gespeichert – '+backupError)}
 }
 async function pruneDailyBackups(dir){const files=[];for await(const [name,handle] of dir.entries()){if(handle.kind==='file'&&/^M-iCare_Tagesbackup_\d{4}-\d{2}-\d{2}\.json$/.test(name))files.push(name)}files.sort().reverse();for(const name of files.slice(30))await dir.removeEntry(name)}
-async function snapshotNow(){if(!folder)return alert('Bitte zuerst einen Hauptordner wählen, z. B. C:\\M-iCare');await backupAutomatic();if(!unsavedBackup)notify('Aktueller Stand im Ordner gespeichert')}
+async function snapshotNow(){if(!folder)return alert('Bitte zuerst einen Hauptordner wählen, z. B. C:\\M-iCare');try{let p=await folder.queryPermission({mode:'readwrite'});if(p!=='granted')p=await folder.requestPermission({mode:'readwrite'});if(p!=='granted')return alert('Kein Schreibzugriff. Bitte auf „Ordner auswählen“ klicken und C:\\M-iCare erneut freigeben.')}catch(e){return alert('Ordnerberechtigung fehlgeschlagen: '+e.message)}await backupAutomatic();if(!unsavedBackup)notify('Aktueller Stand im Ordner gespeichert')}
 async function emailSnapshot(){ $('shareFormat').value='json';await emailBackup() }
 async function writeHandle(dir,name,data){const h=await dir.getFileHandle(name,{create:true}),w=await h.createWritable();await w.write(data);await w.close()}
 async function chooseFolder(){if(!('showDirectoryPicker' in window)){notify('Dieser Browser unterstützt keinen automatischen Ordnerzugriff. Bitte Exporte herunterladen.');return}try{const chosen=await window.showDirectoryPicker({mode:'readwrite'});if((await chosen.requestPermission({mode:'readwrite'}))!=='granted')throw Error('Keine Schreibberechtigung');folder=chosen;await write('folder',folder);notify('Ordner verbunden');await backupAutomatic()}catch(e){notify('Ordner nicht verbunden: '+e.message)}}
