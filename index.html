@@ -31,7 +31,7 @@
 <section id="backupSection"><h2>Sicherung, PDF & Excel</h2>
 <p class="hint">Die App speichert lokal im Browser. Für eine unabhängige Sicherheitskopie wähle nach Möglichkeit einen Ordner auf deinem Gerät aus. Wenn der Browser das automatische Schreiben nicht unterstützt, lade die Sicherungen nach jeder Änderung manuell herunter.</p>
 <div class="row actions"><button id="chooseDir">📁 Sicherungsordner auswählen</button><button class="secondary" id="exportExcel">📊 Monats-Excel herunterladen</button><button class="secondary" id="pdfExport">📄 PDF-Vorschau / Speichern</button><button class="secondary" id="exportJson">⬇ JSON-Vollsicherung herunterladen</button></div>
-<div class="row actions" style="margin-top:12px"><button type="button" id="emailBackup">✉️ Sicherung teilen (JSON, PDF & Excel)</button></div><p class="hint">Die App versucht zuerst, JSON, Excel und PDF gemeinsam zu teilen. Falls Android das nicht unterstützt, werden die drei Dateien in einer ZIP-Datei zusammengefasst. Funktioniert auch das Teilen der ZIP-Datei nicht, wird sie zum manuellen Anhängen heruntergeladen. Vor dem Senden den Anhang in Gmail prüfen.</p><div id="backupStatus" class="status warn" role="status" aria-live="polite" style="margin-top:12px">Sicherungsstatus wird geladen.</div>
+<div class="row actions" style="margin-top:12px"><label for="shareFormat">Was möchtest du per E-Mail schicken?</label><select id="shareFormat" style="max-width:280px"><option value="pdf" selected>PDF – Monatsübersicht</option><option value="xlsx">Excel – Monatsdatei</option><option value="json">JSON – Vollsicherung</option></select><button type="button" id="emailBackup">✉️ Ausgewählte Datei per E-Mail teilen</button></div><p class="hint">PDF ist vorausgewählt und reicht für eine lesbare Monatsübersicht. Excel und JSON kannst du bei Bedarf auswählen. Unterstützt dein Browser kein direktes Teilen, lädt die App die gewählte Datei herunter. Diese kannst du in Gmail über die Büroklammer anhängen.</p><div id="backupStatus" class="status warn" role="status" aria-live="polite" style="margin-top:12px">Sicherungsstatus wird geladen.</div>
 <p class="hint">Dateien: <strong>M-iCare_2026-10.xlsx</strong> (aktueller Monat) und <strong>Backups/M-iCare_2026-10-22_11-30-00.json</strong> (vollständiger Datenbestand je Änderung). Automatischer Ordnerzugriff erfordert Browserunterstützung und Berechtigung.</p>
 <div class="row actions"><label style="margin:0" for="importJson">Sicherung wiederherstellen:</label><input class="file" style="max-width:300px" type="file" accept=".json,application/json" id="importJson"></div>
 </section>
@@ -111,24 +111,22 @@ function createMonthlyPdf(month){
 }
 async function emailBackup(){
  try{
- const month=$('historyMonth').value||isoDate().slice(0,7),time=stamp();
- const files=[
- new File([JSON.stringify(state,null,2)],'M-iCare_Vollsicherung_'+time+'.json',{type:'application/json'}),
- new File([makeXlsx(month)],'M-iCare_'+month+'.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
- new File([createMonthlyPdf(month)],'M-iCare_'+month+'.pdf',{type:'application/pdf'})];
- async function shareFiles(list,title){
-  if(!navigator.share||!navigator.canShare||!navigator.canShare({files:list}))return false;
-  try{await navigator.share({files:list,title,text:'M-iCare Datensicherung. Bitte den Dateianhang vor dem Senden prüfen.'});return true}
-  catch(e){if(e.name==='AbortError')return true;console.warn('Datei-Teilen nicht möglich',e);return false}
+ const month=$('historyMonth').value||isoDate().slice(0,7),time=stamp(),kind=$('shareFormat').value;
+ let file;
+ if(kind==='pdf')file=new File([createMonthlyPdf(month)],'M-iCare_'+month+'.pdf',{type:'application/pdf'});
+ else if(kind==='xlsx')file=new File([makeXlsx(month)],'M-iCare_'+month+'.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+ else file=new File([JSON.stringify(state,null,2)],'M-iCare_Vollsicherung_'+time+'.json',{type:'application/json'});
+ if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  try{
+   await navigator.share({files:[file],title:'M-iCare '+(kind==='pdf'?'Monatsübersicht':kind==='xlsx'?'Excel':'Datensicherung'),text:'M-iCare Datei im Anhang'});
+   notify('Teilen geöffnet. Anhang vor dem Versand prüfen.');
+   return;
+  }catch(e){if(e.name==='AbortError')return;console.warn('Teilen fehlgeschlagen',e)}
  }
- if(await shareFiles(files,'M-iCare – 3 Sicherungsdateien')){notify('Teilen geöffnet oder abgebrochen. Bitte Anhänge prüfen.');return}
- const archiveFiles=await Promise.all(files.map(async f=>[f.name,new Uint8Array(await f.arrayBuffer())]));
- const archive=new File([zip(archiveFiles)],'M-iCare_Sicherung_'+time+'.zip',{type:'application/zip'});
- if(await shareFiles([archive],'M-iCare – ZIP-Sicherung')){notify('ZIP-Teilen geöffnet. In Gmail ZIP-Anhang prüfen.');return}
- download(archive.name,archive);
- notify('ZIP-Sicherung heruntergeladen ('+Math.ceil(archive.size/1024)+' KB).');
- alert('Das direkte Teilen wird von diesem Browser nicht unterstützt. Eine ZIP-Datei mit JSON, PDF und Excel wurde heruntergeladen. Öffne Gmail und füge die ZIP-Datei aus Downloads über die Büroklammer hinzu.');
- }catch(e){console.error(e);alert('Sicherung fehlgeschlagen: '+e.message+'. Bitte JSON und Excel separat herunterladen.')}
+ download(file.name,file);
+ notify(file.name+' heruntergeladen');
+ alert('Die Datei wurde heruntergeladen. Öffne Gmail, tippe auf Verfassen, dann auf die Büroklammer und wähle '+file.name+' aus Downloads. Die App kann den Anhang nicht automatisch einsetzen.');
+ }catch(e){console.error(e);alert('Datei konnte nicht erstellt werden: '+e.message)}
 }
 function printPdf(){render();const m=$('historyMonth').value;const title=document.title;document.title='M-iCare_Monatsuebersicht_'+m;const restore=()=>{document.title=title;window.removeEventListener('afterprint',restore)};window.addEventListener('afterprint',restore);window.print();setTimeout(restore,30000)}
 function exportXlsx(){let m=$('historyMonth').value;download('M-iCare_'+m+'.xlsx',makeXlsx(m));notify('Excel-Download gestartet – bitte Datei prüfen.')}
