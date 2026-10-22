@@ -31,7 +31,7 @@
 <section id="backupSection"><h2>Sicherung, PDF & Excel</h2>
 <p class="hint">Die App speichert lokal im Browser. Für eine unabhängige Sicherheitskopie wähle nach Möglichkeit einen Ordner auf deinem Gerät aus. Wenn der Browser das automatische Schreiben nicht unterstützt, lade die Sicherungen nach jeder Änderung manuell herunter.</p>
 <div class="row actions"><button id="chooseDir">📁 Sicherungsordner auswählen</button><button class="secondary" id="exportExcel">📊 Monats-Excel herunterladen</button><button class="secondary" id="pdfExport">📄 PDF-Vorschau / Speichern</button><button class="secondary" id="exportJson">⬇ JSON-Vollsicherung herunterladen</button></div>
-<div class="row actions" style="margin-top:12px"><button type="button" id="emailBackup">✉️ JSON + PDF + Excel per E-Mail teilen</button></div><p class="hint">Auf unterstützten Handys öffnet sich das Teilen-Menü mit drei Dateien: JSON-Vollsicherung, Excel-Monatsdatei und PDF-Monatsübersicht. In Gmail vor dem Senden alle drei Anhänge kontrollieren. Sonst werden alle drei Dateien heruntergeladen und können manuell angehängt werden.</p><div id="backupStatus" class="status warn" role="status" aria-live="polite" style="margin-top:12px">Sicherungsstatus wird geladen.</div>
+<div class="row actions" style="margin-top:12px"><button type="button" id="emailBackup">✉️ Sicherung teilen (JSON, PDF & Excel)</button></div><p class="hint">Die App versucht zuerst, JSON, Excel und PDF gemeinsam zu teilen. Falls Android das nicht unterstützt, werden die drei Dateien in einer ZIP-Datei zusammengefasst. Funktioniert auch das Teilen der ZIP-Datei nicht, wird sie zum manuellen Anhängen heruntergeladen. Vor dem Senden den Anhang in Gmail prüfen.</p><div id="backupStatus" class="status warn" role="status" aria-live="polite" style="margin-top:12px">Sicherungsstatus wird geladen.</div>
 <p class="hint">Dateien: <strong>M-iCare_2026-10.xlsx</strong> (aktueller Monat) und <strong>Backups/M-iCare_2026-10-22_11-30-00.json</strong> (vollständiger Datenbestand je Änderung). Automatischer Ordnerzugriff erfordert Browserunterstützung und Berechtigung.</p>
 <div class="row actions"><label style="margin:0" for="importJson">Sicherung wiederherstellen:</label><input class="file" style="max-width:300px" type="file" accept=".json,application/json" id="importJson"></div>
 </section>
@@ -110,15 +110,25 @@ function createMonthlyPdf(month){
  return new Blob(parts,{type:'application/pdf'});
 }
 async function emailBackup(){
- const month=$('historyMonth').value||isoDate().slice(0,7),time=stamp(),jsonName='M-iCare_Vollsicherung_'+time+'.json',excelName='M-iCare_'+month+'.xlsx',pdfName='M-iCare_'+month+'.pdf';
- const files=[new File([JSON.stringify(state,null,2)],jsonName,{type:'application/json'}),new File([makeXlsx(month)],excelName,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),new File([createMonthlyPdf(month)],pdfName,{type:'application/pdf'})];
- const kb=Math.round(files.reduce((sum,f)=>sum+f.size,0)/1024);
- if(navigator.share&&navigator.canShare&&navigator.canShare({files})){
-  try{await navigator.share({files,title:'M-iCare Sicherung '+month,text:'M-iCare: JSON-Vollsicherung, Excel und PDF. Bitte prüfen, ob alle drei Anhänge vorhanden sind.'});notify('Teilen geöffnet: drei Anhänge ('+kb+' KB) kontrollieren.');return}catch(e){if(e.name==='AbortError')return;console.warn(e)}
+ try{
+ const month=$('historyMonth').value||isoDate().slice(0,7),time=stamp();
+ const files=[
+ new File([JSON.stringify(state,null,2)],'M-iCare_Vollsicherung_'+time+'.json',{type:'application/json'}),
+ new File([makeXlsx(month)],'M-iCare_'+month+'.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
+ new File([createMonthlyPdf(month)],'M-iCare_'+month+'.pdf',{type:'application/pdf'})];
+ async function shareFiles(list,title){
+  if(!navigator.share||!navigator.canShare||!navigator.canShare({files:list}))return false;
+  try{await navigator.share({files:list,title,text:'M-iCare Datensicherung. Bitte den Dateianhang vor dem Senden prüfen.'});return true}
+  catch(e){if(e.name==='AbortError')return true;console.warn('Datei-Teilen nicht möglich',e);return false}
  }
- for(const file of files)download(file.name,file);
- notify('Drei Dateien heruntergeladen ('+kb+' KB).');
- alert('Dein Browser konnte die drei Dateien nicht direkt teilen. Alle drei wurden heruntergeladen. Bitte in Gmail über die Büroklammer aus Downloads anhängen.');
+ if(await shareFiles(files,'M-iCare – 3 Sicherungsdateien')){notify('Teilen geöffnet oder abgebrochen. Bitte Anhänge prüfen.');return}
+ const archiveFiles=await Promise.all(files.map(async f=>[f.name,new Uint8Array(await f.arrayBuffer())]));
+ const archive=new File([zip(archiveFiles)],'M-iCare_Sicherung_'+time+'.zip',{type:'application/zip'});
+ if(await shareFiles([archive],'M-iCare – ZIP-Sicherung')){notify('ZIP-Teilen geöffnet. In Gmail ZIP-Anhang prüfen.');return}
+ download(archive.name,archive);
+ notify('ZIP-Sicherung heruntergeladen ('+Math.ceil(archive.size/1024)+' KB).');
+ alert('Das direkte Teilen wird von diesem Browser nicht unterstützt. Eine ZIP-Datei mit JSON, PDF und Excel wurde heruntergeladen. Öffne Gmail und füge die ZIP-Datei aus Downloads über die Büroklammer hinzu.');
+ }catch(e){console.error(e);alert('Sicherung fehlgeschlagen: '+e.message+'. Bitte JSON und Excel separat herunterladen.')}
 }
 function printPdf(){render();const m=$('historyMonth').value;const title=document.title;document.title='M-iCare_Monatsuebersicht_'+m;const restore=()=>{document.title=title;window.removeEventListener('afterprint',restore)};window.addEventListener('afterprint',restore);window.print();setTimeout(restore,30000)}
 function exportXlsx(){let m=$('historyMonth').value;download('M-iCare_'+m+'.xlsx',makeXlsx(m));notify('Excel-Download gestartet – bitte Datei prüfen.')}
