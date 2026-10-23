@@ -395,7 +395,7 @@ function createMonthlyPdf(month){
   function fit(text,max){text=String(text??'');while(c.measureText(text).width>max&&text.length>1)text=text.slice(0,-2)+'…';return text}
   entries.slice(page*perPage,(page+1)*perPage).forEach((e,i)=>{
    const y=193+i*39;if(i%2===0){c.fillStyle='#f3f7fa';c.fillRect(40,y-20,1043,38)}
-   c.fillStyle='#263747';const customer=state.customers.find(x=>x.id===e.customerId),object=state.objects.find(x=>x.id===e.objectId);const vals=[formatDate(e.date),e.employee,e.service,customer?.name||'Nicht hinterlegt',object?.name||e.object||'Nicht hinterlegt',reportAddress(object),hours(e.minutes)];
+   c.fillStyle='#263747';const customer=state.customers.find(x=>x.id===e.customerId),object=state.objects.find(x=>x.id===e.objectId);const vals=[formatDate(e.date),e.employee,e.service,(customer?.publicNumber?customer.publicNumber+' · ':'')+(customer?.name||'Nicht hinterlegt'),(object?.publicNumber?object.publicNumber+' · ':'')+(object?.name||e.object||'Nicht hinterlegt'),reportAddress(object),hours(e.minutes)];
    vals.forEach((v,k)=>c.fillText(fit(v,widths[k]),xs[k],y));c.font='12px Arial';c.fillStyle='#52677b';c.fillText(fit('Kunde: '+vals[3]+'  |  Geschäftsstelle: '+vals[4]+'  |  Straße, PLZ, Ort: '+vals[5],1000),45,y+16);c.font='14px Arial';
   });
   c.fillStyle='#123c62';c.font='bold 19px Arial';c.fillText('Gesamtstunden im Monat: '+hours(allMinutes)+' Std.',45,744);
