@@ -223,7 +223,7 @@ function createOrderStatusPdf(month,filter){
    const object=state.objects.find(o=>o.id===x.appointment.objectId);
    return {date:x.date,time:x.start+'–'+x.end,customer:customerDisplay(customer),object:(object?.publicNumber?object.publicNumber+' · ':'')+(object?.name||''),address:reportAddress(object),service:x.appointment.service||'',employee:entry?.employee||(x.appointment.employee?'gepl. '+x.appointment.employee:'—'),status,label:labels[status]||status};
  }).filter(x=>!filter||x.status===filter).sort((a,b)=>a.date.localeCompare(b.date)||a.customer.localeCompare(b.customer,'de'));
- const fitHeader=text=>String(text).slice(0,106);const w=1123,h=794,perPage=12,pg=Math.max(1,Math.ceil(records.length/perPage)),images=[];
+ const fitHeader=text=>String(text).slice(0,106);const w=1123,h=794,perPage=14,pg=Math.max(1,Math.ceil(records.length/perPage)),images=[];
  for(let page=0;page<pg;page++){
    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
    const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);
@@ -237,8 +237,8 @@ function createOrderStatusPdf(month,filter){
    function fit(v,max){let text=String(v??'');while(c.measureText(text).width>max&&text.length>1)text=text.slice(0,-2)+'…';return text}
    c.font='14px Arial';
    records.slice(page*perPage,(page+1)*perPage).forEach((x,i)=>{
-     const y=224+i*43;
-     if(i%2===0){c.fillStyle='#f1f5f9';c.fillRect(38,y-24,1045,42)}
+     const y=224+i*39;
+     if(i%2===0){c.fillStyle='#f1f5f9';c.fillRect(38,y-24,1045,38)}
      c.fillStyle='#263747';
      c.font='bold 13px Arial';c.fillText(formatDate(x.date),xs[0],y-6);c.font='13px Arial';c.fillText(x.time,xs[0],y+11);
      c.font='bold 13px Arial';c.fillText(fit(x.customer,widths[1]),xs[1],y-9);
@@ -446,7 +446,19 @@ async function emailBackup(){
  }catch(e){console.error(e);alert('Datei konnte nicht erstellt werden: '+e.message)}
 }
 async function printPdf(){const month=$('historyMonth').value;await saveExport('M-iCare_Arbeitszeiten_'+month+'.pdf',createMonthlyPdf(month),'Arbeitszeiten');notify('Arbeitszeiten-PDF erstellt. In Downloads öffnen und drucken.')}
-async function exportOrderStatusPdf(){const month=$('historyMonth').value,filter=$('orderOverviewStatus').value||'',range=reportRange(),customer=$('reportAllCustomers').checked?'Alle_Kunden':$('reportCustomer').value;await saveExport('M-iCare_Auftragsstatus_'+range.label+'_'+customer+(filter?'_'+filter:'')+'.pdf',createOrderStatusPdf(month,filter),'Berichte');notify('Auftragsstatus-PDF erstellt. In Downloads öffnen und drucken.')}
+let exportingOrderStatusPdf=false;
+async function exportOrderStatusPdf(){
+ if(exportingOrderStatusPdf)return;
+ exportingOrderStatusPdf=true;
+ const button=$('orderStatusPdf');button.disabled=true;
+ try{
+  const month=$('historyMonth').value,filter=$('orderOverviewStatus').value||'',range=reportRange(),customer=$('reportAllCustomers').checked?'Alle_Kunden':$('reportCustomer').value;
+  const name='M-iCare_Auftragsstatus_'+range.label+'_'+customer+(filter?'_'+filter:'')+'_'+stamp()+'.pdf';
+  await saveExport(name,createOrderStatusPdf(month,filter),'Berichte');
+  notify('Auftragsstatus-PDF exportiert. Bitte die neueste Datei öffnen.');
+ }catch(e){console.error('PDF-Export fehlgeschlagen',e);alert('PDF-Export fehlgeschlagen: '+e.message)}
+ finally{exportingOrderStatusPdf=false;button.disabled=false}
+}
 
 async function exportXlsx(){let m=$('historyMonth').value;await saveExport('M-iCare_'+m+'.xlsx',makeXlsx(m),'Arbeitszeiten')}
 async function importJson(ev){let f=ev.target.files?.[0];if(!f)return;try{if(f.size>10*1024*1024)throw Error('Datei zu groß (max. 10 MB)');let o=JSON.parse(await f.text());if(!o||!Array.isArray(o.entries)||!Array.isArray(o.employees)||o.entries.length>50000||o.employees.length>5000)throw Error('Ungültige oder zu große Sicherung');let employees=o.employees.map(x=>{if(typeof x!=='string'||x.length>80||!x.trim())throw Error('Ungültiger Mitarbeiter');return x});let entries=o.entries.map(x=>{if(!x||typeof x!=='object'||typeof x.id!=='string'||x.id.length>100||typeof x.employee!=='string'||typeof x.date!=='string'||typeof x.endDate!=='string'||typeof x.start!=='string'||typeof x.end!=='string'||!SERVICES.includes(x.service)||!employees.includes(x.employee)||typeof x.object!=='string'||x.object.length>160||typeof x.notes!=='string'||x.notes.length>300)throw Error('Ungültiger Eintrag');let m=((x.orderStatus==='absent'||x.orderStatus==='cancelled')&&x.start===x.end&&x.date===x.endDate&&Number(x.breakMinutes)===0)?0:duration(x);return {...x,minutes:m}});if(!confirm('ACHTUNG: '+entries.length+' Einträge und '+employees.length+' Mitarbeiter importieren? Alle vorhandenen Daten werden überschrieben. Bitte vorher eine eigene Sicherung herunterladen.'))return;await exportJson();state={version:2,employees,entries,customers:Array.isArray(o.customers)?o.customers:[],objects:Array.isArray(o.objects)?o.objects:[],appointments:Array.isArray(o.appointments)?o.appointments:[],appointmentTrash:Array.isArray(o.appointmentTrash)?o.appointmentTrash.filter(t=>t&&typeof t==='object'&&t.appointment&&typeof t.appointment.id==='string').slice(0,5000):[],changeHistory:Array.isArray(o.changeHistory)?o.changeHistory.filter(h=>h&&typeof h==='object'&&typeof h.time==='string'&&typeof h.type==='string'&&typeof h.action==='string').slice(-4000):[],lastSave:null,lastBackup:null};rememberSnapshot();state.changeHistory.push({id:crypto.randomUUID(),time:new Date().toISOString(),type:'Datensicherung',action:'Importiert',name:f.name,details:entries.length+' Einträge und '+employees.length+' Mitarbeiter'});ensureCustomerNumbers();await saveState();resetEdit();render();notify('Sicherung importiert')}catch(e){alert('Import nicht möglich: '+e.message)}finally{ev.target.value=''}}
