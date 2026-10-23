@@ -1,0 +1,39 @@
+name: M-iCare Windows Installer
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'windows-app/**'
+      - 'index.html'
+      - 'manifest.webmanifest'
+      - 'icon.svg'
+      - 'logo.svg'
+      - '.github/workflows/windows-installer.yml'
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Copy offline web app
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force windows-app/web | Out-Null
+          Copy-Item index.html,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
+      - name: Install dependencies
+        working-directory: windows-app
+        run: npm install --no-audit --no-fund
+      - name: Build offline Windows installer
+        working-directory: windows-app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: M-iCare-Windows-Setup
+          path: windows-app/dist/M-iCare-Setup-*.exe
+          retention-days: 30
