@@ -345,7 +345,7 @@ async function emailBackup(){
  alert('Die Datei wurde heruntergeladen. Öffne Gmail, tippe auf Verfassen, dann auf die Büroklammer und wähle '+file.name+' aus Downloads. Die App kann den Anhang nicht automatisch einsetzen.');
  }catch(e){console.error(e);alert('Datei konnte nicht erstellt werden: '+e.message)}
 }
-async async function printPdf(){const month=$('historyMonth').value;await saveExport('M-iCare_Arbeitszeiten_'+month+'.pdf',createMonthlyPdf(month),'Arbeitszeiten');notify('Arbeitszeiten-PDF erstellt. In Downloads öffnen und drucken.')}
+async function printPdf(){const month=$('historyMonth').value;await saveExport('M-iCare_Arbeitszeiten_'+month+'.pdf',createMonthlyPdf(month),'Arbeitszeiten');notify('Arbeitszeiten-PDF erstellt. In Downloads öffnen und drucken.')}
 async function exportOrderStatusPdf(){const month=$('historyMonth').value,filter=$('orderOverviewStatus').value||'';await saveExport('M-iCare_Auftragsstatus_'+month+(filter?'_'+filter:'')+'.pdf',createOrderStatusPdf(month,filter),'Berichte');notify('Auftragsstatus-PDF erstellt. In Downloads öffnen und drucken.')}
 
 async function exportXlsx(){let m=$('historyMonth').value;await saveExport('M-iCare_'+m+'.xlsx',makeXlsx(m),'Arbeitszeiten')}
