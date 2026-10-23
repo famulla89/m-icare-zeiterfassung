@@ -283,7 +283,7 @@ function dailyBackupReminder(){let last='';try{last=localStorage.getItem('micare
 function dailyExportNow(){const fileName='M-iCare_Tagesbackup_'+isoDate()+'.json';if(window.MiCareNative?.saveJson){window.MiCareNative.saveJson(fileName,JSON.stringify(state,null,2));notify('Speicherort auswählen und JSON-Datei bestätigen.');return}download(fileName,new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));markDailyBackup();$('dailyBackupNotice').classList.add('hidden')}
 async function exportJson(){if(window.MiCareNative?.saveJson){window.MiCareNative.saveJson('M-iCare_Vollsicherung_'+stamp()+'.json',JSON.stringify(state,null,2));return}await saveExport('M-iCare_Vollsicherung_'+stamp()+'.json',JSON.stringify(state,null,2),'Backups')}
 function createMonthlyPdf(month){
- const entries=monthEntries(month), allMinutes=entries.reduce((sum,e)=>sum+e.minutes,0),w=1123,h=794,perPage=19,pg=Math.max(1,Math.ceil(entries.length/perPage)),images=[];
+ const entries=monthEntries(month), allMinutes=entries.reduce((sum,e)=>sum+e.minutes,0),w=1123,h=794,perPage=13,pg=Math.max(1,Math.ceil(entries.length/perPage)),images=[];
  for(let page=0;page<pg;page++){
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='white';c.fillRect(0,0,w,h);
   c.fillStyle='#0f568e';c.font='bold 32px Arial';c.fillText('M-iCare Gebäudereinigung',45,60);
@@ -295,9 +295,9 @@ function createMonthlyPdf(month){
   c.font='14px Arial';
   function fit(text,max){text=String(text??'');while(c.measureText(text).width>max&&text.length>1)text=text.slice(0,-2)+'…';return text}
   entries.slice(page*perPage,(page+1)*perPage).forEach((e,i)=>{
-   const y=193+i*27;if(i%2===0){c.fillStyle='#f3f7fa';c.fillRect(40,y-20,1043,26)}
+   const y=193+i*39;if(i%2===0){c.fillStyle='#f3f7fa';c.fillRect(40,y-20,1043,38)}
    c.fillStyle='#263747';const customer=state.customers.find(x=>x.id===e.customerId),object=state.objects.find(x=>x.id===e.objectId);const vals=[formatDate(e.date),e.employee,e.service,customer?.name||'Nicht hinterlegt',object?.name||e.object||'Nicht hinterlegt',reportAddress(object),hours(e.minutes)];
-   vals.forEach((v,k)=>c.fillText(fit(v,widths[k]),xs[k],y));
+   vals.forEach((v,k)=>c.fillText(fit(v,widths[k]),xs[k],y));c.font='12px Arial';c.fillStyle='#52677b';c.fillText(fit('Kunde: '+vals[3]+'  |  Geschäftsstelle: '+vals[4]+'  |  Straße, PLZ, Ort: '+vals[5],1000),45,y+16);c.font='14px Arial';
   });
   c.fillStyle='#123c62';c.font='bold 19px Arial';c.fillText('Gesamtstunden im Monat: '+hours(allMinutes)+' Std.',45,744);
   c.font='12px Arial';c.fillStyle='#64748b';c.fillText('Erstellt am '+new Date().toLocaleString('de-DE')+' · Aus der lokalen M-iCare Zeiterfassung',45,770);
@@ -329,7 +329,7 @@ function createOrderStatusPdf(month,filter){
    const object=state.objects.find(o=>o.id===x.appointment.objectId);
    return {date:x.date,time:x.start+'–'+x.end,customer:customer?.name||'Unbekannter Kunde',object:object?.name||'',address:reportAddress(object),service:x.appointment.service||'',employee:x.appointment.employee||'',status,label:labels[status]||status};
  }).filter(x=>!filter||x.status===filter).sort((a,b)=>a.date.localeCompare(b.date)||a.customer.localeCompare(b.customer,'de'));
- const w=1123,h=794,perPage=19,pg=Math.max(1,Math.ceil(records.length/perPage)),images=[];
+ const w=1123,h=794,perPage=13,pg=Math.max(1,Math.ceil(records.length/perPage)),images=[];
  for(let page=0;page<pg;page++){
    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
    const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);
@@ -343,10 +343,11 @@ function createOrderStatusPdf(month,filter){
    function fit(v,max){let text=String(v??'');while(c.measureText(text).width>max&&text.length>1)text=text.slice(0,-2)+'…';return text}
    c.font='14px Arial';
    records.slice(page*perPage,(page+1)*perPage).forEach((x,i)=>{
-     const y=221+i*26;
-     if(i%2===0){c.fillStyle='#f1f5f9';c.fillRect(38,y-19,1045,25)}
+     const y=220+i*39;
+     if(i%2===0){c.fillStyle='#f1f5f9';c.fillRect(38,y-18,1045,38)}
      c.fillStyle='#263747';
      [formatDate(x.date),x.time,x.customer,x.object,x.address,x.employee,x.label].forEach((v,j)=>c.fillText(fit(v,widths[j]),xs[j],y));
+     c.fillStyle='#52677b';c.font='12px Arial';c.fillText(fit('Kunde: '+x.customer+'  |  Geschäftsstelle: '+x.object+'  |  Adresse: '+x.address,1000),44,y+16);c.font='14px Arial';
    });
    if(!records.length){c.fillStyle='#52677b';c.fillText('Keine Aufträge für diesen Filter vorhanden.',45,230)}
    c.fillStyle='#64748b';c.font='12px Arial';c.fillText('Seite '+(page+1)+' von '+pg+' · Stand: '+new Date().toLocaleString('de-DE'),45,765);
