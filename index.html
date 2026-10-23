@@ -132,9 +132,11 @@ function enableKeyboardForNativePickers(){
   };
   manual.addEventListener('input',()=>{
    manual.setCustomValidity('');
-   const digits=manual.value.replace(/\\D/g,'').slice(0,isDate?8:4);
-   manual.value=isDate?digits.slice(0,2)+(digits.length>2?'.'+digits.slice(2,4):'')+(digits.length>4?'.'+digits.slice(4):''):digits.slice(0,2)+(digits.length>2?':'+digits.slice(2):'');
-   if(digits.length===(isDate?8:4))commit();
+   const digits=manual.value.replace(/\D/g,'').slice(0,isDate?8:4);
+   // Do not insert separators while Android's numeric keyboard is editing:
+   // changing the text and caret mid-entry can corrupt the next digit.
+   manual.value=digits;
+   if(digits.length===(isDate?8:4)&&commit())syncFromNative();
   });
   manual.addEventListener('blur',()=>{if(commit())syncFromNative()});
   manual.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commit(true);manual.blur()}});
