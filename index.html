@@ -97,34 +97,51 @@ function enableKeyboardForNativePickers(){
   const native=$(id);if(!native||native.dataset.keyboardReady)return;
   native.dataset.keyboardReady='1';
   const isDate=native.type==='date';
-  const manual=document.createElement('input');manual.type='text';manual.inputMode='numeric';
-  manual.autocomplete='off';manual.placeholder=isDate?'TT.MM.JJJJ':'HH:MM';
-  manual.maxLength=isDate?10:5;manual.className='hidden';manual.setAttribute('aria-label',(native.getAttribute('aria-label')||id)+' per Tastatur eingeben');
-  manual.style.marginTop='6px';
-  const button=el('button','⌨ Tastatur');button.type='button';button.className='secondary smallbtn';button.style.marginTop='6px';button.style.marginLeft='6px';
-  const commit=()=>{const val=manual.value.replace(/[\u200B-\u200D\uFEFF]/g,'').trim();if(!val){if(!native.required){native.value='';native.dispatchEvent(new Event('change',{bubbles:true}))}return true}
-   try{let parsed;if(isDate){const digits=val.replace(/\D/g,'');const normalized=digits.length===8?digits.slice(0,2)+'.'+digits.slice(2,4)+'.'+digits.slice(4):val;parsed=germanToIso(normalized)}else{const digits=val.replace(/\D/g,'');parsed=digits.length===4?digits.slice(0,2)+':'+digits.slice(2):digits.length===3?'0'+digits.slice(0,1)+':'+digits.slice(1):val;if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(parsed))throw Error('Uhrzeit bitte als HH:MM eingeben')}
-    native.value=parsed;native.dispatchEvent(new Event('change',{bubbles:true}));manual.setCustomValidity('');return true
-   }catch(e){manual.setCustomValidity(isDate?'Datum bitte als TT.MM.JJJJ eingeben':'Uhrzeit bitte als HH:MM eingeben');return false}};
-  native.insertAdjacentElement('afterend',manual);manual.insertAdjacentElement('afterend',button);
-  button.onclick=()=>{if(manual.classList.contains('hidden')){manual.value=isDate?(native.value?formatDate(native.value):''):native.value;native.classList.add('hidden');manual.classList.remove('hidden');button.textContent='✓ Übernehmen';manual.focus();manual.select()}
-   else{if(!commit()){manual.reportValidity();manual.focus();return}manual.classList.add('hidden');native.classList.remove('hidden');button.textContent='⌨ Tastatur'}};
-  manual.addEventListener('input',()=>{manual.setCustomValidity('');if(isDate){const digits=manual.value.replace(/\D/g,'').slice(0,8);manual.value=digits.slice(0,2)+(digits.length>2?'.'+digits.slice(2,4):'')+(digits.length>4?'.'+digits.slice(4):'')}else{const digits=manual.value.replace(/\D/g,'').slice(0,4);manual.value=digits.slice(0,2)+(digits.length>2?':'+digits.slice(2):'')}});
-  // Keep the underlying date/time input synchronized without requiring an extra confirmation.
-  manual.addEventListener('input',()=>{
-   const digits=manual.value.replace(/\D/g,'');
-   if(digits.length===(isDate?8:4)){
-    const parsed=isDate?digits.slice(0,2)+'.'+digits.slice(2,4)+'.'+digits.slice(4):digits.slice(0,2)+':'+digits.slice(2);
-    try{
-     const value=isDate?germanToIso(parsed):parsed;
-     if(!isDate&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(value))return;
-     native.value=value;native.dispatchEvent(new Event('change',{bubbles:true}));
-    }catch(e){}
+  const manual=document.createElement('input');
+  manual.type='text';manual.inputMode='numeric';manual.autocomplete='off';
+  manual.placeholder=isDate?'TT.MM.JJJJ':'HH:MM';
+  manual.maxLength=isDate?10:5;
+  manual.setAttribute('aria-label',(native.getAttribute('aria-label')||id)+' direkt eingeben');
+  const picker=el('button',isDate?'📅':'🕒');
+  picker.type='button';picker.className='secondary smallbtn';
+  picker.setAttribute('aria-label',isDate?'Kalender öffnen':'Uhrzeit auswählen');
+  // Keep the native input for the platform picker and microphone integration.
+  native.style.position='absolute';native.style.width='1px';native.style.height='1px';
+  native.style.opacity='0';native.style.pointerEvents='none';native.tabIndex=-1;
+  native.insertAdjacentElement('afterend',manual);
+  manual.insertAdjacentElement('afterend',picker);
+  const syncFromNative=()=>{manual.value=isDate?(native.value?formatDate(native.value):''):native.value};
+  const commit=(report=false)=>{
+   const val=manual.value.trim(),digits=val.replace(/\\D/g,'');
+   if(!val){if(!native.required){native.value='';native.dispatchEvent(new Event('change',{bubbles:true}))}return !native.required}
+   try{
+    let parsed;
+    if(isDate){
+     if(digits.length!==8)throw Error('Datum unvollständig');
+     parsed=germanToIso(digits.slice(0,2)+'.'+digits.slice(2,4)+'.'+digits.slice(4));
+    }else{
+     parsed=digits.length===4?digits.slice(0,2)+':'+digits.slice(2):digits.length===3?'0'+digits[0]+':'+digits.slice(1):'';
+     if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(parsed))throw Error('Uhrzeit ungültig');
+    }
+    native.value=parsed;native.dispatchEvent(new Event('change',{bubbles:true}));
+    manual.setCustomValidity('');return true;
+   }catch(e){
+    if(report){manual.setCustomValidity(isDate?'Datum bitte als TT.MM.JJJJ eingeben':'Uhrzeit bitte als HH:MM eingeben');manual.reportValidity()}
+    return false;
    }
+  };
+  manual.addEventListener('input',()=>{
+   manual.setCustomValidity('');
+   const digits=manual.value.replace(/\\D/g,'').slice(0,isDate?8:4);
+   manual.value=isDate?digits.slice(0,2)+(digits.length>2?'.'+digits.slice(2,4):'')+(digits.length>4?'.'+digits.slice(4):''):digits.slice(0,2)+(digits.length>2?':'+digits.slice(2):'');
+   if(digits.length===(isDate?8:4))commit();
   });
-  manual.addEventListener('blur',()=>{if(commit()){manual.classList.add('hidden');native.classList.remove('hidden');button.textContent='⌨ Tastatur'}});
-  // Native picker fields remain tappable and open the platform date/time picker.
-  manual.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();button.click()}});
+  manual.addEventListener('blur',()=>{if(commit())syncFromNative()});
+  manual.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commit(true);manual.blur()}});
+  native.addEventListener('change',syncFromNative);
+  native.addEventListener('input',syncFromNative);
+  picker.onclick=()=>{try{native.showPicker()}catch(e){native.focus();native.click()}};
+  syncFromNative();
  }
 }
 function enforcePostalDigits(){for(const id of ['editCustomerZip','newObjectZip']){const x=$(id);x.addEventListener('input',()=>{const cleaned=x.value.replace(/[^0-9]/g,'').slice(0,5);if(x.value!==cleaned)x.value=cleaned})}}
