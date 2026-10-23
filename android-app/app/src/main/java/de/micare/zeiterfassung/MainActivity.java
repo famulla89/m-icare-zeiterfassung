@@ -1,6 +1,10 @@
 package de.micare.zeiterfassung;
 
 import android.app.Activity;
+import android.speech.RecognizerIntent;
+import java.util.ArrayList;
+import java.util.Locale;
+import org.json.JSONObject;
 import android.webkit.JavascriptInterface;
 import android.content.ClipData;
 import androidx.core.content.FileProvider;
@@ -22,6 +26,7 @@ public class MainActivity extends Activity {
   private ValueCallback<Uri[]> fileCallback;
   private static final int PICK_FILE=400;
   private static final int SAVE_FILE=401;
+  private static final int SPEECH_REQUEST=402;
   private String pendingName;
   private String pendingJson;
   @Override public void onCreate(Bundle state) {
@@ -30,6 +35,13 @@ public class MainActivity extends Activity {
     web=new WebView(this);
     web.getSettings().setJavaScriptEnabled(true);
     web.addJavascriptInterface(new Object(){
+      @JavascriptInterface public void speech(){runOnUiThread(()->{try{
+        Intent intent=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"de-DE");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,"Bitte Datum, Uhrzeit oder Text sprechen");
+        startActivityForResult(intent,SPEECH_REQUEST);
+      }catch(Exception e){android.widget.Toast.makeText(MainActivity.this,"Spracherkennung nicht verfügbar",android.widget.Toast.LENGTH_LONG).show();}});}
       @JavascriptInterface public void shareJson(String name,String json){runOnUiThread(()->{try{
         File dir=new File(getCacheDir(),"shared");dir.mkdirs();
         File file=new File(dir,"M-iCare-Vollsicherung.json");
@@ -72,6 +84,7 @@ public class MainActivity extends Activity {
   }
   @Override protected void onActivityResult(int request,int result,Intent data) {
     super.onActivityResult(request,result,data);
+    if(request==SPEECH_REQUEST){if(result==RESULT_OK&&data!=null){ArrayList<String> matches=data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);if(matches!=null&&!matches.isEmpty())web.evaluateJavascript("window.micareNativeSpeechResult("+JSONObject.quote(matches.get(0))+")",null);}return;}
     if(request==SAVE_FILE){if(result==RESULT_OK&&data!=null&&data.getData()!=null&&pendingJson!=null){try(java.io.OutputStream out=getContentResolver().openOutputStream(data.getData())){out.write(pendingJson.getBytes(StandardCharsets.UTF_8));}catch(Exception e){android.widget.Toast.makeText(this,"Speichern fehlgeschlagen",android.widget.Toast.LENGTH_LONG).show();}}pendingJson=null;return;}
     if(request==PICK_FILE&&fileCallback!=null){
       fileCallback.onReceiveValue(result==RESULT_OK&&data!=null&&data.getData()!=null?new Uri[]{data.getData()}:null);
