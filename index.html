@@ -112,7 +112,7 @@ function enableKeyboardForNativePickers(){
   manual.insertAdjacentElement('afterend',picker);
   const syncFromNative=()=>{manual.value=isDate?(native.value?formatDate(native.value):''):native.value};
   const commit=(report=false)=>{
-   const val=manual.value.trim(),digits=val.replace(/\\D/g,'');
+   const val=manual.value.trim(),digits=val.replace(/\D/g,'');
    if(!val){if(!native.required){native.value='';native.dispatchEvent(new Event('change',{bubbles:true}))}return !native.required}
    try{
     let parsed;
@@ -121,7 +121,7 @@ function enableKeyboardForNativePickers(){
      parsed=germanToIso(digits.slice(0,2)+'.'+digits.slice(2,4)+'.'+digits.slice(4));
     }else{
      parsed=digits.length===4?digits.slice(0,2)+':'+digits.slice(2):digits.length===3?'0'+digits[0]+':'+digits.slice(1):'';
-     if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(parsed))throw Error('Uhrzeit ungültig');
+     if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(parsed))throw Error('Uhrzeit ungültig');
     }
     native.value=parsed;native.dispatchEvent(new Event('change',{bubbles:true}));
     manual.setCustomValidity('');return true;
