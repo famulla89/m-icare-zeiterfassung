@@ -1,0 +1,39 @@
+{
+  "name": "m-icare-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "M-iCare Windows offline",
+  "main": "main.js",
+  "scripts": {
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "de.micare.desktop",
+    "productName": "M-iCare",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "web/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "M-iCare-Setup-${version}.${ext}"
+    }
+  }
+}
