@@ -102,15 +102,15 @@ function enableKeyboardForNativePickers(){
   manual.maxLength=isDate?10:5;manual.className='hidden';manual.setAttribute('aria-label',(native.getAttribute('aria-label')||id)+' per Tastatur eingeben');
   manual.style.marginTop='6px';
   const button=el('button','⌨ Tastatur');button.type='button';button.className='secondary smallbtn';button.style.marginTop='6px';button.style.marginLeft='6px';
-  const commit=()=>{const val=manual.value.trim();if(!val){if(!native.required){native.value='';native.dispatchEvent(new Event('change',{bubbles:true}))}return true}
-   try{let parsed;if(isDate){const digits=val.replace(/\D/g,'');const normalized=digits.length===8?digits.slice(0,2)+'.'+digits.slice(2,4)+'.'+digits.slice(4):val;parsed=germanToIso(normalized)}else{const digits=val.replace(/\D/g,'');parsed=digits.length===4?digits.slice(0,2)+':'+digits.slice(2):val;if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(parsed))throw Error('Uhrzeit bitte als HH:MM eingeben')}
+  const commit=()=>{const val=manual.value.replace(/[\u200B-\u200D\uFEFF]/g,'').trim();if(!val){if(!native.required){native.value='';native.dispatchEvent(new Event('change',{bubbles:true}))}return true}
+   try{let parsed;if(isDate){const digits=val.replace(/\D/g,'');const normalized=digits.length===8?digits.slice(0,2)+'.'+digits.slice(2,4)+'.'+digits.slice(4):val;parsed=germanToIso(normalized)}else{const digits=val.replace(/\D/g,'');parsed=digits.length===4?digits.slice(0,2)+':'+digits.slice(2):digits.length===3?'0'+digits.slice(0,1)+':'+digits.slice(1):val;if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(parsed))throw Error('Uhrzeit bitte als HH:MM eingeben')}
     native.value=parsed;native.dispatchEvent(new Event('change',{bubbles:true}));manual.setCustomValidity('');return true
    }catch(e){manual.setCustomValidity(isDate?'Datum bitte als TT.MM.JJJJ eingeben':'Uhrzeit bitte als HH:MM eingeben');return false}};
   native.insertAdjacentElement('afterend',manual);manual.insertAdjacentElement('afterend',button);
   button.onclick=()=>{if(manual.classList.contains('hidden')){manual.value=isDate?(native.value?formatDate(native.value):''):native.value;native.classList.add('hidden');manual.classList.remove('hidden');button.textContent='✓ Übernehmen';manual.focus();manual.select()}
    else{if(!commit()){manual.reportValidity();manual.focus();return}manual.classList.add('hidden');native.classList.remove('hidden');button.textContent='⌨ Tastatur'}};
   manual.addEventListener('input',()=>{manual.setCustomValidity('');if(isDate){const digits=manual.value.replace(/\D/g,'').slice(0,8);manual.value=digits.slice(0,2)+(digits.length>2?'.'+digits.slice(2,4):'')+(digits.length>4?'.'+digits.slice(4):'')}else{const digits=manual.value.replace(/\D/g,'').slice(0,4);manual.value=digits.slice(0,2)+(digits.length>2?':'+digits.slice(2):'')}});
-  manual.addEventListener('change',commit);
+  // Validate only on explicit confirmation; Android blur/change can fire during editing.
   manual.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();button.click()}});
  }
 }
