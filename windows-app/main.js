@@ -12,7 +12,7 @@ app.whenReady().then(()=>{
     return net.fetch(pathToFileURL(resolved).toString());
   });
   const win=new BrowserWindow({width:1180,height:820,minWidth:400,minHeight:500,autoHideMenuBar:true,title:'M-iCare – Offline',webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true}});
-  win.webContents.setWindowOpenHandler(({url})=>{if(/^https:\/\//.test(url))shell.openExternal(url);return {action:'deny'};});
+  win.webContents.setWindowOpenHandler(({url})=>{if(url==='about:blank')return {action:'allow',overrideBrowserWindowOptions:{webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true}}};if(/^https:\/\//.test(url))shell.openExternal(url);return {action:'deny'};});
   win.webContents.on('will-navigate',(e,url)=>{if(!url.startsWith('micare://app/')){e.preventDefault();if(/^https:\/\//.test(url))shell.openExternal(url)}});
   win.loadURL('micare://app/index.html');
 });
