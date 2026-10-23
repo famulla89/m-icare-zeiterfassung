@@ -227,7 +227,7 @@ function createOrderStatusPdf(month,filter){
    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
    const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);
    c.fillStyle='#154b76';c.font='bold 29px Arial';c.fillText('M-iCare · Auftragsstatus',42,55);
-   c.font='18px Arial';const customerLabel=$('reportAllCustomers').checked?'Alle Kunden':(state.customers.find(z=>z.id===$('reportCustomer').value)?.name||'Kunde nicht gefunden');c.fillText(fitHeader(range.label+' · '+customerLabel+' · '+(labels[filter]||'Alle Status')),42,89);
+   c.font='18px Arial';const customerLabel=$('reportAllCustomers').checked?'Alle Kunden':customerDisplay(state.customers.find(z=>z.id===$('reportCustomer').value));c.fillText(fitHeader(range.label+' · '+customerLabel+' · '+(labels[filter]||'Alle Status')),42,89);
    c.font='13px Arial';c.fillStyle='#34495e';c.fillText('Gesamt: '+occurrences.length+'  |  Offen: '+counts.open+'  |  Erledigt: '+counts.done+'  |  In Bearbeitung: '+counts.progress,42,118);
    c.fillText('Abgebrochen: '+counts.cancelled+'  |  Kunde nicht da: '+counts.absent+'  |  Im Bericht: '+records.length,42,139);
    const xs=[44,225,797,967],widths=[170,560,155,107],heads=['Datum / Uhrzeit','Kunde / Objekt / Adresse','Mitarbeiter','Status'];
@@ -240,9 +240,9 @@ function createOrderStatusPdf(month,filter){
      if(i%2===0){c.fillStyle='#f1f5f9';c.fillRect(38,y-24,1045,42)}
      c.fillStyle='#263747';
      c.font='bold 13px Arial';c.fillText(formatDate(x.date),xs[0],y-6);c.font='13px Arial';c.fillText(x.time,xs[0],y+11);
-     const words=(x.customer+' · '+x.object+' · '+x.address).split(' ');let lines=[''];
-     for(const word of words){const n=(lines[lines.length-1]+' '+word).trim();if(c.measureText(n).width>widths[1]&&lines[lines.length-1]){if(lines.length<3)lines.push(word)}else lines[lines.length-1]=n}
-     c.fillText(fit(lines[0],widths[1]),xs[1],y-9);if(lines[1])c.fillText(fit(lines[1],widths[1]),xs[1],y+7);if(lines[2])c.fillText(fit(lines[2],widths[1]),xs[1],y+21);
+     c.font='bold 13px Arial';c.fillText(fit(x.customer,widths[1]),xs[1],y-9);
+     c.font='13px Arial';const objectLine=[x.object,x.address].filter(Boolean).join(' · ');
+     c.fillText(fit(objectLine,widths[1]),xs[1],y+9);
      c.fillText(fit(x.employee,widths[2]),xs[2],y+3);c.fillText(fit(x.label,widths[3]),xs[3],y+3);
    });
    if(!records.length){c.fillStyle='#52677b';c.fillText('Keine Aufträge für diesen Filter vorhanden.',45,230)}
