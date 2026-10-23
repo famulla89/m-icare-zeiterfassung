@@ -1,0 +1,39 @@
+name: M-iCare Android APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android-app/**'
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'icon.svg'
+      - 'logo.svg'
+      - '.github/workflows/android-apk.yml'
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Bundle current offline web app
+        run: |
+          mkdir -p android-app/app/src/main/assets
+          cp index.html sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+      - name: Build APK
+        working-directory: android-app
+        run: gradle :app:assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: M-iCare-Android-Test-APK
+          path: android-app/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
