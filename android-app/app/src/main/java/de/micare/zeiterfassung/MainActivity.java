@@ -29,6 +29,7 @@ public class MainActivity extends Activity {
   private static final int SPEECH_REQUEST=402;
   private String pendingName;
   private String pendingJson;
+  private byte[] pendingExportBytes;
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     WebViewAssetLoader loader=new WebViewAssetLoader.Builder().addPathHandler("/assets/",new WebViewAssetLoader.AssetsPathHandler(this)).build();
@@ -50,6 +51,19 @@ public class MainActivity extends Activity {
         Intent share=new Intent(Intent.ACTION_SEND);share.setType("application/json");share.putExtra(Intent.EXTRA_STREAM,uri);share.setClipData(ClipData.newRawUri("M-iCare",uri));share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(Intent.createChooser(share,"M-iCare Sicherung teilen"));
       }catch(Exception e){android.widget.Toast.makeText(MainActivity.this,"Teilen fehlgeschlagen: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();}});}
+      @JavascriptInterface public void saveExport(String name,String base64){runOnUiThread(()->{try{
+        if(base64.length()>30_000_000)throw new IllegalArgumentException("Datei zu groß");
+        byte[] bytes=android.util.Base64.decode(base64,android.util.Base64.DEFAULT);
+        if(bytes.length==0)throw new IllegalArgumentException("Leere Datei");
+        String safe=name==null?"M-iCare-Export.pdf":name.replaceAll("[^a-zA-Z0-9._\\-]","_");
+        if(!safe.matches("(?i).+\\.(pdf|json|xlsx)"))throw new IllegalArgumentException("Unbekannter Dateityp");
+        pendingExportBytes=bytes;
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(safe.toLowerCase(Locale.ROOT).endsWith(".pdf")?"application/pdf":safe.toLowerCase(Locale.ROOT).endsWith(".xlsx")?"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"application/json");
+        intent.putExtra(Intent.EXTRA_TITLE,safe);
+        startActivityForResult(intent,403);
+      }catch(Exception e){pendingExportBytes=null;reportExport(false,"Export fehlgeschlagen: "+e.getMessage());}});}
       @JavascriptInterface public void saveJson(String name,String json){runOnUiThread(()->{
         pendingName="M-iCare-Vollsicherung.json";pendingJson=json;
         Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,pendingName);startActivityForResult(intent,SAVE_FILE);
@@ -85,11 +99,24 @@ public class MainActivity extends Activity {
   @Override protected void onActivityResult(int request,int result,Intent data) {
     super.onActivityResult(request,result,data);
     if(request==SPEECH_REQUEST){if(result==RESULT_OK&&data!=null){ArrayList<String> matches=data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);if(matches!=null&&!matches.isEmpty())web.evaluateJavascript("window.micareNativeSpeechResult("+JSONObject.quote(matches.get(0))+")",null);}return;}
+    if(request==403){
+      boolean ok=false;String msg="Speichern abgebrochen";
+      if(result==RESULT_OK&&data!=null&&data.getData()!=null&&pendingExportBytes!=null){
+        try(java.io.OutputStream out=getContentResolver().openOutputStream(data.getData())){
+          if(out==null)throw new java.io.IOException("Kein Schreibzugriff");
+          out.write(pendingExportBytes);out.flush();ok=true;msg="Datei gespeichert";
+        }catch(Exception e){msg="Speichern fehlgeschlagen: "+e.getMessage();}
+      }
+      pendingExportBytes=null;reportExport(ok,msg);return;
+    }
     if(request==SAVE_FILE){if(result==RESULT_OK&&data!=null&&data.getData()!=null&&pendingJson!=null){try(java.io.OutputStream out=getContentResolver().openOutputStream(data.getData())){out.write(pendingJson.getBytes(StandardCharsets.UTF_8));}catch(Exception e){android.widget.Toast.makeText(this,"Speichern fehlgeschlagen",android.widget.Toast.LENGTH_LONG).show();}}pendingJson=null;return;}
     if(request==PICK_FILE&&fileCallback!=null){
       fileCallback.onReceiveValue(result==RESULT_OK&&data!=null&&data.getData()!=null?new Uri[]{data.getData()}:null);
       fileCallback=null;
     }
+  }
+  private void reportExport(boolean success,String message){
+    if(web!=null)web.evaluateJavascript("window.micareNativeExportResult("+success+","+JSONObject.quote(message)+")",null);
   }
   @Override public void onBackPressed(){if(web!=null&&web.canGoBack())web.goBack();else super.onBackPressed();}
 }
