@@ -385,7 +385,29 @@ async function deleteEntry(id){if(!confirm('Eintrag wirklich löschen? Danach wi
 function resetEdit(){editId=null;$('form').reset();$('saveBtn').textContent='💾 Eintrag speichern';$('cancelEdit').classList.add('hidden');$('date').value=formatDate(isoDate());$('endDate').value=$('date').value;$('breakMinutes').value='';$('orderStatus').value='';$('workDone').value='';$('orderRemarks').value='';$('linkedAppointment').value='';refreshLinkedAppointments();calc()}
 async function addEmployee(){let n=$('newEmployee').value.trim();if(!n||n.length>80)return alert('Bitte Mitarbeiternamen eingeben.');if(state.employees.some(x=>x.toLocaleLowerCase('de')===n.toLocaleLowerCase('de')))return alert('Mitarbeiter existiert bereits.');state.employees.push(n);$('newEmployee').value='';await saveState();$('employee').value=n;notify('Mitarbeiter hinzugefügt')}
 function download(name,blob){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000)}
-async function saveExport(name,data,subdir){if(folder){try{if((await folder.queryPermission({mode:'readwrite'}))==='granted'){const dir=await folder.getDirectoryHandle(subdir,{create:true});const parts=/^(.*)\.(json|xlsx|pdf)$/i.exec(name);const saved=parts?await writeVersioned(dir,parts[1].replace(/_\d{8}_\d+$/,''),parts[2],data):(await writeHandle(dir,name,data),name);notify('Gespeichert in M-iCare/'+subdir+'/'+saved);return true}}catch(e){console.warn('Ordnerexport fehlgeschlagen',e)}}download(name,data instanceof Blob?data:new Blob([data]));notify('Kein Ordnerzugriff – '+name+' wurde in Downloads gespeichert');return false}
+let nativeExportPending=null;
+window.micareNativeExportResult=(success,message)=>{
+ const p=nativeExportPending;nativeExportPending=null;
+ if(!p)return;
+ if(success)p.resolve(true);else p.reject(new Error(message||'Speichern abgebrochen'));
+};
+async function saveNativeExport(name,data){
+ if(nativeExportPending)throw new Error('Ein anderer Export ist noch offen');
+ const blob=data instanceof Blob?data:new Blob([data]);
+ if(blob.size>20*1024*1024)throw new Error('Export zu groß (max. 20 MB)');
+ const base64=await new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onerror=()=>reject(new Error('Datei konnte nicht gelesen werden'));
+  reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+  reader.readAsDataURL(blob);
+ });
+ return new Promise((resolve,reject)=>{
+  nativeExportPending={resolve,reject};
+  try{window.MiCareNative.saveExport(name,base64)}
+  catch(e){nativeExportPending=null;reject(e)}
+ });
+}
+async function saveExport(name,data,subdir){if(window.MiCareNative&&typeof window.MiCareNative.saveExport==='function')return await saveNativeExport(name,data);if(folder){try{if((await folder.queryPermission({mode:'readwrite'}))==='granted'){const dir=await folder.getDirectoryHandle(subdir,{create:true});const parts=/^(.*)\.(json|xlsx|pdf)$/i.exec(name);const saved=parts?await writeVersioned(dir,parts[1].replace(/_\d{8}_\d+$/,''),parts[2],data):(await writeHandle(dir,name,data),name);notify('Gespeichert in M-iCare/'+subdir+'/'+saved);return true}}catch(e){console.warn('Ordnerexport fehlgeschlagen',e)}}download(name,data instanceof Blob?data:new Blob([data]));notify('Kein Ordnerzugriff – '+name+' wurde in Downloads gespeichert');return false}
 function fileData(kind){if(kind==='customers')return {format:'M-iCare',version:2,type:'customers',exportedAt:new Date().toISOString(),customers:state.customers||[],objects:state.objects||[]};if(kind==='appointments')return {format:'M-iCare',version:1,type:'appointments',exportedAt:new Date().toISOString(),appointments:state.appointments||[]};return {format:'M-iCare',version:1,type:'work',exportedAt:new Date().toISOString(),entries:state.entries||[]}}
 async function exportSeparate(kind,name){await saveExport(name,JSON.stringify(fileData(kind),null,2),kind==='customers'?'Kundendaten':kind==='appointments'?'Termine':'Arbeitszeiten')}
 function markDailyBackup(){try{localStorage.setItem('micare-daily-export',isoDate())}catch{}$('dailyBackupInfo').textContent='Externe Sicherung für heute angestoßen. Bitte kontrollieren, dass die JSON-Datei tatsächlich im Download-Ordner oder in OneDrive liegt.'}
