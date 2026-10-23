@@ -247,7 +247,7 @@ function createOrderStatusPdf(month,filter){
      c.fillText(fit(x.employee,widths[2]),xs[2],y+3);c.fillText(fit(x.label,widths[3]),xs[3],y+3);
    });
    if(!records.length){c.fillStyle='#52677b';c.fillText('Keine Aufträge für diesen Filter vorhanden.',45,230)}
-   c.fillStyle='#64748b';c.font='12px Arial';c.fillText('Seite '+(page+1)+' von '+pg+' · Stand: '+new Date().toLocaleString('de-DE'),45,765);
+   c.fillStyle='#64748b';c.font='12px Arial';c.fillText('Seite '+(page+1)+' von '+pg+' · Stand: '+new Date().toLocaleString('de-DE')+' · PDF-ID-Fix 1.0.1',45,765);
    const binary=atob(canvas.toDataURL('image/jpeg',0.85).split(',')[1]);const jpg=new Uint8Array(binary.length);
    for(let i=0;i<binary.length;i++)jpg[i]=binary.charCodeAt(i);images.push(jpg);
  }
