@@ -1,6 +1,12 @@
 package de.micare.zeiterfassung;
 
 import android.app.Activity;
+import android.webkit.JavascriptInterface;
+import android.content.ClipData;
+import androidx.core.content.FileProvider;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -15,11 +21,28 @@ public class MainActivity extends Activity {
   private WebView web;
   private ValueCallback<Uri[]> fileCallback;
   private static final int PICK_FILE=400;
+  private static final int SAVE_FILE=401;
+  private String pendingName;
+  private String pendingJson;
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     WebViewAssetLoader loader=new WebViewAssetLoader.Builder().addPathHandler("/assets/",new WebViewAssetLoader.AssetsPathHandler(this)).build();
     web=new WebView(this);
     web.getSettings().setJavaScriptEnabled(true);
+    web.addJavascriptInterface(new Object(){
+      @JavascriptInterface public void shareJson(String name,String json){runOnUiThread(()->{try{
+        File dir=new File(getCacheDir(),"shared");dir.mkdirs();
+        File file=new File(dir,"M-iCare-Vollsicherung.json");
+        try(FileOutputStream out=new FileOutputStream(file)){out.write(json.getBytes(StandardCharsets.UTF_8));}
+        Uri uri=FileProvider.getUriForFile(MainActivity.this,getPackageName()+".fileprovider",file);
+        Intent share=new Intent(Intent.ACTION_SEND);share.setType("application/json");share.putExtra(Intent.EXTRA_STREAM,uri);share.setClipData(ClipData.newRawUri("M-iCare",uri));share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(share,"M-iCare Sicherung teilen"));
+      }catch(Exception e){android.widget.Toast.makeText(MainActivity.this,"Teilen fehlgeschlagen: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();}});}
+      @JavascriptInterface public void saveJson(String name,String json){runOnUiThread(()->{
+        pendingName="M-iCare-Vollsicherung.json";pendingJson=json;
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,pendingName);startActivityForResult(intent,SAVE_FILE);
+      });}
+    },"MiCareNative");
     web.getSettings().setDomStorageEnabled(true);
     web.getSettings().setDatabaseEnabled(true);
     web.getSettings().setAllowFileAccess(false);
@@ -49,6 +72,7 @@ public class MainActivity extends Activity {
   }
   @Override protected void onActivityResult(int request,int result,Intent data) {
     super.onActivityResult(request,result,data);
+    if(request==SAVE_FILE){if(result==RESULT_OK&&data!=null&&data.getData()!=null&&pendingJson!=null){try(java.io.OutputStream out=getContentResolver().openOutputStream(data.getData())){out.write(pendingJson.getBytes(StandardCharsets.UTF_8));}catch(Exception e){android.widget.Toast.makeText(this,"Speichern fehlgeschlagen",android.widget.Toast.LENGTH_LONG).show();}}pendingJson=null;return;}
     if(request==PICK_FILE&&fileCallback!=null){
       fileCallback.onReceiveValue(result==RESULT_OK&&data!=null&&data.getData()!=null?new Uri[]{data.getData()}:null);
       fileCallback=null;
