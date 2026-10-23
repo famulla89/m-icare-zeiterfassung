@@ -110,7 +110,20 @@ function enableKeyboardForNativePickers(){
   button.onclick=()=>{if(manual.classList.contains('hidden')){manual.value=isDate?(native.value?formatDate(native.value):''):native.value;native.classList.add('hidden');manual.classList.remove('hidden');button.textContent='✓ Übernehmen';manual.focus();manual.select()}
    else{if(!commit()){manual.reportValidity();manual.focus();return}manual.classList.add('hidden');native.classList.remove('hidden');button.textContent='⌨ Tastatur'}};
   manual.addEventListener('input',()=>{manual.setCustomValidity('');if(isDate){const digits=manual.value.replace(/\D/g,'').slice(0,8);manual.value=digits.slice(0,2)+(digits.length>2?'.'+digits.slice(2,4):'')+(digits.length>4?'.'+digits.slice(4):'')}else{const digits=manual.value.replace(/\D/g,'').slice(0,4);manual.value=digits.slice(0,2)+(digits.length>2?':'+digits.slice(2):'')}});
-  // Validate only on explicit confirmation; Android blur/change can fire during editing.
+  // Keep the underlying date/time input synchronized without requiring an extra confirmation.
+  manual.addEventListener('input',()=>{
+   const digits=manual.value.replace(/\D/g,'');
+   if(digits.length===(isDate?8:4)){
+    const parsed=isDate?digits.slice(0,2)+'.'+digits.slice(2,4)+'.'+digits.slice(4):digits.slice(0,2)+':'+digits.slice(2);
+    try{
+     const value=isDate?germanToIso(parsed):parsed;
+     if(!isDate&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(value))return;
+     native.value=value;native.dispatchEvent(new Event('change',{bubbles:true}));
+    }catch(e){}
+   }
+  });
+  manual.addEventListener('blur',()=>{if(commit()){manual.classList.add('hidden');native.classList.remove('hidden');button.textContent='⌨ Tastatur'}});
+  // Native picker fields remain tappable and open the platform date/time picker.
   manual.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();button.click()}});
  }
 }
