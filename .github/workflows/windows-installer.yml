@@ -26,14 +26,29 @@ jobs:
           Copy-Item index.html,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
       - name: Install dependencies
         working-directory: windows-app
-        run: npm install --no-audit --no-fund
+        run: npm install --no-fund
+      - name: Audit dependency tree (block high / critical vulnerabilities)
+        working-directory: windows-app
+        run: npm audit --audit-level=high
       - name: Build offline Windows installer
         working-directory: windows-app
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run dist
+      - name: Produce SHA-256 checksum and signing report
+        shell: pwsh
+        run: |
+          Get-ChildItem windows-app/dist/M-iCare-Setup-*.exe | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Add-Content windows-app/dist/SHA256SUMS.txt
+            $signature = Get-AuthenticodeSignature $_.FullName
+            "Installer: $($_.Name); Signature status: $($signature.Status); Signer: $($signature.SignerCertificate.Subject)" | Add-Content windows-app/dist/SIGNATURE_STATUS.txt
+          }
       - uses: actions/upload-artifact@v4
         with:
-          name: M-iCare-Windows-Setup
-          path: windows-app/dist/M-iCare-Setup-*.exe
+          name: M-iCare-Windows-Setup-UNSIGNED-TEST
+          path: |
+            windows-app/dist/M-iCare-Setup-*.exe
+            windows-app/dist/SHA256SUMS.txt
+            windows-app/dist/SIGNATURE_STATUS.txt
           retention-days: 30
