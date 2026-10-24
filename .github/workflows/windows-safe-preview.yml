@@ -1,0 +1,49 @@
+name: M-iCare Windows Browser-Testpaket (ohne EXE)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'index.html'
+      - 'manifest.webmanifest'
+      - 'icon.svg'
+      - 'logo.svg'
+      - 'sw.js'
+      - '.github/workflows/windows-safe-preview.yml'
+jobs:
+  safe-browser-bundle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack browser-only files
+        run: |
+          mkdir -p windows-browser-test
+          cp index.html manifest.webmanifest icon.svg logo.svg sw.js windows-browser-test/
+          cat > windows-browser-test/START-HIER.txt <<'EOF'
+          M-iCare Windows-Browsertest - keine EXE, keine Installation
+
+          1. Dieses GitHub-Artefakt entpacken.
+          2. index.html im entpackten Ordner in Chrome oder Edge oeffnen.
+          3. Zum Testen bitte ausschliesslich Testdaten verwenden.
+             Die lokale Datei-Variante unter file:// hat Einschraenkungen
+             bei Service Worker, Offline-Installation und Datenhaltung.
+
+          Fuer die vollstaendige Browser-/PWA-Funktion (falls Python installiert ist):
+          A) Windows-Terminal im entpackten Ordner oeffnen.
+          B) py -m http.server 8765
+          C) http://localhost:8765/ in Chrome oder Edge oeffnen.
+          D) In Chrome: Menue > Streamen, speichern und teilen > Seite als App installieren.
+             In Edge: Apps > Diese Website als App installieren.
+          E) Das Terminal waehrend des normalen lokalen Zugriffs offen lassen.
+
+          Achtung: Es findet KEINE automatische Synchronisation mit Handy oder
+          anderen Browsern statt. Daten bleiben lokal im verwendeten Profil.
+          Vor echten Daten unbedingt Vollsicherung/JSON-Export testen.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: M-iCare-Windows-Browser-Test-ohne-EXE
+          path: windows-browser-test/
+          if-no-files-found: error
+          retention-days: 30
