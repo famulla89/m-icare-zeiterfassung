@@ -42,4 +42,16 @@ assert.equal(movedResults[0].date,'2026-10-06');
 assert.equal(movedResults[0].originalDate,'2026-10-05');
 assert.equal(movedResults[0].start,'12:00');
 assert.deepEqual(get({...base,exceptions:{'2026-10-05':{cancelled:true}}},'2026-10-01','2026-10-31'),[]);
+
+const overlapStart=script.indexOf('function workTimeOverlaps('),overlapEnd=script.indexOf('\nlet workEntrySaveInProgress=',overlapStart);
+assert(overlapStart>0&&overlapEnd>overlapStart,'Overlap method missing');
+vm.runInNewContext(script.slice(overlapStart,overlapEnd),sandbox,{timeout:1500});
+const night={date:'2026-10-24',endDate:'2026-10-25',start:'23:00',end:'02:00'};
+const nextDay={date:'2026-10-25',endDate:'2026-10-25',start:'01:00',end:'03:00'};
+const afterNight={date:'2026-10-25',endDate:'2026-10-25',start:'02:00',end:'04:00'};
+const beforeNight={date:'2026-10-24',endDate:'2026-10-24',start:'21:00',end:'23:00'};
+assert.equal(sandbox.workTimeOverlaps(night,nextDay),true,'Night and next-day overlap must be detected');
+assert.equal(sandbox.workTimeOverlaps(nextDay,night),true,'Overlap must be symmetric');
+assert.equal(sandbox.workTimeOverlaps(night,afterNight),false,'Adjacent shifts must not overlap');
+assert.equal(sandbox.workTimeOverlaps(night,beforeNight),false,'Immediately preceding shifts must not overlap');
 console.log('App core smoke tests: PASS – ISO dates, 9 duration checks, night shifts, pauses, recurring/overridden appointments');
