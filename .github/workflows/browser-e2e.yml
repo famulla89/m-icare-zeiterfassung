@@ -6,7 +6,11 @@ on:
       - feature/audited-order-corrections-20261024
     paths:
       - index.html
+      - cloud-transfer.js
+      - quote-calculator.js
+      - quote-ui.js
       - tests/browser-e2e.cjs
+      - tests/quote-calculator-smoke.cjs
       - .github/workflows/browser-e2e.yml
   pull_request:
     paths:
@@ -29,4 +33,15 @@ jobs:
       - name: Install headless Chromium
         run: npx playwright install --with-deps chromium
       - name: Test customer, worktime, planned correction, reporting, PDF, backup
-        run: node tests/browser-e2e.cjs
+        run: |
+          node tests/quote-calculator-smoke.cjs
+          node tests/browser-e2e.cjs
+
+      - name: Publish synthetic AK report examples for PDF/CSV review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M-iCare-AK-Reporting-Testausdrucke
+          path: test-output/
+          if-no-files-found: warn
+          retention-days: 14
