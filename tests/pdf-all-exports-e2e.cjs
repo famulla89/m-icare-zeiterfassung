@@ -97,7 +97,7 @@ let activeBrowser=null;
  await page.evaluate(()=>{window.__qaQuoteDoc.kind='invoice';window.__qaQuoteDoc.number='RG-ENTWURF-2026-001';window.__qaQuoteDoc.dueDate='2026-12-08';});
  await fromBlob('11_Rechnungsentwurf_Logo_Zahlungsziel.pdf',"MiCareQuote.pdf(window.__qaQuoteDoc)");
  await page.evaluate(()=>{
-  window.__qaQuoteDoc.kind='quote';window.__qaQuoteDoc.validUntil='2026-11-23';
+  window.__qaQuoteDoc.kind='quote';window.__qaQuoteDoc.number='KV-QA-2026-002';window.__qaQuoteDoc.validUntil='2026-11-23';
   const items=Array.from({length:8},(_,i)=>({id:String(i),label:'Fensterart '+(i+1),qty:1,each:i+1,rate:7,sides:2,soil:1,frame:false,ladder:false,lift:false}));
   const data=MiCareQuote.compute({scope:'windows',area:200,visits:1,hours:2,sqmPerHour:100,hourly:20,nonwage:20,overhead:15,productivity:90,material:3,km:5,perKm:0.70,margin:25,minNet:0,vat:19,manualNet:0,windowItems:items});
   Object.assign(window.__qaQuoteDoc,{rows:data.rows,net:data.net,tax:data.tax,gross:data.gross,vat:data.vat});
