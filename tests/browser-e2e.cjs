@@ -122,6 +122,22 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.locator('#orderPrintPreviewBody').screenshot({path:path.join(sampleDir,'M-iCare_AK_Druckvorschau_Test.png')});
  console.log('E2E step 4b: AK open/done, customer filter, conflicts, CSV and PDF passed');
 
+ // Multi-page PDF and CSV formula-injection regression check.
+ const safeCsv=await page.evaluate(()=>akCsvBlob([['=HYPERLINK("https://example.test")']]).text());
+ assert(safeCsv.includes('"\'=HYPERLINK'), 'CSV formula-looking strings must be escaped');
+ await page.evaluate(()=>{document.getElementById('reportAllCustomers').checked=true;renderOrderOverview()});
+ const reportCount=await page.evaluate(()=>akReportData('2026-10-01','2026-10-31').rows.length);
+ assert(reportCount>12,'Fixture must exercise multipage export');
+ const multiDownload=page.waitForEvent('download');
+ await page.locator('#orderStatusPdf').click();
+ const multiPdf=await multiDownload;
+ const multiBytes=fs.readFileSync(await multiPdf.path());
+ const countMatch=/\/Count\s+(\d+)/.exec(multiBytes.toString('latin1'));
+ assert(countMatch&&Number(countMatch[1])>=2,'Large AK PDF needs multiple pages');
+ fs.writeFileSync(path.join(sampleDir,'M-iCare_AK_Alle-Kunden_Mehrseitig_Test.pdf'),multiBytes);
+ console.log('E2E step 4c: multipage AK report and CSV injection protection passed');
+
+
  // Planned order correction: no reason => blocked, reason => same entry updated and audited
  await page.evaluate(()=>editEntry('test-entry-1'));
  assert(await page.locator('#plannedEditorScreen').isVisible());
