@@ -1,0 +1,200 @@
+'use strict';
+/* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
+(function(){
+ const byId=id=>document.getElementById(id);
+ const numeric=['Area','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','WindowQty','WindowEach','WindowRate','ManualNet'];
+ const tracked=['Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','WindowType','WindowQty','WindowEach','WindowRate','WindowSides','WindowDirt','WindowEquip','ManualNet','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
+ const typeAreas={none:0,standard:1.5,large:4,sliding:2.5,mullion:1.2,winter:0,roof:0};
+ const de=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+ let activeId=null;
+ function value(key){return byId('q'+key)?.value||''}
+ function num(key){const node=byId('q'+key);if(!node)throw Error('Fehlende Eingabe '+key);const n=Number(node.value);if(!node.value.trim()||!Number.isFinite(n)||n<0)throw Error('Ungültiger Wert in '+(node.labels?.[0]?.textContent||key));return n}
+ function option(sel,value,label){const n=document.createElement('option');n.value=value;n.textContent=label;sel.append(n)}
+ function refreshCustomers(){
+  const select=byId('qCustomer'),prev=select.value;select.replaceChildren();option(select,'','– Kunden auswählen –');
+  for(const c of state.customers||[])option(select,c.id,(c.publicNumber||'–')+' · '+c.name+(c.archived?' (archiviert)':''));
+  if([...select.options].some(o=>o.value===prev))select.value=prev;
+  updateObjects();
+ }
+ function updateObjects(){
+  const select=byId('qObject'),prev=select.value;select.replaceChildren();option(select,'','– Geschäftsstelle auswählen –');
+  for(const o of (state.objects||[]).filter(o=>o.customerId===value('Customer'))){
+   option(select,o.id,(o.publicNumber||'–')+' · '+o.name+(o.archived?' (archiviert)':''));
+  }
+  if([...select.options].some(o=>o.value===prev))select.value=prev;
+  updateAppointments();
+ }
+ function updateAppointments(){
+  const select=byId('qAppointment'),prev=select.value;select.replaceChildren();option(select,'','– ohne Arbeitskarte –');
+  for(const a of (state.appointments||[]).filter(a=>a.customerId===value('Customer')&&(!value('Object')||a.objectId===value('Object')))){
+   option(select,a.id,'AK '+(a.akNumber||'–')+' · '+(a.service||'Reinigung')+' · '+(a.date||'')+(a.repeat&&a.repeat!=='none'?' · wiederkehrend':''));
+  }
+  if([...select.options].some(o=>o.value===prev))select.value=prev;
+ }
+ function selectAppointment(){
+  const a=state.appointments.find(x=>x.id===value('Appointment'));if(!a)return calculate();
+  if(a.objectId&&a.objectId!==value('Object')){byId('qObject').value=a.objectId;updateAppointments();byId('qAppointment').value=a.id}
+  if(a.service)byId('qService').value=a.service;
+  if(a.date)byId('qServiceDate').value=formatDate(a.date);
+  // Dauerauftrag: Anzahl der abzurechnenden Einsätze bleibt frei wählbar.
+  calculate();
+ }
+ function readInput(){
+  const wc=byId('qWc').checked,kitchen=byId('qKitchen').checked,heavy=byId('qHeavy').checked;
+  const factor=1+(wc?0.12:0)+(kitchen?0.08:0)+(heavy?0.15:0);
+  const windowSqm=value('WindowType')==='none'?0:Math.round(num('WindowQty')*num('WindowEach')*100)/100;
+  return {
+   area:num('Area'),visits:num('Visits'),hours:num('Hours'),sqmPerHour:num('SqmHour')/factor,
+   hourly:num('Hourly'),nonwage:num('Nonwage'),overhead:num('Overhead'),
+   productivity:num('Productivity'),material:num('Material'),km:num('Km'),perKm:num('KmPrice'),
+   margin:num('Margin'),minNet:num('MinNet'),manualNet:num('ManualNet'),
+   vat:Number(value('Vat')),windowSqm,windowRate:num('WindowRate'),
+   sides:Number(value('WindowSides')),soil:Number(value('WindowDirt')),extras:Number(value('WindowEquip'))
+  };
+ }
+ function renderSummary(out){
+  const node=byId('qSummary');node.replaceChildren();
+  const title=document.createElement('div');title.textContent='Dein berechneter Gesamtpreis';node.append(title);
+  const total=document.createElement('strong');total.textContent=de(out.gross)+' brutto';node.append(total);
+  const info=document.createElement('p');info.className='hint';
+  info.textContent='Netto '+de(out.net)+' · Umsatzsteuer '+de(out.tax)+' ('+out.vat+' %) · '+out.visits+' Einsätze à ca. '+out.hoursPerVisit+' Std.';
+  node.append(info);
+  const info2=document.createElement('p');info2.className='hint';
+  info2.textContent='Geschätzte interne Kosten '+de(out.cleaningCost)+' · Fensteraufschlag '+de(out.windowsNet)+' · Kalkulierter Überschuss ca. '+de(out.profit);
+  node.append(info2);
+  const info3=document.createElement('p');info3.className='hint';
+  info3.textContent='Preisvorschlag '+de(out.recommendNet)+' netto'+(num('ManualNet')>0?' · Dein abweichender Festpreis wurde übernommen.':'');
+  node.append(info3);
+ }
+ function calculate(){
+  try{
+   const out=MiCareQuote.compute(readInput());
+   byId('qCalculationMessage').textContent='';
+   byId('qWindowArea').textContent='Fensterfläche: '+out.windowSqm.toLocaleString('de-DE')+' m²';
+   renderSummary(out);return out;
+  }catch(e){
+   byId('qCalculationMessage').textContent='Bitte Eingaben prüfen: '+e.message;
+   byId('qSummary').textContent='Keine gültige Kalkulation vorhanden.';
+   return null;
+  }
+ }
+ function nextNumber(kind){
+  const prefix=kind==='quote'?'KV':'RG-ENTWURF',year=new Date().getFullYear();
+  const existing=new Set((state.quotes||[]).filter(d=>d.kind===kind).map(d=>d.number));
+  let i=1,number='';do{number=prefix+'-'+year+'-'+String(i++).padStart(4,'0')}while(existing.has(number));
+  return number;
+ }
+ function readValues(){
+  const entries={};for(const k of tracked){const el=byId('q'+k);entries[k]=el.type==='checkbox'?el.checked:el.value}return entries;
+ }
+ function updateNumber(){if(!activeId)byId('qNumber').value=nextNumber(value('Kind'))}
+ function collect(){
+  const out=calculate();if(!out)throw Error('Bitte die Kalkulation oben korrigieren');
+  const cid=value('Customer'),c=state.customers.find(c=>c.id===cid);
+  if(!c)throw Error('Bitte einen vorhandenen Kunden auswählen');
+  const o=state.objects.find(o=>o.id===value('Object')),a=state.appointments.find(a=>a.id===value('Appointment'));
+  const number=value('Number').trim();
+  if(!number)throw Error('Dokumentnummer fehlt');
+  if((state.quotes||[]).some(q=>q.id!==activeId&&q.kind===value('Kind')&&q.number===number))throw Error('Dokumentnummer bereits vergeben');
+  const today=new Date().toISOString().slice(0,10);
+  const doc={
+   id:activeId||crypto.randomUUID(),kind:value('Kind'),number,createdAt:today,date:formatDate(today),
+   customerId:c.id,customerNumber:c.publicNumber||'',customerName:c.name,customerAddress:[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+   objectId:o?.id||'',objectName:o?.name||'',objectAddress:o?[o.address,[o.zip,o.city].filter(Boolean).join(' ')].filter(Boolean).join(', '):'',
+   appointmentId:a?.id||'',orderNumber:a?'AK '+(a.akNumber||'–')+' / '+orderCode(a):'',
+   service:value('Service').trim()||'Reinigungsleistung',serviceDate:value('ServiceDate').trim(),
+   validUntil:value('Kind')==='quote'?value('ValidUntil'):'',dueDate:value('Kind')==='invoice'?value('ValidUntil'):'',
+   sellerName:value('SellerName').trim(),sellerAddress:value('SellerAddress').trim(),sellerTaxId:value('SellerTax').trim(),sellerEmail:value('SellerEmail').trim(),iban:value('Iban').trim(),
+   notes:value('Notes').trim(),vat:out.vat,net:out.net,tax:out.tax,gross:out.gross,rows:out.rows,calculation:out,formValues:readValues()
+  };
+  return MiCareQuote.createDocument(doc);
+ }
+ function saveSettings(){
+  const keep=['SellerName','SellerAddress','SellerTax','SellerEmail','Iban'];
+  state.quoteSettings=Object.fromEntries(keep.map(k=>[k,value(k)]));
+ }
+ async function persist(){
+  const doc=collect();state.quotes??=[];saveSettings();
+  const i=state.quotes.findIndex(x=>x.id===doc.id);
+  if(i>=0)state.quotes[i]=doc;else state.quotes.push(doc);
+  activeId=doc.id;await saveState();showSaved();
+  notify('Kalkulation '+doc.number+' gespeichert');
+  return doc;
+ }
+ async function makePdf(){
+  const button=byId('qPdf');if(button.disabled)return;button.disabled=true;
+  try{
+   const doc=await persist();
+   if(doc.kind==='invoice'&&(!doc.sellerName||!doc.sellerAddress||!doc.sellerTaxId||!doc.customerAddress||!doc.serviceDate))
+    alert('Wichtige Rechnungs-Pflichtangaben fehlen. Die PDF bleibt ausdrücklich als Rechnungsentwurf gekennzeichnet. Bitte ergänze Firmenanschrift, Steuernummer, Kundenanschrift und Leistungsdatum.');
+   const pdf=await MiCareQuote.pdf(doc);
+   await saveExport('M-iCare_'+(doc.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+'_'+doc.number.replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf',pdf,'Angebote');
+   notify('PDF-Entwurf erstellt: '+doc.number);
+  }catch(e){alert('PDF konnte nicht erstellt werden: '+e.message)}
+  finally{button.disabled=false}
+ }
+ function loadQuote(id){
+  const doc=(state.quotes||[]).find(q=>q.id===id);if(!doc)return;
+  activeId=id;const values=doc.formValues||{};
+  for(const [k,v] of Object.entries(values)){
+   const node=byId('q'+k);if(!node)continue;if(node.type==='checkbox')node.checked=!!v;
+   else if(!['Customer','Object','Appointment'].includes(k))node.value=v;
+  }
+  byId('qCustomer').value=doc.customerId;updateObjects();
+  byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
+  calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
+ }
+ function showSaved(){
+  const area=byId('qSavedList');area.replaceChildren();
+  const items=[...(state.quotes||[])].reverse();
+  if(!items.length){area.textContent='Noch keine Kalkulation gespeichert.';return}
+  for(const item of items){
+   const line=document.createElement('div');line.className='quoteSavedItem';
+   const title=document.createElement('div');title.textContent=(item.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+' '+item.number+' · '+item.customerName+' · '+de(item.gross||0);
+   const actions=document.createElement('div');actions.className='row';
+   const open=document.createElement('button');open.type='button';open.className='secondary';open.textContent='Bearbeiten';open.onclick=()=>loadQuote(item.id);
+   const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='Löschen';
+   del.onclick=async()=>{if(!confirm('Entwurf '+item.number+' unwiderruflich löschen?'))return;state.quotes=state.quotes.filter(q=>q.id!==item.id);if(activeId===item.id)activeId=null;await saveState();showSaved()};
+   actions.append(open,del);line.append(title,actions);area.append(line);
+  }
+ }
+ function clear(){
+  activeId=null;for(const k of ['Customer','Object','Appointment'])byId('q'+k).value='';
+  byId('qService').value='Unterhaltsreinigung';
+  byId('qKind').value='quote';byId('qManualNet').value='0';
+  byId('qNotes').value='';byId('qServiceDate').value='';
+  byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+  for(const k of ['Wc','Kitchen','Heavy'])byId('q'+k).checked=false;
+  updateObjects();updateNumber();calculate();window.scrollTo(0,0);
+ }
+ function refresh(){
+  const settings=state.quoteSettings||{};
+  for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&!node.value)node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
+  refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
+ }
+ function init(){
+  for(const k of tracked){
+   const el=byId('q'+k);if(!el)throw Error('Kalkulationsfeld fehlt: '+k);
+   el.addEventListener('input',()=>calculate());
+   el.addEventListener('change',()=>calculate());
+  }
+  byId('qCustomer').addEventListener('change',()=>{byId('qObject').value='';updateObjects();calculate()});
+  byId('qObject').addEventListener('change',()=>{updateAppointments();calculate()});
+  byId('qAppointment').addEventListener('change',selectAppointment);
+  byId('qKind').addEventListener('change',updateNumber);
+  byId('qWindowType').addEventListener('change',()=>{
+   const type=value('WindowType'),sq=typeAreas[type];
+   if(sq)byId('qWindowEach').value=sq;
+   if(type==='none')byId('qWindowQty').value=0;
+   calculate();
+  });
+  byId('qAreas').addEventListener('click',e=>{const target=e.target.closest('button[data-area]');if(!target)return;byId('qArea').value=target.dataset.area;calculate()});
+  byId('qSave').onclick=()=>persist().catch(e=>alert('Kalkulation nicht gespeichert: '+e.message));
+  byId('qPdf').onclick=makePdf;
+  byId('qNew').onclick=clear;
+  byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+  calculate();
+ }
+ init();
+ window.MiCareQuoteUI={refresh,calculate,collect};
+})();
