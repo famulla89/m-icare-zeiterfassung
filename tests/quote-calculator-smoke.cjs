@@ -13,6 +13,13 @@ function create(overrides={}){
   overhead:15,productivity:90,material:2,km:8,perKm:0.70,margin:25,minNet:0,
   manualNet:0,vat:19,windowSqm:0,windowRate:3,sides:1,soil:1,extras:1,...overrides});
 }
+assert.equal(m.formatPdfDate('2026-11-23'),'23.11.2026','ISO date in quote PDF is DD.MM.YYYY');
+assert.equal(m.formatPdfDate('2026-12-08'),'08.12.2026','Due dates also converted');
+assert.equal(m.formatPdfDate('2028-02-29'),'29.02.2028','Leap years remain correct');
+assert.equal(m.formatPdfDate('23.11.2026'),'23.11.2026','Already German-formatted date remains unchanged');
+assert.equal(m.formatPdfDate('Oktober 2026'),'Oktober 2026','Textual service period remains unchanged');
+assert.equal(m.formatPdfDate('2026-02-30'),'2026-02-30','Malformed dates not silently falsified');
+assert.equal(m.formatPdfDate(''),'','Missing date kept empty');
 const base=create();
 assert.equal(base.visits,8);
 assert.equal(base.hoursPerVisit,2);
