@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/reporting-dashboard-20261024
+      - feature/audited-order-corrections-20261024
     paths:
       - index.html
       - tests/reporting-smoke.cjs
