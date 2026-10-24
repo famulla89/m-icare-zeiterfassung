@@ -61,6 +61,7 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   assert(dialogs.some(d=>d.includes('Korrekturgrund')),'Closed AK cannot be modified without reason');
   assert.equal(await page.evaluate(()=>state.entries.find(e=>e.id==='test-entry-1').orderStatus),'done');
 
+  await page.locator('#correctionEditor').selectOption('Anna Test');
   await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
   await page.locator('#saveBtn').click();
   await page.waitForFunction(()=>state.entries.find(e=>e.id==='test-entry-1')?.orderStatus==='progress');
@@ -71,6 +72,7 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   });
   assert.equal(corrected.count,1,'Correcting closed AK must not create duplicate');
   assert.equal(corrected.reason,'Auftragsstatus falsch gewählt');
+  assert.equal(await page.evaluate(()=>state.entries.find(e=>e.id==='test-entry-1')?.corrections?.at(-1)?.editedBy),'Anna Test','Correction actor persists in installed Windows app');
   assert(corrected.wasCompleted,'Originally closed state must remain auditable');
   await page.evaluate(()=>{
    showScreen('reportingScreen');reportOpenTab('quality');
