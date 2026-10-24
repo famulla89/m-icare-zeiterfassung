@@ -18,9 +18,11 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  const base='http://127.0.0.1:'+server.address().port+'/';
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({acceptDownloads:true,viewport:{width:1330,height:900}});
+ page.setDefaultTimeout(10000);page.setDefaultNavigationTimeout(15000);
  const errors=[],dialogs=[];
  page.on('pageerror',err=>errors.push(String(err)));
  page.on('dialog',async dialog=>{dialogs.push(dialog.message());await dialog.accept()});
+ console.log('E2E step 1: load app');
  await page.goto(base+'index.html',{waitUntil:'load'});
  await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0,{timeout:15000});
  assert(await page.locator('#home').isVisible(),'Home screen is visible');
@@ -30,7 +32,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
    await saveState();
    updateCustomerSelects();fillEmployees();refreshLinkedAppointments();
  },fixture);
- await page.waitForFunction(()=>state.customers.length===10);
+ await page.waitForFunction(()=>state.customers.length===10);console.log('E2E step 2: fixture imported');
  // Navigation and customer data
  await page.locator('[data-jump="customerOverviewScreen"]').click();
  assert(await page.locator('#customerOverviewScreen').isVisible());
@@ -39,6 +41,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.locator('[data-jump="customersPanel"]').click();
  assert(await page.locator('#customersPanel').isVisible());
  await page.locator('#goHome').click();
+ console.log('E2E step 3: customer navigation passed');
  // Reporting: search + customer filter, CSV and print
  await page.locator('[data-jump="reportingScreen"]').click();
  assert(await page.locator('#reportHome').isVisible());
@@ -67,6 +70,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  const pdf=await page.pdf({format:'A4',printBackground:true});
  assert(pdf.length>2500,'Generated PDF should not be empty');
  await page.emulateMedia({media:'screen'});
+ console.log('E2E step 4: reporting export and print passed');
  // Planned order correction: no reason => blocked, reason => same entry updated and audited
  await page.evaluate(()=>editEntry('test-entry-1'));
  assert(await page.locator('#plannedEditorScreen').isVisible());
@@ -85,6 +89,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(correction.records,1,'Must not duplicate planned appointment entry');
  assert(correction.reasons.includes('Aus Versehen abgeschlossen'));
  assert(correction.audit>=1,'Corrections must be auditable');
+ console.log('E2E step 5: planned order correction passed');
  // Free entry and the shared appointment calendar
  await page.evaluate(()=>{resetEdit();openFreeWorkScreen()});
  await page.locator('#date').fill('28.10.2026');
@@ -96,6 +101,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(await page.evaluate(()=>state.entries.some(e=>e.date==='2026-10-28'&&e.minutes===120)));
  await page.evaluate(()=>{showScreen('appointmentsPanel');calendarMonth='2026-10';chosenDay='2026-10-28';renderCalendar()});
  assert((await page.locator('#selectedDayList').innerText()).includes('14:00–16:00'),'Free entries should appear in calendar');
+ console.log('E2E step 6: free work and calendar passed');
  // Navigation and backups
  await page.locator('#goHome').click();
  await page.locator('[data-jump="backupSection"]').click();
@@ -109,4 +115,4 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('Browser E2E PASS: customers, navigation, reporting filters, CSV, print/PDF, planned corrections, free time, calendar, JSON backup');
  await browser.close();
  server.close();
-})().catch(e=>{console.error(e);server.close();process.exitCode=1});
+})().catch(e=>{console.error('E2E FAILED:',e);server.close();process.exit(1)});
