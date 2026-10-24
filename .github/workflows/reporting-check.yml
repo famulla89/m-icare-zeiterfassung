@@ -8,12 +8,14 @@ on:
       - index.html
       - tests/reporting-smoke.cjs
       - tests/app-core-smoke.cjs
+      - tests/order-correction-smoke.cjs
       - .github/workflows/reporting-check.yml
   pull_request:
     paths:
       - index.html
       - tests/reporting-smoke.cjs
       - tests/app-core-smoke.cjs
+      - tests/order-correction-smoke.cjs
       - .github/workflows/reporting-check.yml
 
 jobs:
@@ -29,3 +31,4 @@ jobs:
         run: |
           node tests/reporting-smoke.cjs
           node tests/app-core-smoke.cjs
+          node tests/order-correction-smoke.cjs
