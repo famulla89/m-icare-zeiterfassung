@@ -9,6 +9,8 @@ on:
       - 'icon.svg'
       - 'logo.svg'
       - '.github/workflows/windows-installer.yml'
+      - 'tests/windows-installer-smoke.ps1'
+      - 'tests/windows-electron-e2e.cjs'
 jobs:
   windows:
     runs-on: windows-latest
@@ -54,6 +56,15 @@ jobs:
       - name: Validate packaged app and silently install Windows EXE on isolated runner
         shell: pwsh
         run: ./tests/windows-installer-smoke.ps1
+      - name: Test installed Electron app with Playwright (Windows)
+        shell: pwsh
+        run: |
+          Push-Location windows-app
+          try {
+            npm install --no-save --no-audit --no-fund playwright
+            if ($LASTEXITCODE -ne 0) { throw 'Playwright installation failed' }
+          } finally { Pop-Location }
+          node tests/windows-electron-e2e.cjs
       - uses: actions/upload-artifact@v4
         with:
           name: M-iCare-Windows-Setup-UNSIGNED-TEST
