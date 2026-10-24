@@ -130,14 +130,34 @@
   if(typeof document==='undefined')throw Error('PDF benötigt Browsergrafik');
   const W=1240,H=1754,blue='#124e8a',dark='#152b42',muted='#516478',jpgs=[];
   const euros=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+  // Das bereits mit Android, Windows und PWA ausgelieferte Original-M-iCare-Logo einbetten.
+  // Lokal über ein Image-Element laden: keine fremden URLs, Konten oder Netzverbindung.
+  // Bei Fehler abbrechen statt unbemerkt eine PDF ohne Firmenlogo auszuliefern.
+  async function loadBrandLogo(){
+   const picture=new Image();
+   picture.decoding='async';
+   picture.src=new URL('./logo.svg',document.baseURI).href;
+   await new Promise((resolve,reject)=>{
+    if(picture.complete&&picture.naturalWidth>0)return resolve();
+    picture.onload=resolve;
+    picture.onerror=()=>reject(Error('Das M-iCare-Logo konnte nicht geladen werden. Bitte App-Dateien überprüfen.'));
+   });
+   if(picture.naturalWidth<1||picture.naturalHeight<1)throw Error('M-iCare-Logo ist leer');
+   return picture;
+  }
+  const brandLogo=await loadBrandLogo();
   function render(pageIndex,rows,pageCount){
    const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
    const c=canvas.getContext('2d');if(!c)throw Error('Canvas nicht verfügbar');
    c.fillStyle='#fff';c.fillRect(0,0,W,H);
    c.fillStyle=blue;c.fillRect(0,0,W,12);
-   c.fillStyle=blue;c.font='bold 38px Arial';c.fillText('M-iCare  |  '+(d.kind==='quote'?'KOSTENVORANSCHLAG':'RECHNUNGSENTWURF'),70,91);
-   c.fillStyle=muted;c.font='20px Arial';c.fillText('Entwurf zur Prüfung  ·  Seite '+(pageIndex+1)+' von '+pageCount,70,130);
-   let y=180;
+   // Briefkopf: echtes Logo im Original-Seitenverhältnis, immer sichtbar oben links.
+   c.drawImage(brandLogo,70,31,350,154);
+   c.fillStyle=blue;c.font='bold 37px Arial';
+   c.fillText(d.kind==='quote'?'KOSTENVORANSCHLAG':'RECHNUNGSENTWURF',455,91);
+   c.fillStyle=muted;c.font='20px Arial';c.fillText('Entwurf zur Prüfung  ·  Seite '+(pageIndex+1)+' von '+pageCount,458,133);
+   c.strokeStyle='#c7d8e9';c.lineWidth=2;c.beginPath();c.moveTo(70,199);c.lineTo(1170,199);c.stroke();
+   let y=244;
    function write(text,left,top,width,font='22px Arial',color=dark){
     c.font=font;c.fillStyle=color;
     const words=String(text||'—').split(/\s+/);let line='',lines=[];
