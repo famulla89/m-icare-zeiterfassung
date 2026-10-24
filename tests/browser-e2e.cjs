@@ -308,6 +308,49 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(restoredOrder.events>=2);
  console.log('E2E step 12: full order backup and restore passed');
 
+ // Sequential numbering and terminal cancellation/closure must work through the UI.
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('ordersScreen')});
+ for(const [title,date] of [['Probeauftrag Küche','2027-01-09'],['Probeauftrag Glas','2027-01-10']]){
+  await page.locator('#newOrderToggle').click();
+  await page.locator('#orderCustomer').selectOption('test-customer-1');
+  await page.locator('#orderObject').selectOption('test-object-1-1');
+  await page.locator('#orderTitle').fill(title);
+  await page.locator('#orderService').selectOption('Gebäudereinigung');
+  await page.locator('#orderEmployee').selectOption('Inhaber');
+  await page.locator('#orderType').selectOption('once');
+  await page.locator('#orderStartDate').fill(date);
+  await page.locator('#orderStartTime').fill('15:00');
+  await page.locator('#orderEndTime').fill('16:00');
+  await page.locator('#orderCreateSave').click();
+  await page.waitForFunction(name=>state.orders.some(o=>o.title===name),title);
+ }
+ const ids=await page.evaluate(()=>state.orders.map(o=>({number:o.number,title:o.title,status:o.status,kind:o.type})));
+ assert.deepEqual(ids.map(o=>o.number),['1','2','3'],'New order numbers must be sequential');
+ let testCard=page.locator('#orderList .orderCard').filter({hasText:'Probeauftrag Küche'});
+ await testCard.locator('.orderActions details summary').click();
+ await testCard.locator('.orderActions details select').selectOption('cancelled');
+ await testCard.locator('.orderActions details textarea').fill('Kunde hat den Auftrag abgesagt');
+ await testCard.locator('.orderActions details button').click();
+ await page.waitForFunction(()=>state.orders.find(o=>o.number==='2')?.status==='cancelled');
+ testCard=page.locator('#orderList .orderCard').filter({hasText:'Probeauftrag Glas'});
+ await testCard.locator('.orderActions details summary').click();
+ await testCard.locator('.orderActions details select').selectOption('completed');
+ await testCard.locator('.orderActions details textarea').fill('Auftrag administrativ geschlossen');
+ await testCard.locator('.orderActions details button').click();
+ await page.waitForFunction(()=>state.orders.find(o=>o.number==='3')?.status==='completed');
+ const closed=await page.evaluate(()=>({all:state.orders.length,closed:state.orders.filter(orderIsClosed).length,cancelled:state.orders.filter(o=>o.status==='cancelled').length,events:state.orders.filter(orderIsClosed).map(o=>o.events.at(-1)?.reason),percent:state.orders.find(o=>o.number==='2')&&orderProgress(state.orders.find(o=>o.number==='2')).percent,next:orderNextNumber()}));
+ assert.equal(closed.all,3);assert.equal(closed.closed,2);assert.equal(closed.cancelled,1);
+ assert.equal(closed.percent,0,'Cancellation must not count as completed work');
+ assert.equal(closed.next,4,'Sequence must advance after cancellation');
+ assert(closed.events.includes('Kunde hat den Auftrag abgesagt'));
+ await page.locator('#orderStateFilter').selectOption('closed');
+ assert.equal(await page.locator('#orderList .orderCard').count(),2,'Closed filter includes completed and cancelled');
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('reportingScreen');reportOpenTab('contracts')});
+ const report=await page.locator('#reportPanels').innerText();
+ assert(report.includes('Abgeschlossen – abgebrochen')&&report.includes('Abgeschlossen – erledigt'),'Controlling reports must distinguish closure reason');
+ console.log('E2E step 13: orders 1/2/3, cancelled and completed count as closed, reason and report verified');
+
+
 
  assert.equal(errors.length,0,'Unhandled browser errors: '+errors.join(' | '));
  console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, double-save/date changes, unsaved edits, calendar, JSON export/import and annual orders/follow-ups');
