@@ -147,15 +147,45 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(check.gross>check.net&&check.rows.length>=3);
  await page.locator('#qManualNet').fill('950');
  assert.equal((await page.evaluate(()=>MiCareQuoteUI.calculate())).net,950,'Manuellen Angebotspreis übernehmen');
+ await page.locator('#qValidUntil').fill('2026-11-23');
  await page.locator('#qSellerName').fill('M-iCare Testfirma');
  await page.locator('#qSave').click();
  await page.waitForFunction(()=>state.quotes?.length===1);
  assert.equal(await page.evaluate(()=>state.quotes[0].formValues.WindowItems.length),2,'Fensterliste wird im Entwurf dauerhaft gespeichert');
+ await page.evaluate(()=>{
+  window.__quotePdfLines=[];
+  window.__quotePdfLogos=[];
+  const imageOriginal=CanvasRenderingContext2D.prototype.drawImage;
+  CanvasRenderingContext2D.prototype.drawImage=function(img,...args){
+   if(img instanceof HTMLImageElement&&img.currentSrc.endsWith('/logo.svg'))window.__quotePdfLogos.push({src:img.currentSrc,width:args[2],height:args[3],naturalWidth:img.naturalWidth});
+   return imageOriginal.call(this,img,...args);
+  };
+  const original=CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText=function(text,...args){
+   window.__quotePdfLines.push(String(text));
+   return original.call(this,text,...args);
+  };
+ });
  const quotePdfDownload=page.waitForEvent('download');
  await page.locator('#qPdf').click();
  const quotePdf=await quotePdfDownload;
  const quotePdfBytes=fs.readFileSync(await quotePdf.path());
  assert(quotePdfBytes.length>5000&&quotePdfBytes.subarray(0,5).toString()==='%PDF-','Angebots-PDF ist gültig');
+ const quotePdfDates=await page.evaluate(()=>window.__quotePdfLines);
+ assert(quotePdfDates.some(t=>t.includes('Angebot gültig bis: 23.11.2026')),'PDF must show 23.11.2026');
+ assert(!quotePdfDates.some(t=>t.includes('2026-11-23')),'ISO date must not be printed');
+ const logos=await page.evaluate(()=>window.__quotePdfLogos);
+ assert(logos.length>=1,'PDF must render the original M-iCare logo');
+ assert(logos.every(l=>l.width===350&&l.height===154&&l.naturalWidth>0),'PDF logo must remain proportionate in header');
+ const invoicePdfDates=await page.evaluate(async()=>{
+  window.__quotePdfLines=[];
+  const doc=structuredClone(state.quotes[0]);
+  doc.kind='invoice';doc.dueDate='2026-12-08';
+  await MiCareQuote.pdf(doc);
+  return [...window.__quotePdfLines];
+ });
+ assert(invoicePdfDates.some(t=>t.includes('Zahlbar bis: 08.12.2026')),'Invoice due date must be German-formatted');
+ console.log('E2E PDF German dates: offer 23.11.2026 and invoice 08.12.2026 passed');
  await page.locator('#goHome').click();
  await page.locator('#home [data-jump="quoteCalculator"]').click();
  assert((await page.locator('#qSavedList').innerText()).includes('KV-'),'Gespeicherter Entwurf wird angezeigt');
