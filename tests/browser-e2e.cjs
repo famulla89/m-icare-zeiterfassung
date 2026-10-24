@@ -81,6 +81,43 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(await page.locator('#customersPanel').isVisible());
  await page.locator('#goHome').click();
  console.log('E2E step 3: customer navigation passed');
+
+ // Cloud handoff: actual AES-256-GCM file, restore preview and local rollback.
+ await page.locator('[data-jump="backupSection"]').click();
+ assert(await page.locator('#cloudTransferPanel').isVisible(),'Cloud handoff must be visible in backups');
+ await page.locator('#cloudOwnerEmail').fill('qa-cloud@gmail.com');
+ await page.locator('#cloudOwnerEmail').dispatchEvent('change');
+ await page.locator('#cloudPassword').fill('QA-Cloud-Passphrase-2026');
+ await page.locator('#cloudPasswordConfirm').fill('QA-Cloud-Passphrase-2026');
+ const cloudFileDownload=page.waitForEvent('download');
+ await page.locator('#cloudExport').click();
+ const cloudDownload=await cloudFileDownload;
+ assert(/M-iCare_Cloud_.*\.json$/.test(cloudDownload.suggestedFilename()),'Encrypted backup has correct name');
+ const encryptedFile=fs.readFileSync(await cloudDownload.path(),'utf8');
+ const encryptedBackup=JSON.parse(encryptedFile);
+ assert.equal(encryptedBackup.format,'M-iCare-Cloud-Backup');
+ assert(!encryptedFile.includes('Nordstern'),'Backup must not reveal plaintext customer names');
+ await page.evaluate(async()=>{
+  state.customers.push({id:'cloud-undo-test',name:'Kunde zum Rückgängigmachen'});
+  await saveState();
+ });
+ assert.equal(await page.evaluate(()=>state.customers.length),11);
+ await page.locator('#cloudPassword').fill('QA-Cloud-Passphrase-2026');
+ await page.locator('#cloudImportFile').setInputFiles({name:'QA-Cloud-Import.json',mimeType:'application/json',buffer:Buffer.from(encryptedFile)});
+ await page.waitForFunction(()=>!document.querySelector('#cloudTransferPreview')?.classList.contains('hidden'));
+ assert((await page.locator('#cloudImportCompare').innerText()).includes('fehlen in Datei 1'),'Must show local-only records before import');
+ assert.equal(await page.evaluate(()=>state.customers.length),11,'Preview must not overwrite state');
+ await page.locator('#cloudOverwriteConsent').check();
+ await page.locator('#cloudApplyImport').click();
+ await page.waitForFunction(()=>state.customers.length===10);
+ assert.equal(await page.evaluate(()=>state.entries.length),fixture.entries.length,'Cloud restore retains work times');
+ await page.locator('#cloudRestorePrevious').click();
+ await page.waitForFunction(()=>state.customers.length===11);
+ assert((await page.locator('#cloudTransferStatus').innerText()).includes('Vorheriger Stand erfolgreich'));
+ await page.evaluate(async()=>{state.customers=state.customers.filter(c=>c.id!=='cloud-undo-test');await saveState()});
+ await page.locator('#goHome').click();
+ console.log('E2E cloud: encrypted download, safe diff preview, confirmed replace and recovery passed');
+
  // Reporting: search + customer filter, CSV and print
  await page.locator('[data-jump="reportingScreen"]').click();
  assert(await page.locator('#reportHome').isVisible());
