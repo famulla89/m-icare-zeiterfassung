@@ -44,7 +44,7 @@ assert.equal(multiple.windowItems[1].total,81.12);
 assert.equal(multiple.windowsNet,108.12);
 assert.equal(multiple.liftRental,85);
 assert.equal(multiple.rows.length,4);
-assert.equal(multiple.rows.reduce((a,r)=>a+r.total,0),multiple.net,'Every euro accounted for in PDF positions');
+assert.equal(m.euro(multiple.rows.reduce((a,r)=>a+r.total,0)),multiple.net,'Every euro accounted for in PDF positions');
 assert(multiple.hoursPerVisit>base.hoursPerVisit,'Setup minutes counted');
 assert(create({minimumSqm:20,area:200}).net>=4000,'Minimum net per sqm honored');
 assert.throws(()=>create({windowItems:[{label:'Fenster',qty:0,each:1,rate:3,sides:1,soil:1}]}),/Stückzahl/);
