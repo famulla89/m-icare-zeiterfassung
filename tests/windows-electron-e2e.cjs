@@ -42,6 +42,16 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   assert.equal(await page.locator('#allCustomersList > .objectItem').count(),10);
   console.log('NATIVE WINDOWS CUSTOMER SEARCH PASS: exact customer and object numbers, empty, reset');
 
+  const encryptionProbe=await page.evaluate(async()=>{
+    const pass='QA-Windows-Cloud-Pass-2026';
+    const doc=await MiCareCloudTransfer.encrypt(structuredClone(state),pass,'qa-windows@gmail.com');
+    const restored=await MiCareCloudTransfer.decrypt(doc,pass);
+    return {same:restored.state.customers.length===state.customers.length,owner:restored.ownerEmail,hasPlaintext:JSON.stringify(doc).includes('Nordstern')};
+  });
+  assert(encryptionProbe.same&&!encryptionProbe.hasPlaintext,'Installed Electron renderer can encrypt and decrypt without exposing customer names');
+  assert.equal(encryptionProbe.owner,'qa-windows@gmail.com');
+  console.log('NATIVE WINDOWS CLOUD CRYPTO PASS');
+
   const ak=await page.evaluate(()=>akLabel(state.appointments.find(a=>a.id==='test-appointment-1')));
   assert(/^AK \d+$/.test(ak));
 
