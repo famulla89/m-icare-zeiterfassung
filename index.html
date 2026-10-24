@@ -947,7 +947,7 @@ function orderProgress(order){
   const first=a.date>order.startDate?a.date:order.startDate,last=a.until&&a.until<order.endDate?a.until:order.endDate;
   if(first>last)continue;
   // Generate the agreed schedule before cancellations, so cancelled visits remain visible.
-  for(const occ of datesFor({...a,exceptions:{}},first,last))all.set(appointmentKey(a,occ.originalDate),occ);
+  for(const occ of datesFor({...a,exceptions:{}},first,last))all.set(appointmentKey(a,occ.originalDate),{...occ,source:a});
  }
  for(const e of state.entries||[]){
   const key=e.appointmentId+'|'+e.appointmentOccurrence;
@@ -955,7 +955,7 @@ function orderProgress(order){
  }
  const visits=[...all].map(([key,occ])=>{
   const entry=linked.get(key);
-  const change=occ.appointment.exceptions?.[occ.originalDate];
+  const change=occ.source?.exceptions?.[occ.originalDate];
   const status=entry?.orderStatus||(change?.cancelled?'cancelled':'open');
   return {key,occ,entry,status}
  });
