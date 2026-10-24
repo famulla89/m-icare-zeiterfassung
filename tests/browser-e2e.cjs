@@ -128,6 +128,8 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('Calendar debug',JSON.stringify({calendarText,calendarDebug}));
  assert(calendarText.includes('14:00–16:00'),'Free entries should appear in calendar');
  console.log('E2E step 6: free work and calendar passed');
+ // Wait for the preceding successful save to finish before testing another save.
+ await page.waitForFunction(()=>!workEntrySaveInProgress);
  // Two concurrent submits must create only one work entry.
  const doubleResult=await page.evaluate(async()=>{
   resetEdit();openFreeWorkScreen();
