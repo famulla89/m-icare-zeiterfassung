@@ -90,5 +90,28 @@ orderState.entries.push({id:'one',appointmentId:'oneoff',appointmentOccurrence:'
 assert.equal(sandbox.orderProgress(single).percent,100);
 const daily={id:'daily',date:'2027-01-01',start:'08:00',end:'09:00',repeat:'days',interval:1,until:'2027-12-31',exceptions:{}};
 assert.equal(sandbox.datesFor(daily,'2027-01-01','2027-12-31').length,365,'Daily contracts must not stop at 301 appointments');
+
+const seqStart=script.indexOf('function orderSequenceFromNumber('),seqEnd=script.indexOf('function orderLinkedAppointments(',seqStart);
+assert(seqStart>0&&seqEnd>seqStart,'Sequential numbering and closed-status functions not found');
+vm.runInNewContext(script.slice(seqStart,seqEnd),sandbox,{timeout:1500});
+sandbox.state={orders:[],nextOrderNumber:1};
+assert.equal(sandbox.orderNextNumber(),1,'First contract number should be 1');
+sandbox.state.orders=[{number:'1',status:'active'},{number:'2',status:'cancelled'}];
+sandbox.state.nextOrderNumber=3;
+assert.equal(sandbox.orderNextNumber(),3,'Cancelled order number must not be reused');
+assert.equal(sandbox.orderIsClosed(sandbox.state.orders[1]),true,'Cancelled order is closed');
+assert.equal(sandbox.orderIsClosed(sandbox.state.orders[0]),false);
+assert.equal(sandbox.orderStatusLabel(sandbox.state.orders[1]),'Abgeschlossen – abgebrochen');
+sandbox.state.orders.pop();
+assert.equal(sandbox.orderNextNumber(),3,'Deleted latest record must not reset the persistent sequence');
+sandbox.state.orders=[{number:'A-2026-0010',status:'completed'}];
+sandbox.state.nextOrderNumber=0;
+assert.equal(sandbox.orderNextNumber(),11,'Legacy sequence suffix must be migrated');
+sandbox.state.orders=[{number:'99',status:'completed'},{number:'12',status:'cancelled'}];
+sandbox.state.nextOrderNumber=41;
+assert.equal(sandbox.orderNextNumber(),100,'Next number follows highest assigned ID');
+sandbox.state.orders=[{number:'1'},{number:'2'}];sandbox.state.nextOrderNumber=100;
+assert.equal(sandbox.orderNextNumber(),100,'Persistent sequence is not reused after deletion');
+console.log('Sequential order numbering tests PASS: 1/2/3, cancelled, legacy, deletion, monotonic counter');
 console.log('Order progress tests PASS: 52-week recurring order, threshold 70%, cancellations, one-off, daily 365');
 console.log('App core smoke tests: PASS – ISO dates, 9 duration checks, night shifts, pauses, recurring/overridden appointments');
