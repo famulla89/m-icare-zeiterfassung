@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - 'index.html'
+      - 'cloud-transfer.js'
+      - 'quote-calculator.js'
+      - 'quote-ui.js'
+      - 'report-print.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'logo.svg'
@@ -19,7 +23,7 @@ jobs:
       - name: Pack browser-only files
         run: |
           mkdir -p windows-browser-test
-          cp index.html manifest.webmanifest icon.svg logo.svg sw.js windows-browser-test/
+          cp index.html cloud-transfer.js quote-calculator.js quote-ui.js report-print.js manifest.webmanifest icon.svg logo.svg sw.js windows-browser-test/
           cat > windows-browser-test/START-HIER.txt <<'EOF'
           M-iCare Windows-Browsertest - keine EXE, keine Installation
 
