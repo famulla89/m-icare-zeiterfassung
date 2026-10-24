@@ -27,13 +27,25 @@ jobs:
       - name: Install dependencies
         working-directory: windows-app
         run: npm install --no-audit --no-fund
+      - name: Audit npm dependencies (including build tools)
+        working-directory: windows-app
+        run: npm audit --audit-level=high
       - name: Build offline Windows installer
         working-directory: windows-app
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run dist
+      - name: Write installer SHA-256 checksum
+        shell: pwsh
+        run: |
+          Get-ChildItem windows-app/dist/M-iCare-Setup-*.exe | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Add-Content windows-app/dist/SHA256SUMS.txt
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: M-iCare-Windows-Setup
-          path: windows-app/dist/M-iCare-Setup-*.exe
+          path: |
+            windows-app/dist/M-iCare-Setup-*.exe
+            windows-app/dist/SHA256SUMS.txt
           retention-days: 30
