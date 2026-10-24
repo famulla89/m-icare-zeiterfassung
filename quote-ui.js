@@ -2,7 +2,7 @@
 /* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
 (function(){
  const byId=id=>document.getElementById(id);
- const tracked=['Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
+ const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
  const typeAreas={standard:{label:'Standardfenster',sqm:1.5},large:{label:'Große Glasflächen',sqm:4},sliding:{label:'Schiebeelemente',sqm:2.5},mullion:{label:'Sprossenfenster',sqm:1.2},winter:{label:'Wintergarten',sqm:1},roof:{label:'Glasüberdachung',sqm:1}};
  let windowItems=[];
  const de=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
@@ -34,7 +34,7 @@
  function selectAppointment(){
   const a=state.appointments.find(x=>x.id===value('Appointment'));if(!a)return calculate();
   if(a.objectId&&a.objectId!==value('Object')){byId('qObject').value=a.objectId;updateAppointments();byId('qAppointment').value=a.id}
-  if(a.service)byId('qService').value=a.service;
+  if(a.service){byId('qService').value=a.service;const service=a.service.toLocaleLowerCase('de-DE');const scope=/glas|fenster|wintergarten/.test(service)?'windows':/grundreinigung|unterhaltsreinigung|büroreinigung|gebäudereinigung|treppenhaus|praxis|bauendreinigung/.test(service)?'rooms':'other';byId('qScope').value=scope;updateScope()}
   if(a.date)byId('qServiceDate').value=formatDate(a.date);
   // Dauerauftrag: Anzahl der abzurechnenden Einsätze bleibt frei wählbar.
   calculate();
@@ -90,11 +90,28 @@
   windowItems.push({id:crypto.randomUUID(),label:config.label,qty:1,each:config.sqm,rate:3,sides:1,soil:1,frame:false,ladder:false,lift:false});
   renderWindowItems();calculate();
  }
+ function updateScope(){
+  const scope=value('Scope'),rooms=scope==='rooms'||scope==='combined',windows=scope==='windows'||scope==='combined';
+  for(const node of document.querySelectorAll('#quoteCalculator .qRoomsOnly'))node.classList.toggle('hidden',!rooms);
+  byId('qWindowSection').classList.toggle('hidden',!windows);
+  const descriptions={
+   rooms:'Es wird NUR die Raum-/Bodenreinigung kalkuliert. Keine Fensterpositionen auf dem Angebot. Fläche und m² pro Stunde sind nur relevant, wenn du bei Arbeitsstunden 0 einträgst.',
+   windows:'Es werden NUR die Fenster-/Glaspositionen und allgemeine Kosten (z. B. Fahrt, Material und geschätzte Arbeitszeit) kalkuliert. Die 200 m² Bürofläche zählen hier NICHT. Bitte Fenster unten hinzufügen.',
+   combined:'Raumreinigung UND Fensterreinigung. Die Raumfläche und die getrennt erfassten Fenster werden beide berechnet. „Stunden pro Einsatz“ gelten für den gesamten Mitarbeitereinsatz.',
+   other:'Nur die frei beschriebene Dienstleistung – z. B. Sonderreinigung oder Hausmeisterarbeit. Du gibst eine geschätzte Arbeitszeit ein; Bürofläche und Fenster werden NICHT automatisch berechnet.'
+  };
+  byId('qScopeHint').textContent=descriptions[scope]||descriptions.rooms;
+  const hourLabel=byId('qHours').labels?.[0];
+  if(hourLabel)hourLabel.textContent=rooms?'Arbeitsstunden pro Einsatz (0 = automatisch aus Raumfläche; 2 = 2 Stunden)':'Arbeitsstunden pro Einsatz (2 = 2 Std., 0,5 = 30 Min.; 50 = 50 Std.!)';
+  if(scope==='windows'&&value('Service')==='Unterhaltsreinigung')byId('qService').value='Glas- & Fensterreinigung';
+  if(scope==='other'&&value('Service')==='Unterhaltsreinigung')byId('qService').value='Sonstige Reinigungsleistung';
+  calculate();
+ }
  function readInput(){
   const wc=byId('qWc').checked,kitchen=byId('qKitchen').checked,heavy=byId('qHeavy').checked;
   const factor=1+(wc?0.12:0)+(kitchen?0.08:0)+(heavy?0.15:0);
   return {
-   area:num('Area'),visits:num('Visits'),hours:num('Hours'),sqmPerHour:num('SqmHour')/factor,
+   scope:value('Scope'),serviceName:value('Service'),area:num('Area'),visits:num('Visits'),hours:num('Hours'),sqmPerHour:num('SqmHour')/factor,
    hourly:num('Hourly'),nonwage:num('Nonwage'),overhead:num('Overhead'),mode:document.querySelector('input[name="qMode"]:checked')?.value||'business',
    productivity:num('Productivity'),material:num('Material'),km:num('Km'),perKm:num('KmPrice'),
    margin:num('Margin'),minNet:num('MinNet'),manualNet:num('ManualNet'),
@@ -109,8 +126,9 @@
   const info=document.createElement('p');info.className='hint';
   info.textContent='Netto '+de(out.net)+' · Umsatzsteuer '+de(out.tax)+' ('+out.vat+' %) · '+out.visits+' Einsätze à ca. '+out.hoursPerVisit+' Std.';
   node.append(info);
+  const scope=document.createElement('p');scope.className='hint';scope.textContent={rooms:'Nur Raum-/Bodenreinigung',windows:'Nur Fenster-/Glasreinigung (ohne Büroputzen)',combined:'Raum-/Bodenreinigung UND Fenster',other:'Sonstige Leistung nach Stunden'}[out.scope]+' · '+(out.windowItems.length?out.windowItems.length+' Fensterpositionen':'keine Fensterpositionen');node.append(scope);
   const info2=document.createElement('p');info2.className='hint';
-  info2.textContent='Geschätzte interne Kosten '+de(out.cleaningCost)+' · Fensterleistungen '+de(out.windowsNet)+' · Hebebühnen-Aufwand '+de(out.liftRental)+' · Kalkulierter Überschuss ca. '+de(out.profit);
+  info2.textContent='Geschätzte interne Kosten '+de(out.cleaningCost)+' · Fenster-Verkaufspreis '+de(out.windowsNet)+' · Hebebühnen-Aufwand '+de(out.liftRental)+' · Kalkulierter Überschuss ca. '+de(out.profit);
   node.append(info2);
   const info3=document.createElement('p');info3.className='hint';
   info3.textContent='Preisvorschlag '+de(out.recommendNet)+' netto'+(num('ManualNet')>0?' · Dein abweichender Festpreis wurde übernommen.':'');
@@ -121,7 +139,7 @@
    const out=MiCareQuote.compute(readInput());
    byId('qCalculationMessage').textContent='';
    byId('qWindowArea').textContent='Fensterfläche gesamt: '+out.windowSqm.toLocaleString('de-DE')+' m² · '+out.windowItems.length+' Position(en) · '+de(out.windowsNet)+' netto';
-   renderSummary(out);return out;
+   renderSummary(out);if(out.estimatedLaborWarning)byId('qCalculationMessage').textContent='⚠ '+out.estimatedLaborWarning;return out;
   }catch(e){
    byId('qCalculationMessage').textContent='Bitte Eingaben prüfen: '+e.message;
    byId('qSummary').textContent='Keine gültige Kalkulation vorhanden.';
@@ -192,6 +210,8 @@
    const node=byId('q'+k);if(!node)continue;if(node.type==='checkbox')node.checked=!!v;
    else if(!['Customer','Object','Appointment'].includes(k))node.value=v;
   }
+  if(!values.Scope){byId('qScope').value=(values.WindowItems?.length?'combined':'rooms')}
+  updateScope();
   byId('qCustomer').value=doc.customerId;updateObjects();
   byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
   renderWindowItems();calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
@@ -214,7 +234,8 @@
   activeId=null;windowItems=[];renderWindowItems();
   const radio=document.querySelector('input[name="qMode"][value="business"]');if(radio)radio.checked=true;
   for(const k of ['Customer','Object','Appointment'])byId('q'+k).value='';
-  byId('qService').value='Unterhaltsreinigung';
+  byId('qScope').value='rooms';
+  byId('qService').value='Unterhaltsreinigung';updateScope();
   byId('qKind').value='quote';byId('qManualNet').value='0';
   byId('qNotes').value='';byId('qServiceDate').value='';
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
@@ -232,6 +253,7 @@
    el.addEventListener('input',()=>calculate());
    el.addEventListener('change',()=>calculate());
   }
+  byId('qScope').addEventListener('change',updateScope);
   byId('qCustomer').addEventListener('change',()=>{byId('qObject').value='';updateObjects();calculate()});
   byId('qObject').addEventListener('change',()=>{updateAppointments();calculate()});
   byId('qAppointment').addEventListener('change',selectAppointment);
@@ -250,7 +272,7 @@
   byId('qPdf').onclick=makePdf;
   byId('qNew').onclick=clear;
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
-  calculate();
+  updateScope();
  }
  init();
  window.MiCareQuoteUI={refresh,calculate,collect};

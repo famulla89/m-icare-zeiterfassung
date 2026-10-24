@@ -7,6 +7,7 @@ on:
       - 'index.html'
       - 'cloud-transfer.js'
       - 'quote-calculator.js'
+      - 'tests/quote-calculator-smoke.cjs'
       - 'quote-ui.js'
       - 'sw.js'
       - 'manifest.webmanifest'

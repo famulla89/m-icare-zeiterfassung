@@ -128,6 +128,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  const appointmentCount=await page.locator('#qAppointment option').count();
  assert(appointmentCount>=1,'AK-Auswahl vorhanden');
  if(appointmentCount>1)await page.locator('#qAppointment').selectOption({index:1});
+ await page.locator('#qScope').selectOption('combined');
  await page.locator('#qAreas [data-area="200"]').click();
  await page.locator('#qWindowPicker [data-window="standard"]').click();
  await page.locator('#qWindowPicker [data-window="large"]').click();
@@ -160,6 +161,39 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert((await page.locator('#qSavedList').innerText()).includes('KV-'),'Gespeicherter Entwurf wird angezeigt');
  await page.locator('#qSavedList button').first().click();
  assert.equal(await page.locator('.quoteWindowRow').count(),2,'Wiederöffnen stellt Fenstergrößen und Bedingungen her');
+ // Dedicated windows-only commission: 200 m² office must NOT be billed when only glass is ordered.
+ await page.locator('#qNew').click();
+ await page.locator('#qScope').selectOption('windows');
+ assert.equal(await page.locator('#qWindowSection').isVisible(),true);
+ assert.equal(await page.locator('#qArea').isVisible(),false,'Do not request/charge room area for windows-only');
+ await page.locator('#qCustomer').selectOption('test-customer-1');
+ await page.locator('#qWindowPicker [data-window="standard"]').click();
+ await page.locator('.quoteWindowRow input[type="number"]').first().fill('10');
+ await page.locator('#qHours').fill('0');
+ await page.evaluate(()=>{document.getElementById('qSqmHour').value='0'}); // hidden for windows-only; ignored by calculation
+ await page.locator('#qMaterial').fill('0');
+ await page.locator('#qKm').fill('0');
+ await page.locator('#qSetupMinutes').fill('0');
+ await page.locator('#qVisits').fill('1');
+ await page.locator('#qFixedProfit').fill('0');
+ await page.locator('#qMargin').fill('0');
+ await page.locator('#qManualNet').fill('0');
+ const windowOnly=await page.evaluate(()=>MiCareQuoteUI.calculate());
+ assert(windowOnly&&windowOnly.scope==='windows','Window-only quotation should be valid');
+ assert.equal(windowOnly.windowSqm,15);
+ assert.equal(windowOnly.net,45,'10 windows 1.5sqm at 3 EUR, without office floor cleaning');
+ assert(windowOnly.rows.every(r=>!r.title.includes('Raum- und Bodenreinigung')),'No office rows in window-only quotation');
+ assert((await page.locator('#qCalculationMessage').innerText()).includes('Fenster-Arbeitszeit'),'Warn on 0 estimated hours');
+ await page.locator('#qScope').selectOption('other');
+ assert.equal(await page.locator('#qWindowSection').isVisible(),false);
+ await page.locator('#qHours').fill('3');
+ await page.locator('#qService').fill('Sonderreinigung der Heizungsanlage');
+ const other=await page.evaluate(()=>MiCareQuoteUI.calculate());
+ assert(other&&other.scope==='other'&&other.rows[0].title.includes('Sonderreinigung'));
+ await page.locator('#qScope').selectOption('combined');
+ assert(await page.locator('#qArea').isVisible(),'Combined work includes room area');
+ assert(await page.locator('#qWindowSection').isVisible(),'Combined work includes window cleaning');
+
  await page.locator('#goHome').click();
  console.log('E2E quote: customer, office, AK, 2 window sizes, soil, profit presets, custom price, storage and PDF passed');
 
