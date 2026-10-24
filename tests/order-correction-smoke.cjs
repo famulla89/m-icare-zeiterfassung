@@ -6,7 +6,7 @@ const {webcrypto}=require('node:crypto');
 const html=fs.readFileSync('index.html','utf8');
 const js=html.slice(html.lastIndexOf('<script>')+8,html.lastIndexOf('</script>'));
 new vm.Script(js);
-for(const id of ['correctionPanel','correctionReason','correctionNote','correctionHistoryList']){
+for(const id of ['correctionPanel','correctionReason','correctionEditor','correctionNote','correctionHistoryList']){
  assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,'Expected exactly one '+id);
 }
 const helpers=js.slice(js.indexOf('const ORDER_CORRECTION_FIELDS='),js.indexOf('function renderOrderCorrection(){'));
@@ -23,7 +23,7 @@ const state={employees:['Test Mitarbeiter'],entries:[structuredClone(initial)],a
 let input={...initial,orderStatus:'progress'};
 const fields={
  month:{value:'2026-10'},deviationReason:{value:''},deviationNote:{value:''},
- correctionReason:{value:''},correctionNote:{value:''},
+ correctionReason:{value:''},correctionEditor:{value:''},correctionNote:{value:''},
  saveBtn:{textContent:''},cancelEdit:{classList:{add(){},remove(){}}},
  historyMonth:{value:''}
 };
@@ -49,20 +49,29 @@ const submit=async()=>await vm.runInContext('saveEntry({preventDefault(){}})',ct
  assert.equal(JSON.stringify(state),before,'Rejected changes must not modify state');
  fields.correctionReason.value='Aus Versehen abgeschlossen';
  await submit();
+ assert.equal(calls.saved,0,'Unknown correction actor must prevent saving');
+ assert.match(errors.at(-1),/wer die Arbeitskarte korrigiert/);
+ fields.correctionEditor.value='Test Mitarbeiter';
+ await submit();
  assert.equal(calls.saved,1);
  assert.equal(state.entries.length,1,'Must modify original entry, not create a duplicate');
  assert.equal(state.entries[0].orderStatus,'progress');
  assert.equal(state.entries[0].wasCompleted,true);
  assert.equal(state.entries[0].corrections.length,1);
  assert.equal(state.entries[0].corrections[0].reason,'Aus Versehen abgeschlossen');
+ assert.equal(state.entries[0].corrections[0].editedBy,'Test Mitarbeiter');
+ assert.equal(state.changeHistory[0].editedBy,'Test Mitarbeiter');
  assert(state.entries[0].corrections[0].changes.some(c=>c.field==='orderStatus'&&c.before==='done'&&c.after==='progress'));
  assert.equal(state.changeHistory[0].type,'Auftragskorrektur');
  ctx.editId='original-entry';input={...input,start:'08:00'};
  fields.correctionReason.value='Arbeitszeit falsch erfasst';
+ fields.correctionEditor.value='Test Mitarbeiter';
  await submit();
  assert.equal(state.entries[0].corrections.length,2);
+ assert.equal(state.entries[0].corrections[1].editedBy,'Test Mitarbeiter');
  assert(state.entries[0].corrections[1].changes.some(c=>c.field==='start'));
  ctx.editId='original-entry';
+ fields.correctionEditor.value='Test Mitarbeiter';
  fields.correctionReason.value='Sonstiger Korrekturgrund';
  fields.correctionNote.value='';
  input={...input,orderRemarks:'Ergänzende Änderung'};

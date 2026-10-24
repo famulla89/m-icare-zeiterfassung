@@ -237,13 +237,17 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(await page.evaluate(()=>state.entries.find(e=>e.id==='test-entry-1').orderStatus),'done');
  await page.locator('#correctionReason').selectOption('Aus Versehen abgeschlossen');
  await page.locator('#saveBtn').click();
+ assert(dialogs.some(x=>x.includes('wer die Arbeitskarte korrigiert')),'Correction actor must be required');
+ await page.locator('#correctionEditor').selectOption('Anna Test');
+ await page.locator('#saveBtn').click();
  await page.waitForFunction(()=>state.entries.find(e=>e.id==='test-entry-1')?.orderStatus==='progress');
  const correction=await page.evaluate(()=>{
  const e=state.entries.find(e=>e.id==='test-entry-1');
- return {records:state.entries.filter(x=>x.appointmentId===e.appointmentId&&x.appointmentOccurrence===e.appointmentOccurrence).length,reasons:e.corrections?.map(c=>c.reason)||[],audit:state.changeHistory?.filter(x=>x.type==='Auftragskorrektur').length}
+ return {records:state.entries.filter(x=>x.appointmentId===e.appointmentId&&x.appointmentOccurrence===e.appointmentOccurrence).length,reasons:e.corrections?.map(c=>c.reason)||[],editedBy:e.corrections?.at(-1)?.editedBy,audit:state.changeHistory?.filter(x=>x.type==='Auftragskorrektur').length}
  });
  assert.equal(correction.records,1,'Must not duplicate planned appointment entry');
  assert(correction.reasons.includes('Aus Versehen abgeschlossen'));
+ assert.equal(correction.editedBy,'Anna Test','Actual editor stored separately from executing employee');
  assert(correction.audit>=1,'Corrections must be auditable');
  console.log('E2E step 5: planned order correction passed');
  // A corrected workday must keep the original planned appointment association.
@@ -251,6 +255,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.locator('#date').fill('06.10.2026');
  assert.equal(await page.locator('#linkedAppointment').inputValue(),'test-appointment-1|2026-10-05','The plan link must remain selected after changing actual date');
  await page.locator('#deviationReason').selectOption('Sonstiger Grund');
+ await page.locator('#correctionEditor').selectOption('Ben Test');
  await page.locator('#correctionReason').selectOption('Arbeitszeit falsch erfasst');
  await page.locator('#saveBtn').click();
  await page.waitForFunction(()=>state.entries.find(e=>e.id==='test-entry-1')?.date==='2026-10-06');
@@ -281,7 +286,10 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(await page.locator('#reportAkQuickSearch').inputValue(),testAk,'Quick search mirrors advanced AK filter');
  assert(await page.locator('#reportOnlyCorrectedQuick').isChecked(),'Quick correction checkbox mirrors selected filter');
  const correctedReport=await page.locator('#reportPanels').innerText();
- assert(correctedReport.includes(testAk)&&correctedReport.includes('Nachträglich korrigierte Arbeitskarten'),'Corrected AK should appear in filtered reporting');
+ assert(correctedReport.includes(testAk)&&correctedReport.includes('Wer hat welche AK korrigiert?')&&correctedReport.includes('Anna Test')&&correctedReport.includes('Ben Test'),'All corrected AK and individual editors should appear');
+ await page.locator('#reportCorrectionEditor').selectOption('Ben Test');
+ assert((await page.locator('#reportPanels').innerText()).includes('Ben Test'),'Editor selection filters the correction report');
+ await page.locator('#reportCorrectionEditor').selectOption('');
  const correctedAkLinkCount=await page.evaluate(()=>state.entries.filter(e=>e.appointmentId==='test-appointment-1'&&e.appointmentOccurrence==='2026-10-05').length);
  assert.equal(correctedAkLinkCount,1,'Reporting/search must not duplicate linked entry');
  await page.locator('#reportPanels').getByRole('button',{name:'Ansehen / korrigieren'}).first().click();
@@ -290,6 +298,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
 
  // Closed AK -> progress -> done again: each genuine correction requires a reason and is audit logged.
  await page.locator('#orderStatus').selectOption('done');
+ await page.locator('#correctionEditor').selectOption('Cem Test');
  await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
  await page.locator('#saveBtn').click();
  await page.waitForFunction(()=>state.entries.find(e=>e.id==='test-entry-1')?.orderStatus==='done');
@@ -301,9 +310,12 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(reopened.count,1,'Reopening an AK must not create duplicate entries');
  assert(reopened.wasCompleted&&reopened.corrections>=3,'Reclosing must preserve closure history');
  assert.equal(reopened.last.reason,'Auftragsstatus falsch gewählt');
+ assert.equal(reopened.last.editedBy,'Cem Test');
+ assert.equal(await page.evaluate(()=>correctionActor({employee:'Inhaber'})),'Nicht erfasst','Legacy correction must not misattribute the executing employee');
  assert(reopened.last.changes.some(x=>x.field==='orderStatus'&&x.before==='progress'&&x.after==='done'));
  // Same value + correction reason is not a change and must not grow the audit trail.
  await page.evaluate(()=>editEntry('test-entry-1'));
+ await page.locator('#correctionEditor').selectOption('Cem Test');
  await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
  await page.locator('#saveBtn').click();
  assert(dialogs.some(x=>x.includes('noch keine Änderung')),'No-op correction must not be saved');
