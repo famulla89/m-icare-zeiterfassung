@@ -618,6 +618,11 @@ async function snapshotNow(){if(!folder)return alert('Bitte zuerst einen Hauptor
 async function emailSnapshot(){ if(window.MiCareNative?.shareJson){window.MiCareNative.shareJson('M-iCare-Vollsicherung.json',JSON.stringify(state,null,2));return} $('shareFormat').value='json';await emailBackup() }
 async function writeHandle(dir,name,data){const h=await dir.getFileHandle(name,{create:true}),w=await h.createWritable();await w.write(data);await w.close()}
 async function chooseFolder(){if(!('showDirectoryPicker' in window)){notify('Dieser Browser unterstützt keinen automatischen Ordnerzugriff. Bitte Exporte herunterladen.');return}try{const chosen=await window.showDirectoryPicker({mode:'readwrite'});if((await chosen.requestPermission({mode:'readwrite'}))!=='granted')throw Error('Keine Schreibberechtigung');folder=chosen;await write('folder',folder);notify('Ordner verbunden');await backupAutomatic()}catch(e){notify('Ordner nicht verbunden: '+e.message)}}
+function workTimeOverlaps(a,b){
+ const aStart=String(a.date||'')+'T'+String(a.start||''),aEnd=String(a.endDate||a.date||'')+'T'+String(a.end||'');
+ const bStart=String(b.date||'')+'T'+String(b.start||''),bEnd=String(b.endDate||b.date||'')+'T'+String(b.end||'');
+ return aStart<aEnd&&bStart<bEnd&&aStart<bEnd&&bStart<aEnd;
+}
 let workEntrySaveInProgress=false;
 async function saveEntry(ev){
  ev.preventDefault();
@@ -656,7 +661,7 @@ async function saveEntry(ev){
   if(!v.date.startsWith($('month').value))throw Error('Arbeitstag liegt nicht im ausgewählten Monat');
   if(v.workDone.length>1200||v.orderRemarks.length>1200||v.notes.length>300||v.object.length>160)throw Error('Text zu lang');
   if(v.minutes>0){
-   const conflicts=state.entries.filter(e=>e.id!==editId&&e.employee===v.employee&&e.date===v.date&&e.endDate===v.endDate&&e.start<v.end&&e.end>v.start&&Number(e.minutes)>0);
+   const conflicts=state.entries.filter(e=>e.id!==editId&&e.employee===v.employee&&Number(e.minutes)>0&&workTimeOverlaps(e,v));
    if(conflicts.length&&!confirm('Achtung: '+conflicts.length+' bereits erfasste Arbeitszeit(en) dieses Mitarbeiters überschneiden sich am '+v.date+'. Trotzdem speichern?'))return;
   }
   const now=new Date().toISOString();
