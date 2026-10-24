@@ -746,34 +746,63 @@ function reportBuild(){
  return {entries,occ,completed,total,totalPlan,byCustomer,byObject,byEmployee,byService,byDate,exceptions,free,cancelled,noCustomer,noObject,badDates,overlaps,reasons,statusMap,from,to};
 }
 function customerNameForReport(id){return state.customers.find(c=>c.id===id)?.name||'Ohne Kundenzuordnung'}
+
+function reportOpenHome(){
+ $('reportHome').classList.remove('hidden');$('reportDetail').classList.add('hidden');renderReporting();window.scrollTo(0,0)
+}
+const reportTitles={overview:'Management-Dashboard',employees:'Mitarbeiter & Arbeitsstunden',customers:'Kunden & Geschäftsstellen',orders:'Aufträge & Soll-Ist',services:'Reinigungsleistungen',quality:'Prüfberichte & Konflikte'};
+function reportOpenTab(tab){
+ if(tab==='history'){showScreen('history');return}
+ if(!reportTitles[tab])return;
+ activeReportTab=tab;$('reportHome').classList.add('hidden');$('reportDetail').classList.remove('hidden');
+ $('reportTitle').textContent=reportTitles[tab];
+ $('reportSubtitle').textContent='Kennzahlen und Details zum ausgewählten Bericht – mit kombinierbaren Filtern.';
+ renderReporting();window.scrollTo(0,0)
+}
+function reportSetRange(mode){
+ const today=isoDate(),month=today.slice(0,7);
+ if(mode==='month'){$('reportFrom').value=month+'-01';$('reportTo').value=today}
+ if(mode==='previous'){const d=new Date(today+'T12:00:00');d.setDate(1);d.setMonth(d.getMonth()-1);const ym=isoDate(d).slice(0,7);$('reportFrom').value=ym+'-01';$('reportTo').value=ym+'-'+String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}
+ if(mode==='year'){$('reportFrom').value=today.slice(0,4)+'-01-01';$('reportTo').value=today}
+ if(mode==='all'){const list=[...state.entries.map(e=>e.date),...state.appointments.map(a=>a.date)].filter(x=>typeof x==='string'&&x.length===10).sort();$('reportFrom').value=list[0]||month+'-01';$('reportTo').value=list.length&&list[list.length-1]>today?list[list.length-1]:today}
+ renderReporting()
+}
+function reportBars(parent,title,items){
+ const panel=el('div','');panel.className='objectPanel';panel.append(el('h3',title));
+ const chart=el('div','');chart.className='reportBars';const max=Math.max(1,...items.slice(0,10).map(x=>x.minutes));
+ for(const x of items.slice(0,10)){const line=el('div',''),head=el('div','');head.className='reportBarLabel';head.append(el('span',x.name),el('span',reportMinutes(x.minutes)));const track=el('div','');track.className='reportBarTrack';const fill=el('div','');fill.className='reportBarFill';fill.style.width=Math.max(0,Math.min(100,100*x.minutes/max))+'%';track.append(fill);line.append(head,track);chart.append(line)}
+ if(!items.length)chart.append(el('p','Keine Daten im gewählten Zeitraum.'));
+ panel.append(chart);parent.append(panel)
+}
+
 function renderReporting(){
- if(!$('reportFrom').value){const now=isoDate();$('reportFrom').value=now.slice(0,7)+'-01';$('reportTo').value=now}
- reportFillSelect('reportCustomer',state.customers.map(c=>({value:c.id,label:(c.publicNumber||'')+' '+c.name})), 'Alle Kunden');
+ if(!$('reportFrom').value){const now=isoDate();$('reportFrom').value=now.slice(0,7)+'-01';$('reportTo').value=now}if(!$('reportTo').value)$('reportTo').value=isoDate();
+ const chosen=$('reportCustomer').value,query=$('reportCustomerSearch').value.trim().toLocaleLowerCase('de');reportFillSelect('reportCustomer',state.customers.filter(c=>!query||String(c.name+' '+(c.publicNumber||'')+' '+(c.city||'')).toLocaleLowerCase('de').includes(query)||String(c.id)===chosen).sort((a,b)=>a.name.localeCompare(b.name,'de')).map(c=>({value:c.id,label:(c.publicNumber||'')+' · '+c.name})), 'Alle Kunden');
  reportFillSelect('reportEmployee',state.employees.map(x=>({value:x,label:x})),'Alle Mitarbeiter');
  reportFillSelect('reportObject',state.objects.filter(o=>!$('reportCustomer').value||o.customerId===$('reportCustomer').value).map(o=>({value:o.id,label:o.name})),'Alle Geschäftsstellen');
  reportFillSelect('reportService',SERVICES.map(x=>({value:x,label:x})),'Alle Leistungen');
- const summary=$('reportSummary'),panels=$('reportPanels');summary.replaceChildren();panels.replaceChildren();$('reportActiveFilters').textContent='Aktueller Bericht: '+({overview:'Übersicht',employees:'Mitarbeiterleistung',customers:'Kunden & Objekte',orders:'Aufträge & Soll-Ist',quality:'Qualität & Konflikte'}[activeReportTab])+' · '+($('reportCustomer').selectedOptions[0]?.textContent||'Alle Kunden')+' · '+($('reportEmployee').selectedOptions[0]?.textContent||'Alle Mitarbeiter');document.querySelectorAll('[data-report-tab]').forEach(b=>b.classList.toggle('secondary',b.dataset.reportTab!==activeReportTab));
+ const summary=$('reportSummary'),panels=$('reportPanels');summary.replaceChildren();panels.replaceChildren();const home=$('reportHomeStats');home.replaceChildren();$('reportActiveFilters').textContent='Aktueller Bericht: '+({overview:'Übersicht',employees:'Mitarbeiterleistung',customers:'Kunden & Objekte',orders:'Aufträge & Soll-Ist',quality:'Qualität & Konflikte'}[activeReportTab])+' · '+($('reportCustomer').selectedOptions[0]?.textContent||'Alle Kunden')+' · '+($('reportEmployee').selectedOptions[0]?.textContent||'Alle Mitarbeiter');
  if($('reportFrom').value>$('reportTo').value){summary.append(el('p','Bitte einen gültigen Zeitraum auswählen.'));return}
- const d=reportBuild();const cards=[['Erfasste Stunden',reportMinutes(d.total)],['Arbeitszeiteinträge',d.entries.length],['Freie Erfassungen',d.free.length],['Geplante Termine',d.occ.length],['Dokumentierte Termine',d.completed.length],['Offene geplante Termine',d.occ.length-d.completed.length],['Geplante Zeit',reportMinutes(d.totalPlan)],['Zeitabweichungen',d.exceptions.length],['Auffällige Überschneidungen',d.overlaps.length],['Abgesagt / nicht angetroffen',d.cancelled.length]];
- const shownCards=activeReportTab==='overview'?cards.slice(0,6):activeReportTab==='employees'?[cards[0],cards[1],cards[2]]:activeReportTab==='customers'?[cards[0],cards[1]]:activeReportTab==='orders'?[cards[3],cards[4],cards[5],cards[6]]:[cards[7],cards[8],cards[9]];const g=el('div','');g.className='grid';for(const [name,value] of shownCards){const card=el('div','');card.className='status';card.append(el('strong',value),el('div',name));g.append(card)}summary.append(el('h3','Kennzahlen · '+formatDate(d.from)+' bis '+formatDate(d.to)),g);
+ const d=reportBuild();for(const [name,value] of [['Geleistete Stunden',reportMinutes(d.total)],['Erfasste Arbeitszeiten',d.entries.length],['Geplante Termine',d.occ.length],['Dokumentiert',d.completed.length]]){const c=el('div','');c.className='reportMetric';c.append(el('strong',value),el('span',name));home.append(c)}const cards=[['Erfasste Stunden',reportMinutes(d.total)],['Arbeitszeiteinträge',d.entries.length],['Freie Erfassungen',d.free.length],['Geplante Termine',d.occ.length],['Dokumentierte Termine',d.completed.length],['Offene geplante Termine',d.occ.length-d.completed.length],['Geplante Zeit',reportMinutes(d.totalPlan)],['Zeitabweichungen',d.exceptions.length],['Auffällige Überschneidungen',d.overlaps.length],['Abgesagt / nicht angetroffen',d.cancelled.length]];
+ const shownCards=activeReportTab==='overview'?cards.slice(0,4):activeReportTab==='employees'?[cards[0],cards[1]]:activeReportTab==='customers'?[cards[0],cards[1]]:activeReportTab==='orders'?[cards[3],cards[4],cards[5]]:activeReportTab==='services'?[cards[0],cards[1]]:[cards[7],cards[8]];const g=el('div','');g.className='grid';for(const [name,value] of shownCards){const card=el('div','');card.className='status';card.append(el('strong',value),el('div',name));g.append(card)}summary.append(el('h3','Kennzahlen · '+formatDate(d.from)+' bis '+formatDate(d.to)),g);
  const series=[['Kunden',d.byCustomer],['Geschäftsstellen',d.byObject],['Mitarbeiter',d.byEmployee],['Reinigungsleistungen',d.byService],['Monate',d.byDate]];
- for(const [name,items] of series){const visible=(activeReportTab==='overview'&&name==='Monate')||(activeReportTab==='employees'&&name==='Mitarbeiter')||(activeReportTab==='customers'&&['Kunden','Geschäftsstellen'].includes(name));if(visible)reportTable(panels,'Auswertung nach '+name,['Name','Einsätze','Geleistete Stunden'],items.map(x=>[x.name,x.count,reportMinutes(x.minutes)]));}
- if(activeReportTab==='employees'){
+ for(const [name,items] of series){const visible=(activeReportTab==='overview'&&name==='Monate')||(activeReportTab==='customers'&&name==='Geschäftsstellen')||(activeReportTab==='services'&&name==='Reinigungsleistungen');if(visible)reportTable(panels,'Auswertung nach '+name,['Name','Einsätze','Geleistete Stunden'],items.map(x=>[x.name,x.count,reportMinutes(x.minutes)]));}
+ if(activeReportTab==='overview'){reportBars(panels,'Top-Kunden nach Zeitaufwand',d.byCustomer.slice(0,8))}if(activeReportTab==='employees'){reportBars(panels,'Geleistete Stunden nach Mitarbeiter',d.byEmployee);
   const employees=d.byEmployee.map(g=>{const item=d.entries.filter(e=>e.employee===g.name),days=new Set(item.map(e=>e.date)).size,breaks=item.reduce((n,e)=>n+(Number(e.breakMinutes)||0),0),cus=new Set(item.map(e=>e.customerId).filter(Boolean)).size;return [g.name,item.length,days,cus,reportMinutes(g.minutes),reportMinutes(breaks),days?reportMinutes(g.minutes/days):'0,00 Std.']});
   reportTable(panels,'Mitarbeiterleistung und Auslastung',['Mitarbeiter','Einsätze','Arbeitstage','Kunden','Netto-Zeit','Pausen','Ø pro Arbeitstag'],employees);
   panels.append(el('p','Mitarbeiterleistung bedeutet hier dokumentierte Arbeit und Einsatztage – keine subjektive Bewertung der Arbeitsqualität.')); 
  }
- if(activeReportTab==='customers'){
+ if(activeReportTab==='customers'){reportBars(panels,'Geleistete Stunden nach Kunde',d.byCustomer);
   const rows=d.byCustomer.map(g=>{const customer=state.customers.find(c=>c.name===g.name),ob=customer?state.objects.filter(o=>o.customerId===customer.id).length:0;return [g.name,ob,g.count,reportMinutes(g.minutes)]});
   reportTable(panels,'Kundenstamm und Aufwand',['Kunde','Geschäftsstellen','Einsätze','Stunden'],rows);
  }
- if(activeReportTab==='orders'||activeReportTab==='overview'){
+ if(activeReportTab==='orders'){
   const compare=d.occ.map(o=>{const e=d.entries.find(e=>e.appointmentId===o.appointment.id&&e.appointmentOccurrence===o.originalDate);const part=x=>{const a=x.split(':').map(Number);return a[0]*60+a[1]};const planned=Math.max(0,part(o.end)-part(o.start));return [o.date,customerNameForReport(o.appointment.customerId),o.appointment.employee,o.start+'–'+o.end,reportMinutes(planned),e?reportMinutes(e.minutes):'Offen',e?reportMinutes(e.minutes-planned):'—',e?.deviationReason||'—']});
   reportTable(panels,'Geplante Aufträge und Soll-Ist-Vergleich',['Datum','Kunde','Mitarbeiter','Planzeit','Soll','Ist netto','Differenz','Abweichungsgrund'],compare.slice(0,500));
  }
- if(activeReportTab==='quality'||activeReportTab==='orders'||activeReportTab==='overview')reportTable(panels,'Auftragsstatus',['Status','Einträge'],[...d.statusMap].map(([k,n])=>[k,n]));
+ if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Auftragsstatus',['Status','Einträge'],[...d.statusMap].map(([k,n])=>[k,n]));
  if(activeReportTab==='quality'||activeReportTab==='orders'||activeReportTab==='overview')reportTable(panels,'Gründe für Zeitabweichungen',['Grund','Einträge'],d.reasons.map(x=>[x.name,x.count]));
- if(activeReportTab==='quality'||activeReportTab==='overview')reportTable(panels,'Überschneidende Arbeitszeiten (gleicher Mitarbeiter)',['Mitarbeiter','Datum','Zeit A','Zeit B'],d.overlaps);
+ if(activeReportTab==='quality')reportTable(panels,'Überschneidende Arbeitszeiten (gleicher Mitarbeiter)',['Mitarbeiter','Datum','Zeit A','Zeit B'],d.overlaps);
  if(activeReportTab==='quality'||activeReportTab==='overview')reportTable(panels,'Datenqualität',['Prüfung','Anzahl'],[['Arbeitszeiten ohne Kundenzuordnung',d.noCustomer],['Ohne Geschäftsstelle',d.noObject],['Ohne vollständige Uhrzeit',d.badDates]]);
  const note=el('p','Hinweis: Geplante Zeit = Terminfenster ohne Pausenabzug. Dokumentiert = Termin mit verknüpftem Arbeitszeiteintrag. Für einen aussagekräftigen Soll-Ist-Vergleich pro Auftrag müssen die verknüpften Einträge betrachtet werden. Zahlen basieren nur auf lokal vorhandenen Daten; ohne Umsatz- und Kostendaten ist keine Gewinnberechnung möglich.');note.className='hint';panels.append(note);
 }
