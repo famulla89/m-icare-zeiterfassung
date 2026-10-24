@@ -74,7 +74,7 @@
 <div class="objectPanel"><h3>Aufträge suchen und filtern</h3><div class="grid">
 <div><label for="orderSearch">Auftragsname / Kundennummer suchen</label><input id="orderSearch" type="search" placeholder="Auftrag, Kunde, Geschäftsstelle …"></div>
 <div><label for="orderCustomerFilter">Kunde</label><select id="orderCustomerFilter"></select></div>
-<div><label for="orderStateFilter">Auftragsstatus</label><select id="orderStateFilter"><option value="">Alle</option><option value="active">Aktiv</option><option value="paused">Pausiert</option><option value="completed">Abgeschlossen</option><option value="cancelled">Abgebrochen</option></select></div>
+<div><label for="orderStateFilter">Auftragsstatus</label><select id="orderStateFilter"><option value="">Alle</option><option value="active">Aktiv</option><option value="paused">Pausiert</option><option value="closed">Alle abgeschlossenen</option><option value="completed">Abgeschlossen – erledigt</option><option value="cancelled">Abgeschlossen – abgebrochen</option></select></div>
 <div><label for="orderTypeFilter">Auftragsart</label><select id="orderTypeFilter"><option value="">Alle</option><option value="once">Einmalig</option><option value="recurring">Dauerauftrag</option></select></div>
 <div><label for="orderFollowupFilter">Kundennachbetreuung</label><select id="orderFollowupFilter"><option value="">Alle</option><option value="due">Nachfassen fällig</option><option value="contacted">Kontaktiert</option><option value="offer">Angebot gewünscht</option></select></div>
 </div></div>
@@ -1055,7 +1055,7 @@ function renderOrders(){
  orderRefreshForm();
  const all=state.orders.map(o=>({o,s:orderProgress(o)})),area=$('orderList');
  const due=all.filter(({o,s})=>orderFollowupDue(o,s)).length;
- const kpis=[['Aufträge',all.length],['Aktiv',all.filter(x=>x.o.status==='active').length],['Vollständig erledigt',all.filter(x=>x.s.total>0&&x.s.done===x.s.total).length],['Nachbetreuung fällig',due]];
+ const kpis=[['Aufträge gesamt',all.length],['Aktiv',all.filter(x=>x.o.status==='active').length],['Abgeschlossen gesamt',all.filter(x=>orderIsClosed(x.o)).length],['Davon abgebrochen',all.filter(x=>x.o.status==='cancelled').length],['Nachbetreuung fällig',due]];
  const summary=$('orderKpis');summary.replaceChildren();
  for(const [label,value] of kpis){const card=el('div','');card.className='reportMetric';card.append(el('strong',String(value)),el('span',label));summary.append(card)}
  orderFillSelect('orderCustomerFilter',customerList().map(c=>({id:c.id,label:customerDisplay(c)})),'Alle Kunden');
@@ -1064,14 +1064,14 @@ function renderOrders(){
  orderFillSelect('orderLinkAppointment',(state.appointments||[]).filter(a=>!a.orderId&&(!existingOrder||a.customerId===existingOrder.customerId&&a.objectId===existingOrder.objectId)).map(a=>({id:a.id,label:a.date+' · '+a.service+' · '+a.employee})).slice(0,500),'– Terminserie auswählen –');
  area.replaceChildren();
  const search=$('orderSearch').value.trim().toLocaleLowerCase('de');
- const filtered=all.filter(({o,s})=>(!$('orderCustomerFilter').value||o.customerId===$('orderCustomerFilter').value)&&(!$('orderStateFilter').value||o.status===$('orderStateFilter').value)&&(!$('orderTypeFilter').value||o.type===$('orderTypeFilter').value)&&(!$('orderFollowupFilter').value||($('orderFollowupFilter').value==='due'?orderFollowupDue(o,s):o.followUpStatus===$('orderFollowupFilter').value))&&(!search||[orderName(o),state.objects.find(x=>x.id===o.objectId)?.name||'',o.scope||''].join(' ').toLocaleLowerCase('de').includes(search)));
- const statuses={active:'Aktiv',paused:'Pausiert',completed:'Manuell abgeschlossen',cancelled:'Abgebrochen'};
+ const filtered=all.filter(({o,s})=>(!$('orderCustomerFilter').value||o.customerId===$('orderCustomerFilter').value)&&(!$('orderStateFilter').value||($('orderStateFilter').value==='closed'?orderIsClosed(o):o.status===$('orderStateFilter').value))&&(!$('orderTypeFilter').value||o.type===$('orderTypeFilter').value)&&(!$('orderFollowupFilter').value||($('orderFollowupFilter').value==='due'?orderFollowupDue(o,s):o.followUpStatus===$('orderFollowupFilter').value))&&(!search||[orderName(o),state.objects.find(x=>x.id===o.objectId)?.name||'',o.scope||''].join(' ').toLocaleLowerCase('de').includes(search)));
+ 
  for(const {o,s:stats} of filtered){
   const card=el('article','');card.className='orderCard';
   card.append(el('h3',o.number+' · '+o.title));
   const meta=el('div','');meta.className='orderMeta';
   const customer=state.customers.find(c=>c.id===o.customerId),obj=state.objects.find(v=>v.id===o.objectId);
-  meta.append(el('span',customer?.name||'Kunde unbekannt'),el('span',obj?.name||'Objekt unbekannt'),el('span',o.type==='once'?'Einmalauftrag':'Dauerauftrag'),el('span',statuses[o.status]||'Aktiv'));
+  meta.append(el('span',customer?.name||'Kunde unbekannt'),el('span',obj?.name||'Objekt unbekannt'),el('span',o.type==='once'?'Einmalauftrag':'Dauerauftrag'),el('span',orderStatusLabel(o)));
   card.append(meta);
   card.append(el('div','Vertragszeitraum: '+formatDate(o.startDate)+' – '+formatDate(o.endDate)+' · '+o.service));
   if(o.scope){const scope=el('div',o.scope);scope.className='orderScope';card.append(scope)}
@@ -1082,19 +1082,31 @@ function renderOrders(){
   const view=el('button','Termine ansehen / bearbeiten');view.className='secondary';view.onclick=()=>{
    const box=card.querySelector('.orderVisits');box.classList.toggle('hidden')
   };actions.append(view);
-  const statusBtn=el('button','Auftragsstatus ändern');statusBtn.className='secondary';
-  statusBtn.onclick=async()=>{
-   const value=prompt('Status wählen: active (aktiv), paused (pausiert), completed (abgeschlossen), cancelled (abgebrochen)',o.status||'active');
-   if(value===null)return;const next=value.trim().toLowerCase();
-   if(!['active','paused','completed','cancelled'].includes(next)){alert('Ungültiger Status');return}
-   if(o.status===next)return;
-   if(next==='completed'&&s.total>0&&s.done<s.total&&!confirm('Achtung: '+(s.total-s.done)+' von '+s.total+' vereinbarten Einsätzen sind noch nicht als erledigt dokumentiert. Soll der Gesamtauftrag trotzdem administrativ geschlossen werden? Die Erfüllungsquote bleibt unverändert.'))return;
-   if(next==='cancelled'&&!confirm('Der Gesamtauftrag wird als abgebrochen gekennzeichnet. Bereits vereinbarte Einzeltermine bleiben zur Nachvollziehbarkeit gespeichert. Bitte zukünftige Termine bei Bedarf zusätzlich im Terminplaner absagen. Fortfahren?'))return;
-   const reason=prompt('Grund für die Statusänderung (Pflicht):','');
-   if(!reason?.trim())return alert('Ohne Begründung keine Statusänderung.');
-   o.events??=[];o.events.push({time:new Date().toISOString(),kind:'Status',from:o.status,to:next,reason:reason.trim().slice(0,300)});
-   o.status=next;await saveState();renderOrders()
-  };actions.append(statusBtn);
+
+  const statusDetails=document.createElement('details');statusDetails.className='orderFollowup';
+  const summaryStatus=document.createElement('summary');summaryStatus.textContent='Status ändern / Auftrag abschließen';summaryStatus.style.cursor='pointer';summaryStatus.style.fontWeight='700';statusDetails.append(summaryStatus);
+  statusDetails.append(el('label','Neuer Auftragsstatus'));
+  const statusSelect=document.createElement('select');
+  for(const [value,title] of [['active','Aktiv'],['paused','Pausiert'],['completed','Abgeschlossen – erledigt'],['cancelled','Abgeschlossen – abgebrochen']]){
+   const opt=el('option',title);opt.value=value;statusSelect.append(opt)
+  }statusSelect.value=o.status||'active';statusDetails.append(statusSelect);
+  statusDetails.append(el('label','Grund für die Änderung (Pflicht)'));
+  const statusReason=document.createElement('textarea');statusReason.rows=2;statusReason.maxLength=300;statusReason.placeholder='z. B. Kunde hat den Auftrag storniert';statusDetails.append(statusReason);
+  const statusSave=el('button','Status speichern');statusSave.className='secondary';statusSave.type='button';
+  statusSave.onclick=async()=>{
+   const next=statusSelect.value,reason=statusReason.value.trim();
+   if(next===o.status)return notify('Status unverändert');
+   if(!reason)return alert('Bitte einen Grund für die Statusänderung eingeben.');
+   if(next==='completed'&&stats.total>0&&stats.done<stats.total&&!confirm('Achtung: '+(stats.total-stats.done)+' von '+stats.total+' Einsätzen sind nicht als erledigt dokumentiert. Den Gesamtauftrag trotzdem als erledigt schließen? Die Erfüllungsquote bleibt unverändert.'))return;
+   if(next==='cancelled'&&!confirm('Als abgeschlossen – abgebrochen kennzeichnen? Bestehende Termine und Arbeitszeiten bleiben erhalten; offene Termine bei Bedarf separat absagen.'))return;
+   statusSave.disabled=true;
+   const now=new Date().toISOString(),previous=o.status,oldClosedAt=o.closedAt,oldClosureReason=o.closureReason;
+   o.events??=[];o.events.push({time:now,kind:'Status',from:previous,to:next,reason});
+   o.status=next;o.closedAt=orderIsClosed(o)?now:null;o.closureReason=orderIsClosed(o)?reason:'';
+   try{await saveState();renderOrders();notify('Auftrag '+o.number+' · '+orderStatusLabel(o))}
+   catch(error){o.status=previous;o.closedAt=oldClosedAt;o.closureReason=oldClosureReason;o.events.pop();alert('Status konnte nicht gespeichert werden: '+error.message)}
+   finally{statusSave.disabled=false}
+  };statusDetails.append(statusSave);actions.append(statusDetails);
   card.append(actions);
   const visitBox=el('div','');visitBox.className='orderVisits hidden';visitBox.style.marginTop='14px';
   const shown=stats.visits.filter(v=>v.occ.date>=isoDate()).slice(0,10);
@@ -1261,7 +1273,7 @@ function renderReporting(){
  if(activeReportTab==='contracts')$('reportActiveFilters').textContent='Auftragsfortschritt · alle Vertragslaufzeiten · Kunde: '+($('rptCustomer').selectedOptions[0]?.textContent||'Alle Kunden')+' · Mitarbeiter: '+($('reportEmployee').selectedOptions[0]?.textContent||'Alle Mitarbeiter');
  if(activeReportTab!=='contracts'&&$('reportFrom').value>$('reportTo').value){summary.append(el('p','Bitte einen gültigen Zeitraum auswählen.'));return}
  const d=reportBuild();for(const [name,value] of [['Geleistete Stunden',reportMinutes(d.total)],['Erfasste Arbeitszeiten',d.entries.length],['Geplante Termine',d.occ.length],['Dokumentiert',d.completed.length]]){const c=el('div','');c.className='reportMetric';c.append(el('strong',value),el('span',name));home.append(c)}const cards=[['Erfasste Stunden',reportMinutes(d.total)],['Arbeitszeiteinträge',d.entries.length],['Freie Erfassungen',d.free.length],['Geplante Termine',d.occ.length],['Dokumentierte Termine',d.completed.length],['Offene geplante Termine',d.occ.length-d.completed.length],['Geplante Zeit',reportMinutes(d.totalPlan)],['Zeitabweichungen',d.exceptions.length],['Auffällige Überschneidungen',d.overlaps.length],['Abgesagt / nicht angetroffen',d.cancelled.length]];
- const shownCards=activeReportTab==='contracts'?(()=>{const list=(state.orders||[]).filter(o=>(!$('rptCustomer').value||o.customerId===$('rptCustomer').value)&&(!$('reportObject').value||o.objectId===$('reportObject').value)&&(!$('reportService').value||o.service===$('reportService').value)&&(!$('reportEmployee').value||o.employee===$('reportEmployee').value));return [['Arbeitsaufträge gesamt',list.length],['Daueraufträge',list.filter(o=>o.type==='recurring').length],['Nachbetreuung fällig',list.filter(o=>orderFollowupDue(o,orderProgress(o))).length]]})():activeReportTab==='overview'?cards.slice(0,4):activeReportTab==='employees'?[cards[0],cards[1]]:activeReportTab==='customers'?[cards[0],cards[1]]:activeReportTab==='orders'?[cards[3],cards[4],cards[5]]:activeReportTab==='services'?[cards[0],cards[1]]:[cards[7],cards[8]];const g=el('div','');g.className='grid';for(const [name,value] of shownCards){const card=el('div','');card.className='status';card.append(el('strong',value),el('div',name));g.append(card)}summary.append(el('h3',activeReportTab==='contracts'?'Kennzahlen · alle Vertragslaufzeiten':'Kennzahlen · '+formatDate(d.from)+' bis '+formatDate(d.to)),g);
+ const shownCards=activeReportTab==='contracts'?(()=>{const list=(state.orders||[]).filter(o=>(!$('rptCustomer').value||o.customerId===$('rptCustomer').value)&&(!$('reportObject').value||o.objectId===$('reportObject').value)&&(!$('reportService').value||o.service===$('reportService').value)&&(!$('reportEmployee').value||o.employee===$('reportEmployee').value));return [['Aufträge gesamt',list.length],['Abgeschlossen gesamt',list.filter(orderIsClosed).length],['Davon abgebrochen',list.filter(o=>o.status==='cancelled').length],['Nachbetreuung fällig',list.filter(o=>orderFollowupDue(o,orderProgress(o))).length]]})():activeReportTab==='overview'?cards.slice(0,4):activeReportTab==='employees'?[cards[0],cards[1]]:activeReportTab==='customers'?[cards[0],cards[1]]:activeReportTab==='orders'?[cards[3],cards[4],cards[5]]:activeReportTab==='services'?[cards[0],cards[1]]:[cards[7],cards[8]];const g=el('div','');g.className='grid';for(const [name,value] of shownCards){const card=el('div','');card.className='status';card.append(el('strong',value),el('div',name));g.append(card)}summary.append(el('h3',activeReportTab==='contracts'?'Kennzahlen · alle Vertragslaufzeiten':'Kennzahlen · '+formatDate(d.from)+' bis '+formatDate(d.to)),g);
  const series=[['Kunden',d.byCustomer],['Geschäftsstellen',d.byObject],['Mitarbeiter',d.byEmployee],['Reinigungsleistungen',d.byService],['Monate',d.byDate]];
  for(const [name,items] of series){const visible=(activeReportTab==='overview'&&name==='Monate')||(activeReportTab==='customers'&&name==='Geschäftsstellen')||(activeReportTab==='services'&&name==='Reinigungsleistungen');if(visible)reportTable(panels,'Auswertung nach '+name,['Name','Einsätze','Geleistete Stunden'],items.map(x=>[x.name,x.count,reportMinutes(x.minutes)]));}
  if(activeReportTab==='overview'){reportBars(panels,'Top-Kunden nach Zeitaufwand',d.byCustomer.slice(0,8))}if(activeReportTab==='employees'){reportBars(panels,'Geleistete Stunden nach Mitarbeiter',d.byEmployee);
@@ -1276,8 +1288,8 @@ function renderReporting(){
  }
  if(activeReportTab==='contracts'){
   const contracts=(state.orders||[]).filter(o=>(!$('rptCustomer').value||o.customerId===$('rptCustomer').value)&&(!$('reportObject').value||o.objectId===$('reportObject').value)&&(!$('reportService').value||o.service===$('reportService').value)&&(!$('reportEmployee').value||o.employee===$('reportEmployee').value));
-  const rows=contracts.map(o=>{const p=orderProgress(o),c=state.customers.find(c=>c.id===o.customerId),obj=state.objects.find(x=>x.id===o.objectId);return [o.number,o.title,c?.name||'Unbekannt',obj?.name||'–',o.type==='once'?'Einmalig':'Dauerauftrag',formatDate(o.startDate)+' – '+formatDate(o.endDate),p.total,p.done,p.cancelled,p.percent.toLocaleString('de-DE')+' %',reportMinutes(p.minutes),orderFollowupDue(o,p)?'Fällig':({pending:'Offen',contacted:'Kontaktiert',offer:'Angebot gewünscht',declined:'Kein Interesse'}[o.followUpStatus||'pending'])]});
-  reportTable(panels,'Arbeitsaufträge · Fortschritt für gesamten Auftragszeitraum',['Nr.','Auftrag','Kunde','Objekt','Art','Vertrag','Soll-Einsätze','Erledigt','Ausfälle','Erfüllung','Ist-Stunden','Nachbetreuung'],rows);
+  const rows=contracts.map(o=>{const p=orderProgress(o),c=state.customers.find(c=>c.id===o.customerId),obj=state.objects.find(x=>x.id===o.objectId);return [o.number,o.title,c?.name||'Unbekannt',obj?.name||'–',o.type==='once'?'Einmalig':'Dauerauftrag',orderStatusLabel(o),formatDate(o.startDate)+' – '+formatDate(o.endDate),p.total,p.done,p.cancelled,p.percent.toLocaleString('de-DE')+' %',reportMinutes(p.minutes),orderFollowupDue(o,p)?'Fällig':({pending:'Offen',contacted:'Kontaktiert',offer:'Angebot gewünscht',declined:'Kein Interesse'}[o.followUpStatus||'pending'])]});
+  reportTable(panels,'Arbeitsaufträge · Fortschritt für gesamten Auftragszeitraum',['Nr.','Auftrag','Kunde','Objekt','Art','Status','Vertrag','Soll-Einsätze','Erledigt','Ausfälle','Erfüllung','Ist-Stunden','Nachbetreuung'],rows);
   const due=contracts.filter(o=>orderFollowupDue(o,orderProgress(o)));
   reportTable(panels,'Kunden für mögliche Folgeangebote kontaktieren',['Auftrag','Kunde','Telefon','E-Mail','Fortschritt'],due.map(o=>{const c=state.customers.find(x=>x.id===o.customerId),p=orderProgress(o);return [o.number,c?.name||'–',c?.mobile||c?.phone||'–',c?.email||'–',p.percent.toLocaleString('de-DE')+' %']}));
   panels.append(el('p','Hinweis: Dieser Vertragsbericht zeigt alle Vertragslaufzeiten; die Datumsfelder filtern hier bewusst nicht, damit künftige und mehrjährige Aufträge sichtbar bleiben. Der Vertragsfortschritt zählt alle vereinbarten Einsätze des gesamten Auftrags, unabhängig vom eingestellten Auswertungsmonat. Nur als erledigt dokumentierte Termine erhöhen den Prozentwert. Ausfälle werden gesondert gezeigt. Kunden werden nicht automatisch kontaktiert.'));
