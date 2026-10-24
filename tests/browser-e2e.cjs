@@ -225,8 +225,58 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('E2E step 9: contact and correction unsaved-data warnings passed');
 
 
+
+ // Create an annual order via real UI, document 70% completed, and record customer follow-up.
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('ordersScreen')});
+ assert(await page.locator('#ordersScreen').isVisible());
+ await page.locator('#newOrderToggle').click();
+ await page.locator('#orderCustomer').selectOption('test-customer-1');
+ await page.locator('#orderObject').selectOption('test-object-1-1');
+ await page.locator('#orderTitle').fill('Jahresauftrag Fensterreinigung');
+ await page.locator('#orderService').selectOption('Glas- & Fensterreinigung');
+ await page.locator('#orderEmployee').selectOption('Inhaber');
+ await page.locator('#orderType').selectOption('recurring');
+ await page.locator('#orderStartDate').fill('2026-10-27');
+ await page.locator('#orderUntil').fill('2027-10-19');
+ await page.locator('#orderRepeat').selectOption('weekly');
+ await page.locator('#orderStartTime').fill('09:00');
+ await page.locator('#orderEndTime').fill('11:00');
+ await page.locator('#orderScope').fill('25 Fenster von innen und außen, Rahmen inklusive');
+ await page.locator('#orderCreateSave').click();
+ await page.waitForFunction(()=>state.orders.some(o=>o.title==='Jahresauftrag Fensterreinigung'));
+ const originalProgress=await page.evaluate(()=>{const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung');return {id:o.id,appointments:state.appointments.filter(a=>a.orderId===o.id).length,...orderProgress(o)}});
+ assert.equal(originalProgress.total,52,'Contract should create 52 Tuesdays');
+ assert.equal(originalProgress.done,0);
+ assert.equal(originalProgress.appointments,1,'Contract is one recurring series, not 52 duplicated appointment records');
+ console.log('E2E step 10: annual contract and 52 occurrences created');
+ await page.evaluate(async()=>{
+  const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),stats=orderProgress(o),a=state.appointments.find(a=>a.orderId===o.id);
+  for(const item of stats.visits.slice(0,37)){
+   state.entries.push({id:crypto.randomUUID(),customerId:o.customerId,objectId:o.objectId,employee:'Inhaber',service:o.service,object:'',notes:'',date:item.occ.date,endDate:item.occ.date,start:'09:00',end:'11:00',breakMinutes:0,minutes:120,appointmentId:a.id,appointmentOccurrence:item.occ.originalDate,orderId:o.id,orderStatus:'done',workDone:'Glas gereinigt',orderRemarks:''});
+  }
+  await saveState();renderOrders()
+ });
+ const threshold=await page.evaluate(()=>{const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),p=orderProgress(o);return {done:p.done,total:p.total,percent:p.percent,due:orderFollowupDue(o,p)}});
+ assert.equal(threshold.done,37);assert(threshold.percent>=70&&threshold.percent<72);assert.equal(threshold.due,true);
+ await page.locator('#orderList .orderCard .orderFollowup select').first().selectOption('offer');
+ await page.locator('#orderList .orderCard .orderFollowup textarea').first().fill('Kunde möchte ein Angebot für Treppenhausreinigung');
+ await page.locator('#orderList .orderCard .orderFollowup button').first().click();
+ await page.waitForFunction(()=>state.orders.some(o=>o.title==='Jahresauftrag Fensterreinigung'&&o.followUpStatus==='offer'));
+ assert.equal(await page.evaluate(()=>{const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung');return orderFollowupDue(o,orderProgress(o))}),false);
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('reportingScreen');reportOpenTab('contracts')});
+ assert((await page.locator('#reportPanels').innerText()).includes('Jahresauftrag Fensterreinigung'),'Progress report should include contract');
+ assert((await page.locator('#reportPanels').innerText()).includes('Angebot gewünscht'),'Follow-up response should appear in report');
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('backupSection')});
+ const orderBackupPromise=page.waitForEvent('download');
+ await page.locator('#exportJson').click();
+ const orderBackup=await orderBackupPromise;
+ const orderBackupData=JSON.parse(fs.readFileSync(await orderBackup.path(),'utf8'));
+ assert(orderBackupData.orders?.some(o=>o.title==='Jahresauftrag Fensterreinigung'&&o.followUpStatus==='offer'),'Order and follow-up should persist in JSON full backup');
+ assert(orderBackupData.appointments.some(a=>a.orderId===orderBackupData.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung').id),'Appointment linked to contract');
+ console.log('E2E step 11: 70% progress, follow-up and backup passed');
+
  assert.equal(errors.length,0,'Unhandled browser errors: '+errors.join(' | '));
- console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, double-save/date changes, unsaved edits, calendar, JSON export/import');
+ console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, double-save/date changes, unsaved edits, calendar, JSON export/import and annual orders/follow-ups');
  await browser.close();
  server.close();
 })().catch(e=>{console.error('E2E FAILED:',e);server.close();process.exit(1)});
