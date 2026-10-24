@@ -46,6 +46,22 @@ jobs:
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
+      - name: Verify calculator, cloud backup and normal M-iCare app identifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/quote-calculator-smoke.cjs
+          node tests/cloud-transfer-smoke.cjs
+          APK=android-app/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_SDK_ROOT/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/micare-apk-badging.txt
+          grep -Fq "package: name='de.micare.zeiterfassung'" /tmp/micare-apk-badging.txt
+          grep -Fq "application-label:'M-iCare'" /tmp/micare-apk-badging.txt
+          unzip -p "$APK" assets/index.html | grep -Fq 'data-jump="quoteCalculator"'
+          unzip -l "$APK" | grep -Fq 'assets/quote-calculator.js'
+          unzip -l "$APK" | grep -Fq 'assets/quote-ui.js'
+          unzip -l "$APK" | grep -Fq 'assets/cloud-transfer.js'
+          echo 'PASS: normal M-iCare package, calculator UI, offers and cloud-transfer bundled'
       - uses: actions/upload-artifact@v4
         with:
           name: M-iCare-Android-Test-APK
