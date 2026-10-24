@@ -37,9 +37,9 @@
 #ordersScreen .orderProgressTrack,.orderReportProgress{height:12px;background:#e5edf5;border-radius:16px;overflow:hidden}
 #ordersScreen .orderProgressBar,.orderReportProgress>span{height:100%;background:#119e7b;display:block;border-radius:16px}
 #ordersScreen .orderScope{white-space:pre-wrap;font-size:.88rem;color:#53667c;margin:10px 0}
-#ordersScreen .orderFollowup{margin-top:12px;padding:13px;border:1px solid #e3d6a4;border-radius:10px;background:#fffbec}
-#ordersScreen .orderFollowup label{margin:8px 0 5px}
-#ordersScreen .orderFollowup select,#ordersScreen .orderFollowup textarea{width:100%}
+#ordersScreen .orderFollowup,#ordersScreen .orderStatusEditor{margin-top:12px;padding:13px;border:1px solid #e3d6a4;border-radius:10px;background:#fffbec}
+#ordersScreen .orderFollowup label,#ordersScreen .orderStatusEditor label{margin:8px 0 5px}
+#ordersScreen .orderFollowup select,#ordersScreen .orderFollowup textarea,#ordersScreen .orderStatusEditor select,#ordersScreen .orderStatusEditor textarea{width:100%}
 @media(max-width:550px){#ordersScreen .reportMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head><body><div class="wrap">
 <header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.0 <span class="badge">Offline-PWA</span></div></div></header>
@@ -1083,7 +1083,7 @@ function renderOrders(){
    const box=card.querySelector('.orderVisits');box.classList.toggle('hidden')
   };actions.append(view);
 
-  const statusDetails=document.createElement('details');statusDetails.className='orderFollowup';
+  const statusDetails=document.createElement('details');statusDetails.className='orderStatusEditor';
   const summaryStatus=document.createElement('summary');summaryStatus.textContent='Status ändern / Auftrag abschließen';summaryStatus.style.cursor='pointer';summaryStatus.style.fontWeight='700';statusDetails.append(summaryStatus);
   statusDetails.append(el('label','Neuer Auftragsstatus'));
   const statusSelect=document.createElement('select');
