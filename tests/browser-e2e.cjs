@@ -107,15 +107,25 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('E2E step 6: free work and calendar passed');
  // Navigation and backups
  await page.locator('#goHome').click();
- await page.locator('[data-jump="backupSection"]').click();
+ await page.locator('#home [data-jump="backupSection"]').click();
  const backupPromise=page.waitForEvent('download');
  await page.locator('#exportJson').click();
  const backup=await backupPromise;
  assert(backup.suggestedFilename().endsWith('.json'));
  const backupJson=JSON.parse(fs.readFileSync(await backup.path(),'utf8'));
  assert(backupJson.entries.some(e=>e.id==='test-entry-1'&&e.corrections?.length>=1),'JSON backup retains correction history');
+ // End-to-end restore: importer must preserve the fixture and revert changed state.
+ const importBackupPromise=page.waitForEvent('download');
+ await page.locator('#importJson').setInputFiles(path.join(root,'testdata/micare-10-kunden.json'));
+ await importBackupPromise;
+ await page.waitForFunction(()=>state.entries.find(e=>e.id==='test-entry-1')?.orderStatus==='done' && !state.entries.find(e=>e.id==='test-entry-1')?.corrections?.length);
+ const restored=await page.evaluate(()=>({customers:state.customers.length,objects:state.objects.length,entries:state.entries.length}));
+ assert.equal(restored.customers,fixture.customers.length);
+ assert.equal(restored.objects,fixture.objects.length);
+ assert.equal(restored.entries,fixture.entries.length);
+ console.log('E2E step 7: JSON export and import restore passed');
  assert.equal(errors.length,0,'Unhandled browser errors: '+errors.join(' | '));
- console.log('Browser E2E PASS: customers, navigation, reporting filters, CSV, print/PDF, planned corrections, free time, calendar, JSON backup');
+ console.log('Browser E2E PASS: customers, navigation, reporting, CSV/PDF, planned corrections, free time, calendar, JSON export/import');
  await browser.close();
  server.close();
 })().catch(e=>{console.error('E2E FAILED:',e);server.close();process.exit(1)});
