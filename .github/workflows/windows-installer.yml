@@ -12,6 +12,7 @@ on:
       - '.github/workflows/windows-installer.yml'
       - 'tests/windows-installer-smoke.ps1'
       - 'tests/windows-electron-e2e.cjs'
+      - 'tests/cloud-transfer-smoke.cjs'
 jobs:
   windows:
     runs-on: windows-latest
