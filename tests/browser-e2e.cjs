@@ -71,6 +71,52 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(pdf.length>2500,'Generated PDF should not be empty');
  await page.emulateMedia({media:'screen'});
  console.log('E2E step 4: reporting export and print passed');
+
+ // AK report: customer-specific open/done/actual totals, cross-customer scheduling conflicts,
+ // CSV with planned (not yet completed) orders and a byte-valid exported PDF.
+ await page.evaluate(()=>{
+  showScreen('history');
+  document.getElementById('reportMode').value='month';
+  setReportMode();
+  document.getElementById('historyMonth').value='2026-10';
+  document.getElementById('reportAllCustomers').checked=false;
+  refreshReportCustomers();
+  document.getElementById('reportCustomer').value='test-customer-1';
+  renderOrderOverview();
+ });
+ const akInfo=await page.evaluate(()=>{
+  const d=akReportData('2026-10-01','2026-10-31','test-customer-1');
+  return {rows:d.rows.length,open:d.metrics.open,done:d.metrics.done,actual:d.metrics.doneActual,allBelong:d.rows.every(r=>r.customerId==='test-customer-1'),first:d.rows[0]?.ak,preview:document.getElementById('orderPrintPreviewBody').textContent};
+ });
+ assert(akInfo.rows>=3&&akInfo.open>0&&akInfo.done>0&&akInfo.actual>0,'AK report distinguishes open and done');
+ assert(akInfo.allBelong,'AK customer filter must exclude other customers');
+ assert(/^AK \d+$/.test(akInfo.first),'User-facing AK numbers should be short');
+ assert(akInfo.preview.includes('Noch zu erledigen')&&akInfo.preview.includes('Fertig'),'PDF preview totals');
+ const collision=await page.evaluate(()=>{
+  const a={...state.appointments[0],id:'cross-customer-overlap-test',akNumber:996,customerId:'test-customer-2',objectId:'test-object-2-1',date:'2026-10-05',start:'10:00',end:'10:30',repeat:'once',employee:'Inhaber'};
+  state.appointments.push(a);
+  try{return akReportData('2026-10-01','2026-10-31','test-customer-1').rows.find(r=>r.date==='2026-10-05')?.conflicts||[]}
+  finally{state.appointments.pop()}
+ });
+ assert(collision.some(x=>x.includes('AK 996')),'Cross-customer overlap must appear despite customer filter');
+ const akCsvDownload=page.waitForEvent('download');
+ await page.locator('#orderStatusCsv').click();
+ const akCsv=await akCsvDownload;
+ const akCsvText=fs.readFileSync(await akCsv.path(),'utf8');
+ assert(akCsv.suggestedFilename().endsWith('.csv'),'Customer report CSV extension');
+ assert(akCsvText.startsWith('\ufeff'),'Customer CSV must have UTF-8 BOM');
+ assert(akCsvText.includes('Soll-Minuten')&&akCsvText.includes('Ist-Minuten'),'AK CSV contains planned and actual time');
+ assert(akCsvText.includes('"Offen"')&&akCsvText.includes('"Erledigt"'),'AK CSV includes open and completed orders');
+ const akPdfDownload=page.waitForEvent('download');
+ await page.locator('#orderStatusPdf').click();
+ const akPdf=await akPdfDownload;
+ const akPdfBytes=fs.readFileSync(await akPdf.path());
+ assert(akPdf.suggestedFilename().endsWith('.pdf'),'Customer report PDF extension');
+ assert(akPdfBytes.subarray(0,8).toString().startsWith('%PDF-1.'),'Valid PDF signature');
+ assert(akPdfBytes.length>6000,'AK report PDF should contain image and page content');
+ assert(akPdfBytes.toString('latin1').includes('%%EOF'),'PDF must have a complete cross-reference trailer');
+ console.log('E2E step 4b: AK open/done, customer filter, conflicts, CSV and PDF passed');
+
  // Planned order correction: no reason => blocked, reason => same entry updated and audited
  await page.evaluate(()=>editEntry('test-entry-1'));
  assert(await page.locator('#plannedEditorScreen').isVisible());
