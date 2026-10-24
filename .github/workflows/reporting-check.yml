@@ -7,11 +7,13 @@ on:
     paths:
       - index.html
       - tests/reporting-smoke.cjs
+      - tests/app-core-smoke.cjs
       - .github/workflows/reporting-check.yml
   pull_request:
     paths:
       - index.html
       - tests/reporting-smoke.cjs
+      - tests/app-core-smoke.cjs
       - .github/workflows/reporting-check.yml
 
 jobs:
@@ -24,4 +26,6 @@ jobs:
         with:
           node-version: '22'
       - name: Validate reporting without changing app data
-        run: node tests/reporting-smoke.cjs
+        run: |
+          node tests/reporting-smoke.cjs
+          node tests/app-core-smoke.cjs
