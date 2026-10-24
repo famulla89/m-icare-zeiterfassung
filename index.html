@@ -226,8 +226,11 @@ function akPlannedConflicts(item){
 }
 function updatePlannedEditorConflict(appointment,originalDate){
  const panel=$('plannedEditorConflictInfo');if(!panel)return;
- const item=datesFor(appointment,originalDate,originalDate).find(o=>o.originalDate===originalDate)||
- {appointment,date:originalDate,originalDate,start:appointment.start,end:appointment.end};
+ const override=appointment.exceptions?.[originalDate];
+ if(override?.cancelled){panel.classList.add('hidden');panel.replaceChildren();return}
+ const day=override?.date||originalDate;
+ const item=datesFor(appointment,day<originalDate?day:originalDate,day>originalDate?day:originalDate).find(o=>o.originalDate===originalDate)||
+ {appointment,date:day,originalDate,start:override?.start||appointment.start,end:override?.end||appointment.end};
  const conflicts=akPlannedConflicts(item);
  panel.classList.toggle('hidden',conflicts.length===0);panel.replaceChildren();
  if(!conflicts.length)return;
