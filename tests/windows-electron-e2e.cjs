@@ -81,7 +81,7 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
    const xlsxCustomers=makeCustomersXlsx(),xlsxAppointments=makeAppointmentsXlsx(),xlsxAllWork=makeAllWorkXlsx();
    const backup=JSON.parse(JSON.stringify(state));
    const sig=async blob=>[...new Uint8Array((await blob.slice(0,8).arrayBuffer()))];
-   const result={pdfSize:pdf.size,pdfSig:await sig(pdf),csvSize:csv.size,csvContent:await csv.text(),
+   const result={pdfSize:pdf.size,pdfSig:await sig(pdf),csvSize:csv.size,csvSig:await sig(csv),csvContent:await csv.text(),
     xlsxSize:xlsx.size,xlsxSig:await sig(xlsx),
     pdfMonthSize:pdfMonth.size,pdfMonthSig:await sig(pdfMonth),
     excelSizes:[xlsxCustomers.size,xlsxAppointments.size,xlsxAllWork.size],
@@ -94,7 +94,9 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
    return result;
   });
   assert(exports.pdfSize>5000&&String.fromCharCode(...exports.pdfSig.slice(0,5))==='%PDF-','Windows AK PDF output');
-  assert(exports.csvSize>100&&exports.csvContent.startsWith('\ufeff')&&exports.csvContent.includes('Erledigt'),'Windows CSV output');
+  assert(exports.csvSize>100,'Windows CSV enthält keine Datensätze');
+  assert.deepEqual(exports.csvSig.slice(0,3),[239,187,191],'CSV muss mit UTF-8-BOM beginnen');
+  assert(exports.csvContent.includes('Erledigt'),'Windows CSV muss deutsche Auftragsstatus enthalten');
   assert(exports.xlsxSize>100&&exports.xlsxSig[0]===80&&exports.xlsxSig[1]===75,'Windows Excel ZIP format');
   assert(exports.pdfMonthSize>5000&&String.fromCharCode(...exports.pdfMonthSig.slice(0,5))==='%PDF-','Windows monthly PDF output');
   assert(exports.excelSizes.every(size=>size>100)&&exports.excelSignatures.every(sig=>sig[0]===80&&sig[1]===75),'Windows customer/appointment/work Excel exports');
