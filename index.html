@@ -969,8 +969,8 @@ async function saveEntry(ev){
   let correction=null;
   if(prior?.appointmentId){
    const reason=$('correctionReason').value.trim(),details=$('correctionNote').value.trim(),editedBy=$('correctionEditor').value.trim();
-   if(!editedBy||!(state.employees||[]).includes(editedBy))throw Error('Bitte auswählen, wer die Arbeitskarte korrigiert hat.');
    if(!reason)throw Error('Bitte einen Korrekturgrund angeben. Ein bereits dokumentierter Auftrag kann sonst nicht geändert werden.');
+   if(!editedBy||!(state.employees||[]).includes(editedBy))throw Error('Bitte auswählen, wer die Arbeitskarte korrigiert hat.');
    if(reason==='Sonstiger Korrekturgrund'&&!details)throw Error('Bitte beim sonstigen Korrekturgrund eine Erklärung eintragen.');
    const changes=orderCorrectionChanges(prior,v);
    if(!changes.length)throw Error('Es wurde noch keine Änderung vorgenommen. Bitte den Auftrag ändern oder die Bearbeitung abbrechen.');
