@@ -138,6 +138,35 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('E2E step 4c: multipage AK report and CSV injection protection passed');
 
 
+
+ // Search a known AK even with a different selected day and employee.
+ const testAk=await page.evaluate(()=>akLabel(state.appointments.find(a=>a.id==='test-appointment-1')));
+ await page.evaluate(()=>{
+  showScreen('plannedWorkScreen');
+  document.getElementById('plannedListDate').value='2026-10-24';
+  document.getElementById('plannedListEmployee').value='Anna Test';
+  renderPlannedWorkScreen();
+ });
+ await page.locator('#plannedAkSearch').fill(testAk);
+ const plannedText=await page.locator('#plannedListItems').innerText();
+ assert(plannedText.includes(testAk),'AK must be found independent of date and employee');
+ assert(plannedText.includes('Erfassung ansehen / korrigieren'),'Existing entry must indicate correction rather than new documentation');
+ await page.locator('#plannedListItems').getByRole('button',{name:'Erfassung ansehen / korrigieren'}).first().click();
+ assert.equal(await page.evaluate(()=>editId),'test-entry-1','AK search must open the existing entry');
+ assert(await page.locator('#correctionPanel').isVisible(),'Existing entry should require correction reason');
+ const simulatedConflict=await page.evaluate(()=>{
+  const original=state.appointments.find(a=>a.id==='test-appointment-1');
+  const partner={...original,id:'test-cross-appointment',akNumber:976,start:'10:00',end:'12:00'};
+  state.appointments.push(partner);
+  try{
+   const item=datesFor(original,'2026-10-05','2026-10-05')[0];
+   const clashes=akPlannedConflicts(item);
+   return clashes.map(x=>({label:x.label,minutes:x.minutes}));
+  }finally{state.appointments.pop()}
+ });
+ assert(simulatedConflict.some(x=>x.label.includes('AK 976')&&x.minutes===60),'AK conflicts show partner number and overlapping minutes');
+ console.log('E2E step 4d: AK number lookup, existing-entry edit and conflict partner details passed');
+
  // Planned order correction: no reason => blocked, reason => same entry updated and audited
  await page.evaluate(()=>editEntry('test-entry-1'));
  assert(await page.locator('#plannedEditorScreen').isVisible());
@@ -179,6 +208,24 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(correctedDayCalendar.includes('Zu geplantem Auftrag vom 05.10.2026'),'Rescheduled work should retain the original appointment date');
 
  console.log('E2E step 5b: moved actual workday retains planned link and audit history');
+
+ // After correcting an AK, show it in the correction-report filter and preserve link.
+ await page.evaluate(()=>{
+  showScreen('reportingScreen');reportOpenTab('orders');
+  document.getElementById('reportFrom').value='2026-10-01';
+  document.getElementById('reportTo').value='2026-10-31';
+  renderReporting();
+ });
+ await page.locator('#reportAkSearch').fill(testAk);
+ await page.locator('#reportAkCorrectionFilter').selectOption('corrected');
+ const correctedReport=await page.locator('#reportPanels').innerText();
+ assert(correctedReport.includes(testAk)&&correctedReport.includes('Nachträglich korrigierte Arbeitskarten'),'Corrected AK should appear in filtered reporting');
+ const reportCount=await page.evaluate(()=>state.entries.filter(e=>e.appointmentId==='test-appointment-1'&&e.appointmentOccurrence==='2026-10-05').length);
+ assert.equal(reportCount,1,'Reporting/search must not duplicate linked entry');
+ await page.locator('#reportPanels').getByRole('button',{name:'Ansehen / korrigieren'}).first().click();
+ assert.equal(await page.evaluate(()=>editId),'test-entry-1','Report edit opens same persisted entry');
+ console.log('E2E step 5c: corrected AK filter and edit-through-report passed');
+
 
  // Free entry and the shared appointment calendar
  await page.evaluate(()=>{resetEdit();openFreeWorkScreen()});
