@@ -90,6 +90,24 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(correction.reasons.includes('Aus Versehen abgeschlossen'));
  assert(correction.audit>=1,'Corrections must be auditable');
  console.log('E2E step 5: planned order correction passed');
+ // A corrected workday must keep the original planned appointment association.
+ await page.evaluate(()=>editEntry('test-entry-1'));
+ await page.locator('#date').fill('06.10.2026');
+ assert.equal(await page.locator('#linkedAppointment').inputValue(),'test-appointment-1|2026-10-05','The plan link must remain selected after changing actual date');
+ await page.locator('#deviationReason').selectOption('Sonstiger Grund');
+ await page.locator('#correctionReason').selectOption('Arbeitszeit falsch erfasst');
+ await page.locator('#saveBtn').click();
+ await page.waitForFunction(()=>state.entries.find(e=>e.id==='test-entry-1')?.date==='2026-10-06');
+ const rescheduled=await page.evaluate(()=>{
+  const e=state.entries.find(e=>e.id==='test-entry-1');
+  return {date:e.date,original:e.appointmentOccurrence,id:e.appointmentId,changes:e.corrections.at(-1)?.changes||[],duplicates:state.entries.filter(x=>x.appointmentId===e.appointmentId&&x.appointmentOccurrence===e.appointmentOccurrence).length};
+ });
+ assert.equal(rescheduled.id,'test-appointment-1');
+ assert.equal(rescheduled.original,'2026-10-05');
+ assert.equal(rescheduled.duplicates,1);
+ assert(rescheduled.changes.some(c=>c.field==='date'&&c.before==='2026-10-05'&&c.after==='2026-10-06'));
+ console.log('E2E step 5b: moved actual workday retains planned link and audit history');
+
  // Free entry and the shared appointment calendar
  await page.evaluate(()=>{resetEdit();openFreeWorkScreen()});
  await page.locator('#date').fill('28.10.2026');
@@ -105,6 +123,29 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('Calendar debug',JSON.stringify({calendarText,calendarDebug}));
  assert(calendarText.includes('14:00–16:00'),'Free entries should appear in calendar');
  console.log('E2E step 6: free work and calendar passed');
+ // Two concurrent submits must create only one work entry.
+ const doubleResult=await page.evaluate(async()=>{
+  resetEdit();openFreeWorkScreen();
+  document.getElementById('date').value='29.10.2026';
+  document.getElementById('endDate').value='29.10.2026';
+  document.getElementById('start').value='20:00';
+  document.getElementById('end').value='21:00';
+  document.getElementById('customerChoice').value='';
+  document.getElementById('employee').value='Inhaber';
+  const before=state.entries.length;
+  const originalSave=saveState;
+  let calls=0;
+  try{
+   saveState=async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,100));};
+   await Promise.all([saveEntry({preventDefault(){}}),saveEntry({preventDefault(){}})]);
+  }finally{saveState=originalSave}
+  const after=state.entries.length;
+  await saveState();
+  return {calls,created:after-before,enabled:!document.getElementById('saveBtn').disabled};
+ });
+ assert.deepEqual(doubleResult,{calls:1,created:1,enabled:true},'Concurrent Save must add only one work entry');
+ console.log('E2E step 6b: double submit guard passed');
+
  // Navigation and backups
  await page.locator('#goHome').click();
  await page.locator('#home [data-jump="backupSection"]').click();
