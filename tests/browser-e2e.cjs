@@ -37,6 +37,45 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.locator('[data-jump="customerOverviewScreen"]').click();
  assert(await page.locator('#customerOverviewScreen').isVisible());
  assert((await page.locator('#allCustomersList').innerText()).includes('Nordstern'));
+ // Kundenübersicht: exakte Kunden- und Objektnummern, Namen, Orte und Status.
+ await page.locator('#customerStateFilter').selectOption('all');
+ await page.locator('#customerSearch').fill('1');
+ let customerRows=await page.locator('#allCustomersList > .objectItem').count();
+ assert.equal(customerRows,1,'Kundennummer 1 darf keine Objektnummer 10.1 oder Adresshausnummer 51 treffen');
+ assert((await page.locator('#allCustomersList').innerText()).includes('Nordstern'),'Customer number 1 must find Nordstern');
+ assert(!(await page.locator('#allCustomersList').innerText()).includes('Westpark'),'Number 1 must not find unrelated customer');
+ assert((await page.locator('#customerListSummary').innerText()).includes('1 von 10 Kunden gefunden'),'Customer counter must show filtered result');
+ await page.locator('#customerSearch').fill('1.2');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),1,'Object number 1.2 finds its parent customer');
+ const objText=await page.locator('#allCustomersList').innerText();
+ assert(objText.includes('1.2'),'Matching object must appear');
+ assert(!objText.includes('1.1 ·'),'Other objects must be hidden for exact object search');
+ const selectedPdfCustomers=await page.evaluate(()=>({
+  customers:filteredCustomers().map(c=>c.publicNumber),
+  objects:filteredCustomers().flatMap(c=>customerObjectsForSearch(c).map(o=>o.publicNumber))
+ }));
+ assert.deepEqual(selectedPdfCustomers.customers,['1']);
+ assert.deepEqual(selectedPdfCustomers.objects,['1.2'],'PDF export and filtered list must use same objects');
+ await page.locator('#customerSearch').fill('10');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),1,'Kundennummer 10 is exact');
+ assert((await page.locator('#allCustomersList').innerText()).includes('Ruhr Campus'));
+ await page.locator('#customerSearch').fill('Nordstern');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),1,'Search customer by name');
+ await page.locator('#customerSearch').fill('Dortmund');
+ assert((await page.locator('#allCustomersList > .objectItem').count())>0,'Search object city');
+ await page.locator('#customerSearch').fill('Muster & Partner');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),1,'Archived customer visible with all filter');
+ await page.locator('#customerStateFilter').selectOption('active');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),0,'Active filter must hide archived customers');
+ await page.locator('#customerStateFilter').selectOption('archived');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),1,'Archived filter shows archived customers');
+ await page.locator('#customerSearch').fill('zzzz-unbekannt');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),0,'Unknown customer should show empty state');
+ assert((await page.locator('#allCustomersList').innerText()).includes('Keine passenden Kunden gefunden'));
+ await page.locator('#customerSearch').fill('');
+ await page.locator('#customerStateFilter').selectOption('all');
+ assert.equal(await page.locator('#allCustomersList > .objectItem').count(),10,'Clear search returns all customers');
+ console.log('E2E step 2b: customer search exact number, object, name, city, archived, empty and PDF filter passed');
  await page.locator('#goHome').click();
  await page.locator('[data-jump="customersPanel"]').click();
  assert(await page.locator('#customersPanel').isVisible());

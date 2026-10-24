@@ -102,7 +102,7 @@
  <div id="reportPanels"></div>
 </div>
 </section>
-<section class="screen" id="customerOverviewScreen"><h2>👥 Kundenübersicht</h2><p class="hint">Kunden suchen, Geschäftsstellen einsehen und zur Bearbeitung öffnen.</p><div class="objectPanel"><h3>Kunden suchen und ansehen</h3><p class="hint">Hier kannst du aktive und archivierte Kunden suchen, auswählen und als Stammdatenliste exportieren. Termine und Arbeitszeiten findest du unter Auswertungen.</p><div class="row"><input id="customerSearch" type="search" placeholder="Kundennummer, Name oder Ort suchen" aria-label="Kunden suchen"><select id="customerStateFilter" aria-label="Kundenstatus"><option value="active">Aktiv</option><option value="archived">Archiviert</option><option value="all">Alle</option></select><button type="button" id="allCustomersPdf" class="secondary">📄 Kundenliste als PDF</button></div><p id="customerListSummary" class="hint"></p><div id="allCustomersList"></div></div>
+<section class="screen" id="customerOverviewScreen"><h2>👥 Kundenübersicht</h2><p class="hint">Kunden suchen, Geschäftsstellen einsehen und zur Bearbeitung öffnen.</p><div class="objectPanel"><h3>Kunden suchen und ansehen</h3><p class="hint">Hier kannst du aktive und archivierte Kunden suchen, auswählen und als Stammdatenliste exportieren. Termine und Arbeitszeiten findest du unter Auswertungen.</p><div class="row"><div style="flex:2;min-width:200px"><label for="customerSearch">Kundennummer, Name, Geschäftsstelle oder Ort</label><input id="customerSearch" type="search" placeholder="z. B. 1, 5.2, Nordstern oder Hagen" autocomplete="off" aria-describedby="customerSearchHint"></div><select id="customerStateFilter" aria-label="Kundenstatus"><option value="active">Aktiv</option><option value="archived">Archiviert</option><option value="all">Alle</option></select><button type="button" id="allCustomersPdf" class="secondary">📄 Kundenliste als PDF</button></div><p class="hint" id="customerSearchHint">Eine Kundennummer wie 1 findet genau Kunde 1; eine Objektnummer wie 5.2 zeigt die zugehörige Geschäftsstelle.</p><p id="customerListSummary" class="hint" aria-live="polite"></p><div id="allCustomersList"></div></div>
 </section>
 <section class="screen" id="customersPanel"><h2>Kundenverwaltung</h2><p class="hint">Wähle einen bestehenden Kunden oder lege einen neuen an. Kundendaten, Reinigungsobjekt und Schlüssel sind in einer gemeinsamen Maske.</p>
 <div class="objectPanel"><div class="row actions"><div id="customerSelectionBlock" style="flex:1;min-width:230px"><label for="selectedCustomer">Kunde auswählen</label><select id="selectedCustomer"></select><p id="newCustomerNotice" class="hint hidden">Neuer Kunde: Bitte die Felder ausfüllen und speichern. Es ist kein bestehender Kunde ausgewählt.</p></div><button type="button" id="newCustomerMode" class="secondary customerModeButton">+ Neuen Kunden anlegen</button></div>
@@ -598,13 +598,66 @@ function ensureCustomerNumbers(){
  }
  return changed
 }
-function filteredCustomers(){const filter=$('customerStateFilter').value,query=$('customerSearch').value.trim().toLocaleLowerCase('de');return (state.customers||[]).filter(c=>(filter==='all'||(filter==='archived'?!!c.archived:!c.archived))&&[c.name,c.publicNumber,c.city,c.address,...(state.objects||[]).filter(o=>o.customerId===c.id).flatMap(o=>[o.name,o.city,o.publicNumber])].join(' ').toLocaleLowerCase('de').includes(query)).sort((a,b)=>a.name.localeCompare(b.name,'de'))}
-function renderAllCustomers(){const area=$('allCustomersList');area.replaceChildren();const customers=filteredCustomers();$('customerListSummary').textContent=customers.length+' Kunden · '+(state.customers||[]).filter(c=>!c.archived).length+' aktiv · '+(state.customers||[]).filter(c=>c.archived).length+' archiviert';if(!customers.length){area.append(el('p','Keine passenden Kunden vorhanden.'));return}for(const c of customers){const row=document.createElement('div');row.className='objectItem';const objs=(state.objects||[]).filter(o=>o.customerId===c.id);const btn=el('button',c.publicNumber+' · '+c.name+' · '+objs.length+' Objekte'+(c.archived?' · Archiviert':''));btn.className='secondary';btn.onclick=()=>{if(c.archived){if(!confirm('Archivierten Kunden '+c.name+' wieder aktivieren?'))return;c.archived=false;saveState().then(()=>renderCustomers());return}$('selectedCustomer').value=c.id;renderCustomers();showScreen('customersPanel')};row.append(btn,el('div',[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')||'Keine Anschrift'));for(const o of objs)row.append(el('div',o.publicNumber+' · '+o.name+' · '+reportAddress(o)));area.append(row)}}
+function normalizedCustomerQuery(value){
+ return String(value??'').trim().toLocaleLowerCase('de').normalize('NFKC');
+}
+function customerSearchMode(value){
+ const query=normalizedCustomerQuery(value);
+ if(!query)return {kind:'all',value:''};
+ // Kundennummern 1, 2, 10 ... niemals als freies Teilstück von Objekt-/Hausnummern auswerten.
+ if(/^\d{1,4}$/.test(query))return {kind:'customerNumber',value:String(Number(query))};
+ if(/^\d{1,4}\.\d{1,4}$/.test(query)){
+  const [customer,object]=query.split('.');
+  return {kind:'objectNumber',value:Number(customer)+'.'+Number(object)};
+ }
+ if(/^\d{5}$/.test(query))return {kind:'postalCode',value:query};
+ return {kind:'text',value:query};
+}
+function customerObjectMatches(o,mode){
+ if(mode.kind==='objectNumber')return String(o.publicNumber??'')===mode.value;
+ if(mode.kind==='postalCode')return String(o.zip??'')===mode.value;
+ if(mode.kind==='text')return [o.name,o.city,o.address,o.publicNumber].some(x=>normalizedCustomerQuery(x).includes(mode.value));
+ return false;
+}
+function customerMatchesQuery(c,mode){
+ if(mode.kind==='all')return true;
+ if(mode.kind==='customerNumber')return String(Number(c.publicNumber))===mode.value;
+ const objs=(state.objects||[]).filter(o=>o.customerId===c.id);
+ if(mode.kind==='objectNumber')return objs.some(o=>customerObjectMatches(o,mode));
+ if(mode.kind==='postalCode')return String(c.zip??'')===mode.value||objs.some(o=>customerObjectMatches(o,mode));
+ return [c.name,c.city,c.address,c.publicNumber].some(x=>normalizedCustomerQuery(x).includes(mode.value))
+   ||objs.some(o=>customerObjectMatches(o,mode));
+}
+function filteredCustomers(){
+ const filter=$('customerStateFilter').value,mode=customerSearchMode($('customerSearch').value);
+ return (state.customers||[]).filter(c=>(filter==='all'||(filter==='archived'?!!c.archived:!c.archived))&&customerMatchesQuery(c,mode))
+  .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'de'));
+}
+function customerObjectsForSearch(c){const objects=(state.objects||[]).filter(o=>o.customerId===c.id),mode=customerSearchMode($('customerSearch').value);return mode.kind==='objectNumber'?objects.filter(o=>customerObjectMatches(o,mode)):objects}
+function renderAllCustomers(){
+ const area=$('allCustomersList');area.replaceChildren();
+ const customers=filteredCustomers(),mode=customerSearchMode($('customerSearch').value),total=(state.customers||[]).length;
+ const active=(state.customers||[]).filter(c=>!c.archived).length,archived=total-active;
+ const matched=customers.length;
+ $('customerListSummary').textContent=(mode.kind==='all'?matched+' Kunden':matched+' von '+total+' Kunden gefunden')+' · '+active+' aktiv · '+archived+' archiviert';
+ if(!customers.length){area.append(el('p','Keine passenden Kunden gefunden. Bitte Suchbegriff oder Statusfilter prüfen.'));return}
+ for(const c of customers){
+  const row=document.createElement('div');row.className='objectItem';
+  const allObjects=(state.objects||[]).filter(o=>o.customerId===c.id);
+  const objects=customerObjectsForSearch(c);
+  const btn=el('button',(c.publicNumber||'–')+' · '+c.name+' · '+allObjects.length+' Objekte'+(c.archived?' · Archiviert':''));
+  btn.className='secondary';
+  btn.onclick=()=>{if(c.archived){if(!confirm('Archivierten Kunden '+c.name+' wieder aktivieren?'))return;c.archived=false;saveState().then(()=>renderCustomers());return}$('selectedCustomer').value=c.id;renderCustomers();showScreen('customersPanel')};
+  row.append(btn,el('div',[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')||'Keine Anschrift'));
+  for(const o of objects)row.append(el('div',(o.publicNumber||'–')+' · '+o.name+' · '+reportAddress(o)));
+  area.append(row);
+ }
+}
 
 function renderCustomers(preferredObjectId){updateCustomerSelects();fillCustomerEditor(preferredObjectId);renderObjectList();renderAllCustomers();const id=$('selectedCustomer').value;const customer=state.customers.find(x=>x.id===id);$('customerOverview').textContent=customer?'Kunde '+(customer.publicNumber||'')+' · '+customer.name:'Kein Kunde ausgewählt';const currentObject=state.objects.find(o=>o.id===$('selectedObject').value&&o.customerId===id);$('customerNumberPanel').textContent=customer?'Kundennummer: '+(customer.publicNumber||'wird vergeben')+' · Objektnummer: '+(currentObject?.publicNumber||'wird bei Neuanlage vergeben'):'Bei Neuanlage werden Kundennummer und Objektnummer automatisch vergeben.';renderAppointments()}
 
 function exportAllCustomersPdf(){
- const customers=filteredCustomers(),rows=customers.flatMap(c=>{const objs=(state.objects||[]).filter(o=>o.customerId===c.id);return (objs.length?objs:[null]).map(o=>({no:c.publicNumber||'—',name:c.name,address:[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '),obj:o?.name||'—',objNo:o?.publicNumber||'—',objAddr:o?reportAddress(o):'—',status:c.archived?'Archiviert':'Aktiv'}))});
+ const customers=filteredCustomers(),rows=customers.flatMap(c=>{const objs=customerObjectsForSearch(c);return (objs.length?objs:[null]).map(o=>({no:c.publicNumber||'—',name:c.name,address:[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '),obj:o?.name||'—',objNo:o?.publicNumber||'—',objAddr:o?reportAddress(o):'—',status:c.archived?'Archiviert':'Aktiv'}))});
  const w=1123,h=794,perPage=18,pages=Math.max(1,Math.ceil(rows.length/perPage)),images=[];
  for(let page=0;page<pages;page++){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);c.fillStyle='#154b76';c.font='bold 28px Arial';c.fillText('M-iCare · Kundenliste',40,57);c.font='15px Arial';c.fillText('Kunden: '+customers.length+' · '+$('customerStateFilter').selectedOptions[0].text+' · Stand: '+new Date().toLocaleDateString('de-DE'),40,87);
  const xs=[40,160,370,580,780,990],widths=[110,198,200,190,198,90],headers=['Nr.','Kunde','Kundenadresse','Objekt / Nr.','Objektadresse','Status'];c.fillStyle='#e8f2fc';c.fillRect(36,115,1050,34);c.fillStyle='#173954';c.font='bold 13px Arial';headers.forEach((x,i)=>c.fillText(x,xs[i],137));
