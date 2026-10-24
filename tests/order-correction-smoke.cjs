@@ -65,6 +65,7 @@ const submit=async()=>await vm.runInContext('saveEntry({preventDefault(){}})',ct
  assert.equal(state.changeHistory[0].type,'Auftragskorrektur');
  ctx.editId='original-entry';input={...input,start:'08:00'};
  fields.correctionReason.value='Arbeitszeit falsch erfasst';
+ fields.correctionEditor.value='Test Mitarbeiter';
  await submit();
  assert.equal(state.entries[0].corrections.length,2);
  assert.equal(state.entries[0].corrections[1].editedBy,'Test Mitarbeiter');
