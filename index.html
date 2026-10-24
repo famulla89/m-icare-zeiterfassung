@@ -81,7 +81,7 @@
    <div><label for="reportFrom">Von</label><input type="date" id="reportFrom"></div>
    <div><label for="reportTo">Bis</label><input type="date" id="reportTo"></div>
    <div><label for="reportCustomerSearch">Kunde suchen (optional)</label><input type="search" id="reportCustomerSearch" placeholder="Name oder Kundennummer eingeben"></div>
-   <div><label for="reportCustomer">Kunde auswählen</label><select id="reportCustomer"></select></div>
+   <div><label for="rptCustomer">Kunde auswählen</label><select id="rptCustomer"></select></div>
    <div><label for="reportEmployee">Mitarbeiter</label><select id="reportEmployee"></select></div>
    <div><label for="reportObject">Geschäftsstelle / Objekt</label><select id="reportObject"></select></div>
    <div><label for="reportService">Reinigungsleistung</label><select id="reportService"></select></div><div><label for="reportEntryKind">Erfassungsart</label><select id="reportEntryKind"><option value="">Alle Arten</option><option value="free">Freie Arbeitszeiterfassung</option><option value="planned">Geplanter Auftrag dokumentiert</option></select></div><div><label for="reportOrderStatus">Status erfasster Arbeiten</label><select id="reportOrderStatus"><option value="">Alle Status</option><option value="done">Erledigt</option><option value="progress">In Bearbeitung</option><option value="cancelled">Abgesagt</option><option value="absent">Nicht angetroffen</option><option value="_none">Ohne Status</option></select></div>
@@ -720,7 +720,7 @@ function reportFillSelect(id,items,all){const select=$(id),previous=select.value
 function reportTable(parent,title,headers,rows){const section=el('div','');section.className='objectPanel';section.append(el('h3',title));const wrap=el('div','');wrap.className='tablewrap';const t=document.createElement('table'),head=document.createElement('thead'),hr=document.createElement('tr');for(const h of headers){const th=el('th',h);hr.append(th)}head.append(hr);t.append(head);const body=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const item of row)tr.append(el('td',item));body.append(tr)}t.append(body);wrap.append(t);section.append(wrap);if(!rows.length)section.append(el('p','Keine passenden Daten im gewählten Zeitraum.'));parent.append(section)}
 function reportMinutes(n){return (Number(n||0)/60).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' Std.'}
 function reportBuild(){
- const from=$('reportFrom').value,to=$('reportTo').value,cid=$('reportCustomer').value,emp=$('reportEmployee').value,oid=$('reportObject').value,svc=$('reportService').value,kind=$('reportEntryKind').value,status=$('reportOrderStatus').value;
+ const from=$('reportFrom').value,to=$('reportTo').value,cid=$('rptCustomer').value,emp=$('reportEmployee').value,oid=$('reportObject').value,svc=$('reportService').value,kind=$('reportEntryKind').value,status=$('reportOrderStatus').value;
  const matches=(x)=> (!cid||x.customerId===cid)&&(!emp||x.employee===emp)&&(!oid||x.objectId===oid)&&(!svc||x.service===svc);
  const entries=state.entries.filter(e=>e.date>=from&&e.date<=to&&matches(e)&&(!kind||(kind==='free'?!e.appointmentId:!!e.appointmentId))&&(!status||(status==='_none'?!e.orderStatus:e.orderStatus===status)));
  const occ=(state.appointments||[]).filter(a=>matches(a)).flatMap(a=>datesFor(a,from,to));
@@ -777,11 +777,11 @@ function reportBars(parent,title,items){
 
 function renderReporting(){
  if(!$('reportFrom').value){const now=isoDate();$('reportFrom').value=now.slice(0,7)+'-01';$('reportTo').value=now}if(!$('reportTo').value)$('reportTo').value=isoDate();
- const chosen=$('reportCustomer').value,query=$('reportCustomerSearch').value.trim().toLocaleLowerCase('de');reportFillSelect('reportCustomer',state.customers.filter(c=>!query||String(c.name+' '+(c.publicNumber||'')+' '+(c.city||'')).toLocaleLowerCase('de').includes(query)||String(c.id)===chosen).sort((a,b)=>a.name.localeCompare(b.name,'de')).map(c=>({value:c.id,label:(c.publicNumber||'')+' · '+c.name})), 'Alle Kunden');
+ const chosen=$('rptCustomer').value,query=$('reportCustomerSearch').value.trim().toLocaleLowerCase('de');reportFillSelect('rptCustomer',state.customers.filter(c=>!query||String(c.name+' '+(c.publicNumber||'')+' '+(c.city||'')).toLocaleLowerCase('de').includes(query)||String(c.id)===chosen).sort((a,b)=>a.name.localeCompare(b.name,'de')).map(c=>({value:c.id,label:(c.publicNumber||'')+' · '+c.name})), 'Alle Kunden');
  reportFillSelect('reportEmployee',state.employees.map(x=>({value:x,label:x})),'Alle Mitarbeiter');
- reportFillSelect('reportObject',state.objects.filter(o=>!$('reportCustomer').value||o.customerId===$('reportCustomer').value).map(o=>({value:o.id,label:o.name})),'Alle Geschäftsstellen');
+ reportFillSelect('reportObject',state.objects.filter(o=>!$('rptCustomer').value||o.customerId===$('rptCustomer').value).map(o=>({value:o.id,label:o.name})),'Alle Geschäftsstellen');
  reportFillSelect('reportService',SERVICES.map(x=>({value:x,label:x})),'Alle Leistungen');
- const summary=$('reportSummary'),panels=$('reportPanels');summary.replaceChildren();panels.replaceChildren();const home=$('reportHomeStats');home.replaceChildren();$('reportActiveFilters').textContent='Aktueller Bericht: '+({overview:'Übersicht',employees:'Mitarbeiterleistung',customers:'Kunden & Objekte',orders:'Aufträge & Soll-Ist',quality:'Qualität & Konflikte'}[activeReportTab])+' · '+($('reportCustomer').selectedOptions[0]?.textContent||'Alle Kunden')+' · '+($('reportEmployee').selectedOptions[0]?.textContent||'Alle Mitarbeiter');
+ const summary=$('reportSummary'),panels=$('reportPanels');summary.replaceChildren();panels.replaceChildren();const home=$('reportHomeStats');home.replaceChildren();$('reportActiveFilters').textContent='Aktueller Bericht: '+({overview:'Übersicht',employees:'Mitarbeiterleistung',customers:'Kunden & Objekte',orders:'Aufträge & Soll-Ist',quality:'Qualität & Konflikte'}[activeReportTab])+' · '+($('rptCustomer').selectedOptions[0]?.textContent||'Alle Kunden')+' · '+($('reportEmployee').selectedOptions[0]?.textContent||'Alle Mitarbeiter');
  if($('reportFrom').value>$('reportTo').value){summary.append(el('p','Bitte einen gültigen Zeitraum auswählen.'));return}
  const d=reportBuild();for(const [name,value] of [['Geleistete Stunden',reportMinutes(d.total)],['Erfasste Arbeitszeiten',d.entries.length],['Geplante Termine',d.occ.length],['Dokumentiert',d.completed.length]]){const c=el('div','');c.className='reportMetric';c.append(el('strong',value),el('span',name));home.append(c)}const cards=[['Erfasste Stunden',reportMinutes(d.total)],['Arbeitszeiteinträge',d.entries.length],['Freie Erfassungen',d.free.length],['Geplante Termine',d.occ.length],['Dokumentierte Termine',d.completed.length],['Offene geplante Termine',d.occ.length-d.completed.length],['Geplante Zeit',reportMinutes(d.totalPlan)],['Zeitabweichungen',d.exceptions.length],['Auffällige Überschneidungen',d.overlaps.length],['Abgesagt / nicht angetroffen',d.cancelled.length]];
  const shownCards=activeReportTab==='overview'?cards.slice(0,4):activeReportTab==='employees'?[cards[0],cards[1]]:activeReportTab==='customers'?[cards[0],cards[1]]:activeReportTab==='orders'?[cards[3],cards[4],cards[5]]:activeReportTab==='services'?[cards[0],cards[1]]:[cards[7],cards[8]];const g=el('div','');g.className='grid';for(const [name,value] of shownCards){const card=el('div','');card.className='status';card.append(el('strong',value),el('div',name));g.append(card)}summary.append(el('h3','Kennzahlen · '+formatDate(d.from)+' bis '+formatDate(d.to)),g);
@@ -814,12 +814,12 @@ function reportExportCsv(){
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='M-iCare_Reporting_'+d.from+'_'+d.to+'.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)
 }
 
-document.querySelectorAll('#reportFilters select,#reportFilters input[type="date"]').forEach(el=>el.addEventListener('change',()=>{if(el.id==='reportCustomer')$('reportObject').value='';renderReporting()}));
+document.querySelectorAll('#reportFilters select,#reportFilters input[type="date"]').forEach(el=>el.addEventListener('change',()=>{if(el.id==='rptCustomer')$('reportObject').value='';renderReporting()}));
 $('reportCustomerSearch').addEventListener('input',renderReporting);
 document.querySelectorAll('[data-open-report]').forEach(b=>b.onclick=()=>reportOpenTab(b.dataset.openReport));
 $('reportBack').onclick=reportOpenHome;
 document.querySelectorAll('[data-report-range]').forEach(b=>b.onclick=()=>reportSetRange(b.dataset.reportRange));
-$('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','reportCustomer','reportEmployee','reportObject','reportService','reportEntryKind','reportOrderStatus'])$(id).value='';renderReporting()};
+$('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','rptCustomer','reportEmployee','reportObject','reportService','reportEntryKind','reportOrderStatus'])$(id).value='';renderReporting()};
 $('reportCsv').onclick=reportExportCsv;
 $('reportTableCsv').onclick=()=>{
  const rows=[['Bericht',reportTitles[activeReportTab]],['Zeitraum',$('reportFrom').value+' bis '+$('reportTo').value]];
