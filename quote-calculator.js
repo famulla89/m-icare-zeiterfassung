@@ -90,81 +90,101 @@
  async function pdf(d){
   validateDocument(d);
   if(typeof document==='undefined')throw Error('PDF benötigt Browsergrafik');
-  const c=document.createElement('canvas');c.width=1240;c.height=1754;
-  const x=c.getContext('2d');if(!x)throw Error('Canvas nicht verfügbar');
-  const W=1240,H=1754;const pages=[];
-  const blue='#124e8a',muted='#516478',dark='#152b42';
-  function fillText(text,left,top,maxWidth=1050,font='24px Arial',color=dark){
-   x.font=font;x.fillStyle=color;
-   const words=String(text||'—').split(/\s+/),lines=[];let line='';
-   for(const word of words){const candidate=line?line+' '+word:word;if(x.measureText(candidate).width>maxWidth&&line){lines.push(line);line=word}else line=candidate}
-   lines.push(line);
-   lines.slice(0,8).forEach((row,i)=>x.fillText(row,left,top+i*32));
-   return Math.min(lines.length,8)*32;
+  const W=1240,H=1754,blue='#124e8a',dark='#152b42',muted='#516478',jpgs=[];
+  const euros=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+  function render(pageIndex,rows,pageCount){
+   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+   const c=canvas.getContext('2d');if(!c)throw Error('Canvas nicht verfügbar');
+   c.fillStyle='#fff';c.fillRect(0,0,W,H);
+   c.fillStyle=blue;c.fillRect(0,0,W,12);
+   c.fillStyle=blue;c.font='bold 38px Arial';c.fillText('M-iCare  |  '+(d.kind==='quote'?'KOSTENVORANSCHLAG':'RECHNUNGSENTWURF'),70,91);
+   c.fillStyle=muted;c.font='20px Arial';c.fillText('Entwurf zur Prüfung  ·  Seite '+(pageIndex+1)+' von '+pageCount,70,130);
+   let y=180;
+   function write(text,left,top,width,font='22px Arial',color=dark){
+    c.font=font;c.fillStyle=color;
+    const words=String(text||'—').split(/\s+/);let line='',lines=[];
+    for(const word of words){
+     const candidate=line?line+' '+word:word;
+     if(c.measureText(candidate).width>width&&line){lines.push(line);line=word}else line=candidate;
+    }
+    lines.push(line);
+    for(const l of lines.slice(0,5)){c.fillText(l,left,top);top+=29}
+    return Math.min(5,lines.length)*29;
+   }
+   if(pageIndex===0){
+    write('Absender',70,y,490,'bold 25px Arial',blue);write('Empfänger',670,y,490,'bold 25px Arial',blue);y+=43;
+    y+=Math.max(write(d.sellerName||'Absender ergänzen',70,y,500,'bold 25px Arial'),write(d.customerName,670,y,500,'bold 25px Arial'));
+    const left=[d.sellerAddress,d.sellerTaxId?'Steuernummer / USt-ID: '+d.sellerTaxId:'Steuernummer noch ergänzen',d.sellerEmail],
+    right=[d.customerAddress,d.objectName,d.objectAddress];
+    for(let i=0;i<3;i++)y+=Math.max(write(left[i]||'',70,y,490),write(right[i]||'',670,y,490),29);
+    y=Math.max(y+35,420);
+    write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+d.date,700,y,470,'23px Arial');y+=45;
+    write('Leistungszeitraum: '+(d.serviceDate||'bitte ergänzen'),70,y,1050);y+=42;
+    write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;
+    y+=write(d.service,70,y,1080,'bold 25px Arial');
+   }else{
+    write('Nr.: '+d.number+'  ·  '+d.customerName,70,y,1080,'bold 25px Arial');
+    y+=62;
+   }
+   y+=20;
+   c.fillStyle='#e9f2fc';c.fillRect(70,y-10,1100,52);
+   write('Leistung',85,y+23,600,'bold 21px Arial',blue);
+   write('Menge',780,y+23,100,'bold 21px Arial',blue);
+   write('Gesamt',1010,y+23,170,'bold 21px Arial',blue);y+=65;
+   for(const row of rows){
+    c.fillStyle='#f4f7fc';c.fillRect(70,y-6,1100,82);
+    write(row.title,84,y+22,670,'21px Arial');
+    write(row.quantity+' '+row.unit,777,y+22,170,'20px Arial');
+    write(euros(row.total),1005,y+22,170,'bold 20px Arial');y+=88;
+   }
+   if(pageIndex===pageCount-1){
+    y+=25;c.strokeStyle='#bdcde0';c.beginPath();c.moveTo(70,y);c.lineTo(1170,y);c.stroke();y+=50;
+    write('Netto',710,y,230);write(euros(d.net),1000,y,180,'bold 24px Arial');y+=49;
+    write('USt. '+d.vat+' %',710,y,240);write(euros(d.tax),1000,y,180,'bold 24px Arial');y+=62;
+    c.fillStyle=blue;c.fillRect(700,y-40,470,70);write('Gesamt',720,y+5,250,'bold 29px Arial','#fff');write(euros(d.gross),970,y+5,185,'bold 29px Arial','#fff');y+=100;
+    if(d.kind==='quote')y+=write('Angebot gültig bis: '+(d.validUntil||'bitte ergänzen'),70,y,1030);
+    else{
+     y+=write('Zahlbar bis: '+(d.dueDate||'bitte ergänzen'),70,y,1030);
+     y+=write('IBAN: '+(d.iban||'bitte ergänzen'),70,y,1030);
+    }
+    y+=write(d.notes||'Leistungsumfang und Konditionen vor Versand überprüfen.',70,y+12,1075,'20px Arial');
+   }
+   c.fillStyle=muted;c.font='19px Arial';c.fillText('Entwurf – nicht automatisch versendet · '+new Date().toLocaleDateString('de-DE'),70,H-65);
+   if(d.kind==='invoice'){
+    c.save();c.translate(285,1480);c.rotate(-Math.PI/11);
+    c.fillStyle='rgba(170,25,25,.16)';c.font='bold 115px Arial';c.fillText('ENTWURF',0,0);c.restore();
+   }
+   const raw=atob(canvas.toDataURL('image/jpeg',0.85).split(',')[1]);
+   const jpg=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)jpg[i]=raw.charCodeAt(i);
+   return jpg;
   }
-  function startPage(){
-   x.fillStyle='#fff';x.fillRect(0,0,W,H);
-   x.fillStyle=blue;x.fillRect(0,0,W,13);
-   x.fillStyle=blue;x.font='bold 40px Arial';x.fillText('M-iCare · '+(d.kind==='quote'?'KOSTENVORANSCHLAG':'RECHNUNGSENTWURF'),70,102);
-   x.fillStyle=muted;x.font='20px Arial';x.fillText('Entwurf / Voransicht · Vor Versand alle Angaben prüfen',70,140);
-   x.fillStyle=dark;
-  }
-  startPage();let y=200;
-  fillText('Absender',70,y,500,'bold 25px Arial',blue);fillText('Empfänger',665,y,500,'bold 25px Arial',blue);y+=48;
-  y+=Math.max(fillText(d.sellerName||'Absender ergänzen',70,y,500,'bold 25px Arial'),fillText(d.customerName,665,y,500,'bold 25px Arial'));
-  const left=[d.sellerAddress,d.sellerTaxId?('Steuer-ID/Steuernummer: '+d.sellerTaxId):'Steuernummer: bitte ergänzen',d.sellerEmail];
-  const right=[d.customerAddress,d.objectName,d.objectAddress];
-  for(let i=0;i<Math.max(left.length,right.length);i++){
-   const h1=fillText(left[i]||'',70,y,520,'22px Arial');
-   const h2=fillText(right[i]||'',665,y,505,'22px Arial');y+=Math.max(h1,h2,34);
-  }
-  y=Math.max(y+55,505);
-  fillText('Dokument: '+d.number,70,y,510,'bold 24px Arial');fillText('Datum: '+d.date,680,y,485,'23px Arial');y+=50;
-  fillText('Leistungsdatum/-zeitraum: '+(d.serviceDate||'bitte ergänzen'),70,y,1120,'23px Arial');y+=52;
-  fillText('Arbeitskarte: '+(d.orderNumber||'keine')+'   ·   Kunde: '+(d.customerNumber||'—'),70,y,1100,'22px Arial');y+=60;
-  y+=fillText(d.service,70,y,1060,'bold 26px Arial');
-  y+=20;
-  x.fillStyle='#e9f2fd';x.fillRect(70,y,1100,54);x.font='bold 22px Arial';x.fillStyle=blue;x.fillText('Leistung',85,y+34);x.fillText('Menge',700,y+34);x.fillText('Einzelpreis',860,y+34);x.fillText('Gesamt',1060,y+34);y+=68;
-  const eur=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
-  for(const row of d.rows){
-   const height=Math.max(68,Math.ceil(String(row.title).length/48)*32+18);
-   x.fillStyle='#f4f7fc';x.fillRect(70,y,1100,height-8);
-   fillText(row.title,85,y+31,590,'21px Arial');
-   x.fillStyle=dark;x.font='21px Arial';x.fillText(String(row.quantity)+' '+row.unit,700,y+31);x.fillText(eur(row.price),860,y+31);x.fillText(eur(row.total),1060,y+31);
-   y+=height;
-  }
-  y+=18;x.strokeStyle='#d3e1ef';x.beginPath();x.moveTo(70,y);x.lineTo(1170,y);x.stroke();y+=55;
-  fillText('Nettobetrag',755,y,280,'23px Arial');fillText(eur(d.net),1030,y,170,'bold 23px Arial');y+=55;
-  fillText('Umsatzsteuer '+d.vat+' %',755,y,300,'23px Arial');fillText(eur(d.tax),1030,y,170,'bold 23px Arial');y+=58;
-  x.fillStyle=blue;x.fillRect(700,y-35,470,72);x.fillStyle='#fff';x.font='bold 29px Arial';x.fillText('Gesamt',725,y+10);x.fillText(eur(d.gross),953,y+10);y+=103;
-  if(d.kind==='quote'){
-   y+=fillText('Angebot gültig bis: '+(d.validUntil||'bitte ergänzen'),70,y,1080,'23px Arial');
-  }else{
-   y+=fillText('Zahlungsziel: '+(d.dueDate||'bitte ergänzen'),70,y,1080,'23px Arial');
-   y+=fillText('Bankverbindung: '+(d.iban||'bitte ergänzen'),70,y,1080,'23px Arial');
-  }
-  y+=fillText(d.notes||'Kalkulation auf Basis der angegebenen Leistungen und Preise.',70,y+20,1090,'22px Arial');
-  x.fillStyle=muted;x.font='20px Arial';x.fillText('M-iCare · Entwurf – keine versendete Rechnung · Druckdatum '+new Date().toLocaleDateString('de-DE'),70,H-65);
-  if(d.kind==='invoice'){
-   x.save();x.translate(210,1020);x.rotate(-Math.PI/8);x.fillStyle='rgba(170,30,30,.18)';x.font='bold 130px Arial';x.fillText('ENTWURF',0,0);x.restore();
-  }
-  const data=c.toDataURL('image/jpeg',0.88).split(',')[1],bin=atob(data),jpg=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)jpg[i]=bin.charCodeAt(i);
-  pages.push(jpg);
-  // Eine einzelne A4-Hochformat-Seite; der Kalkulationsentwurf enthält höchstens 2 Positionen.
-  const enc=new TextEncoder(),chunks=[],offsets=[0];let pos=0;
-  function add(v){let b=typeof v==='string'?enc.encode(v):v;chunks.push(b);pos+=b.length}
-  function obj(id,s){offsets[id]=pos;add(id+' 0 obj\n'+s+'\nendobj\n')}
+  // Maximal 6 Positionen pro Seite; zweite und weitere Seiten haben einen kompakten Kopf.
+  const allPages=[];
+  for(let start=0;start<d.rows.length;start+=6)allPages.push(d.rows.slice(start,start+6));
+  if(!allPages.length)allPages.push([]);
+  // Wenn 6 Zeilen auf der letzten Seite zu wenig Platz für Summen lassen: eigene Summenseite.
+  if(allPages[allPages.length-1].length>4)allPages.push([]);
+  allPages.forEach((rows,index)=>jpgs.push(render(index,rows,allPages.length)));
+  const enc=new TextEncoder(),parts=[],offsets=[0];let pos=0;
+  function add(v){const b=typeof v==='string'?enc.encode(v):v;parts.push(b);pos+=b.length}
+  function obj(id,value){offsets[id]=pos;add(id+' 0 obj\n'+value+'\nendobj\n')}
   add('%PDF-1.4\n');
+  const ids=jpgs.map((_,i)=>3+i*3);
   obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
-  obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-  obj(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /I 4 0 R >> >> /Contents 5 0 R >>');
-  offsets[4]=pos;add('4 0 obj\n<< /Type /XObject /Subtype /Image /Width 1240 /Height 1754 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpg.length+' >>\nstream\n');add(jpg);add('\nendstream\nendobj\n');
-  const commands='q\n595 0 0 842 0 0 cm\n/I Do\nQ\n';
-  obj(5,'<< /Length '+enc.encode(commands).length+' >>\nstream\n'+commands+'endstream');
-  const xref=pos;add('xref\n0 6\n0000000000 65535 f \n');for(let i=1;i<=5;i++)add(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
-  add('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
-  return new Blob(chunks,{type:'application/pdf'});
+  obj(2,'<< /Type /Pages /Kids ['+ids.map(id=>id+' 0 R').join(' ')+'] /Count '+jpgs.length+' >>');
+  jpgs.forEach((jpg,i)=>{
+   const p=ids[i],img=p+1,cmd=p+2;
+   obj(p,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /I '+img+' 0 R >> >> /Contents '+cmd+' 0 R >>');
+   offsets[img]=pos;add(img+' 0 obj\n<< /Type /XObject /Subtype /Image /Width '+W+' /Height '+H+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpg.length+' >>\nstream\n');
+   add(jpg);add('\nendstream\nendobj\n');
+   const commands='q\n595 0 0 842 0 0 cm\n/I Do\nQ\n';
+   obj(cmd,'<< /Length '+enc.encode(commands).length+' >>\nstream\n'+commands+'endstream');
+  });
+  const max=2+jpgs.length*3,xref=pos;
+  add('xref\n0 '+(max+1)+'\n0000000000 65535 f \n');
+  for(let i=1;i<=max;i++)add(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
+  add('trailer\n<< /Size '+(max+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
+  return new Blob(parts,{type:'application/pdf'});
  }
  return {compute,validateDocument,createDocument,pdf,euro};
 });
