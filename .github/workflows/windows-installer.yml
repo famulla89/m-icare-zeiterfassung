@@ -5,6 +5,7 @@ on:
     paths:
       - 'windows-app/**'
       - 'index.html'
+      - 'cloud-transfer.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'logo.svg'
@@ -25,13 +26,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force windows-app/web | Out-Null
-          Copy-Item index.html,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
+          Copy-Item index.html,cloud-transfer.js,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
       - name: Validate business rules and correction flows on Windows
         shell: pwsh
         run: |
           node tests/app-core-smoke.cjs
           node tests/order-correction-smoke.cjs
           node tests/reporting-smoke.cjs
+          node tests/cloud-transfer-smoke.cjs
           node --check tests/browser-e2e.cjs
       - name: Install dependencies
         working-directory: windows-app
