@@ -10,7 +10,7 @@
 <section id="home" class="screen active"><h2>Was möchtest du machen?</h2><div class="tiles"><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">👥 Kunden & Objekte<small>Stammdaten, Standorte und Schlüssel</small></button><button class="tile" data-jump="appointmentsPanel">📅 Termine planen<small>Einmalig oder wiederkehrend</small></button><button class="tile" data-jump="history">📊 Auswertungen<small>Monate, PDF, Excel und Kundenberichte</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
 <section class="screen" id="entryForm"><h2>Arbeitszeit erfassen</h2>
-<div class="row" style="margin-bottom:15px"><button type="button" id="workModeFree" class="secondary">✍ Freie Tageserfassung</button><button type="button" id="workModePlanned" class="secondary">📋 Geplanten Auftrag abschließen</button></div><p id="workModeHint" class="hint">Freie Arbeitszeit ohne Termin erfassen.</p><form id="form">
+<div class="row" style="margin-bottom:15px"><button type="button" class="secondary" data-jump="dailyWorkOverview">📅 Tagesübersicht</button><button type="button" id="workModeFree" class="secondary">✍ Freie Tageserfassung</button><button type="button" id="workModePlanned" class="secondary">📋 Geplanten Auftrag abschließen</button></div><p id="workModeHint" class="hint">Freie Arbeitszeit ohne Termin erfassen.</p><form id="form">
 <div class="grid">
 <div><label for="month">Monat</label><select id="month" required></select></div>
 <div><label for="employee">Mitarbeiter</label><select id="employee" required></select></div>
@@ -29,6 +29,7 @@
 </form>
 <p class="hint">Du kannst Einträge aus jedem Monat bearbeiten. Bei Änderungen wird immer der gesamte Datenstand für die Sicherung verwendet.</p>
 </section>
+<section class="screen" id="dailyWorkOverview"><h2>📅 Tagesübersicht der Arbeitszeiten</h2><p class="hint">Arbeitszeiten und geplante Aufträge eines Mitarbeiters an einem Tag. Auch mehrere Einsätze beim gleichen Kunden bleiben getrennte Einträge.</p><div class="grid"><div><label for="dailyOverviewDate">Datum</label><input type="date" id="dailyOverviewDate"></div><div><label for="dailyOverviewEmployee">Mitarbeiter</label><select id="dailyOverviewEmployee"></select></div></div><div id="dailyOverviewTotals" class="status" style="margin-top:14px"></div><h3>Erfasste Arbeitszeiten</h3><div id="dailyOverviewEntries"></div><h3>Geplante Termine</h3><div id="dailyOverviewAppointments"></div><div class="row"><button type="button" id="dailyOverviewNew" class="secondary">+ Freie Arbeitszeit hinzufügen</button></div></section>
 <section class="screen" id="customersPanel"><h2>Kundenverwaltung</h2><p class="hint">Wähle einen bestehenden Kunden oder lege einen neuen an. Kundendaten, Reinigungsobjekt und Schlüssel sind in einer gemeinsamen Maske.</p>
 <div class="objectPanel"><div class="row actions"><div id="customerSelectionBlock" style="flex:1;min-width:230px"><label for="selectedCustomer">Kunde auswählen</label><select id="selectedCustomer"></select><p id="newCustomerNotice" class="hint hidden">Neuer Kunde: Bitte die Felder ausfüllen und speichern. Es ist kein bestehender Kunde ausgewählt.</p></div><button type="button" id="newCustomerMode" class="secondary customerModeButton">+ Neuen Kunden anlegen</button></div>
 <h3 id="customerFormTitle">Kunden- und Objektdaten bearbeiten</h3><div class="status" id="customerNumberPanel" style="margin:12px 0">Kundennummer und Objektnummer werden automatisch vergeben.</div><h3 style="margin-top:20px">1. Kundendaten</h3><div class="row" id="objectPickerRow"><div style="flex:1;min-width:230px"><label for="selectedObject">Geschäftsstelle / Objekt auswählen</label><select id="selectedObject"></select></div><button type="button" id="newObjectMode" class="secondary customerModeButton">+ Geschäftsstelle hinzufügen</button></div>
@@ -410,6 +411,25 @@ function resetEdit(){editId=null;$('form').reset();$('endDateWrap').classList.ad
 async function addEmployee(){let n=$('newEmployee').value.trim();if(!n||n.length>80)return alert('Bitte Mitarbeiternamen eingeben.');if(state.employees.some(x=>x.toLocaleLowerCase('de')===n.toLocaleLowerCase('de')))return alert('Mitarbeiter existiert bereits.');state.employees.push(n);$('newEmployee').value='';await saveState();$('employee').value=n;notify('Mitarbeiter hinzugefügt')}
 document.addEventListener('click',async event=>{const button=event.target.closest('[data-copy-field]');if(!button)return;const input=document.getElementById(button.dataset.copyField);const value=input?.value.trim();if(!value){notify('Dieses Kontaktfeld ist leer');return;}try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value)}else{input.focus();input.select();if(!document.execCommand('copy'))throw new Error('Kopieren nicht unterstützt')}notify('Kontaktangabe kopiert')}catch(err){input.focus();input.select();notify('Bitte den markierten Text manuell kopieren')}});
 document.addEventListener('click',event=>{if(event.target?.id==='workModeFree')setWorkEntryMode('free');if(event.target?.id==='workModePlanned')setWorkEntryMode('planned');if(event.target?.id==='showEndDate')$('endDateWrap').classList.toggle('hidden')});document.addEventListener('input',event=>{if(['start','end','deviationReason'].includes(event.target?.id))renderPlannedDeviation()});
+function renderDailyWorkOverview(){
+ const dateEl=$('dailyOverviewDate'),empEl=$('dailyOverviewEmployee');if(!dateEl||!empEl)return;
+ if(!dateEl.value)dateEl.value=isoDate();const old=empEl.value;empEl.replaceChildren();
+ for(const n of state.employees){const option=el('option',n);option.value=n;empEl.append(option);}
+ if(state.employees.includes(old))empEl.value=old;
+ const date=dateEl.value,employee=empEl.value;
+ const entries=state.entries.filter(e=>e.date===date&&e.employee===employee).sort((a,b)=>a.start.localeCompare(b.start));
+ const entryArea=$('dailyOverviewEntries');entryArea.replaceChildren();
+ const total=entries.reduce((acc,e)=>acc+(Number(e.minutes)||0),0);
+ $('dailyOverviewTotals').textContent=entries.length+' Einträge · '+Math.floor(total/60)+' Std. '+String(total%60).padStart(2,'0')+' Min. erfasst';
+ for(const e of entries){const row=el('div',e.start+'–'+e.end+' · '+e.service+' · '+(e.object||'Ohne Objekt'));row.className='objectItem';const button=el('button','Bearbeiten');button.className='secondary smallbtn';button.type='button';button.onclick=()=>editEntry(e.id);row.append(button);entryArea.append(row);}
+ if(!entries.length)entryArea.append(el('p','Noch keine Arbeitszeit erfasst.'));
+ const area=$('dailyOverviewAppointments');area.replaceChildren();
+ const appointments=(state.appointments||[]).filter(a=>a.employee===employee).flatMap(a=>datesFor(a,date,date)).filter(o=>o.date===date);
+ for(const o of appointments){const customer=state.customers.find(c=>c.id===o.appointment.customerId);const row=el('div',o.start+'–'+o.end+' · '+(customer?.name||'Kunde unbekannt'));row.className='objectItem';const existing=completedAppointmentEntry(o);const button=el('button',existing?'Eintrag bearbeiten':'Auftrag abschließen');button.className='secondary smallbtn';button.type='button';button.onclick=()=>completeAppointment(o);row.append(button);area.append(row);}
+ if(!appointments.length)area.append(el('p','Keine geplanten Aufträge für diesen Tag.'));
+}
+document.addEventListener('change',e=>{if(['dailyOverviewDate','dailyOverviewEmployee'].includes(e.target?.id))renderDailyWorkOverview();});
+document.addEventListener('click',e=>{if(e.target?.id==='dailyOverviewNew'){resetEdit();$('date').value=formatDate($('dailyOverviewDate').value);$('endDate').value=$('date').value;syncMonthToWorkday();$('employee').value=$('dailyOverviewEmployee').value;setWorkEntryMode('free');showScreen('entryForm');calc();}});
 function download(name,blob){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000)}
 let nativeExportPending=null;
 window.micareNativeExportResult=(success,message)=>{
