@@ -67,6 +67,31 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   const quality=await page.locator('#reportPanels').innerText();
   assert(quality.includes('Geplante AK-Überschneidungen'),'Quality report contains planned conflicts');
   assert(quality.includes('Tatsächlich erfasste Arbeitszeitüberschneidungen'),'Quality report separates actual overlaps');
+
+  // The installed Windows renderer must create functional PDF, CSV, Excel and JSON data.
+  const exports=await page.evaluate(async()=>{
+   const rangeControls={mode:document.getElementById('reportMode').value,month:document.getElementById('historyMonth').value,all:document.getElementById('reportAllCustomers').checked};
+   document.getElementById('reportMode').value='month';
+   document.getElementById('historyMonth').value='2026-10';
+   document.getElementById('reportAllCustomers').checked=true;
+   const pdf=createOrderStatusPdf('2026-10','');
+   const csv=akCsvBlob(akCsvRows(akReportData('2026-10-01','2026-10-31')));
+   const xlsx=makeXlsx('2026-10');
+   const backup=JSON.parse(JSON.stringify(state));
+   const sig=async blob=>[...new Uint8Array((await blob.slice(0,8).arrayBuffer()))];
+   const result={pdfSize:pdf.size,pdfSig:await sig(pdf),csvSize:csv.size,csvContent:await csv.text(),
+    xlsxSize:xlsx.size,xlsxSig:await sig(xlsx),backupCount:backup.entries.length,
+    backupAkCount:backup.appointments.filter(a=>Number.isInteger(a.akNumber)).length};
+   document.getElementById('reportMode').value=rangeControls.mode;
+   document.getElementById('historyMonth').value=rangeControls.month;
+   document.getElementById('reportAllCustomers').checked=rangeControls.all;
+   return result;
+  });
+  assert(exports.pdfSize>5000&&String.fromCharCode(...exports.pdfSig.slice(0,5))==='%PDF-','Windows AK PDF output');
+  assert(exports.csvSize>100&&exports.csvContent.startsWith('\ufeff')&&exports.csvContent.includes('Erledigt'),'Windows CSV output');
+  assert(exports.xlsxSize>100&&exports.xlsxSig[0]===80&&exports.xlsxSig[1]===75,'Windows Excel ZIP format');
+  assert(exports.backupCount===fixture.entries.length&&exports.backupAkCount===fixture.appointments.length,'Windows backup retains AK data');
+
   assert(!pageerrors.length,'Windows renderer JavaScript errors: '+pageerrors.join('; '));
   console.log('NATIVE WINDOWS ELECTRON E2E PASS: offline protocol, AK search, completed correction, reason, no duplicates, quality reports');
  } finally {await app.close();}
