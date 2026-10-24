@@ -97,7 +97,7 @@
   </div>
   <div class="row" style="margin-top:12px"><button type="button" id="reportReset" class="secondary">Filter zurücksetzen</button></div>
  </details>
- <div class="row reportActions"><button type="button" id="reportCsv">⬇ Einzelzeiten als CSV</button><button type="button" id="reportTableCsv" class="secondary">⬇ Berichtstabelle als CSV</button><button type="button" id="reportPrint" class="secondary">🖨 Bericht drucken / als PDF</button></div>
+ <div class="row reportActions"><button type="button" id="reportCsv">⬇ AK & Arbeitszeiten als CSV</button><button type="button" id="reportTableCsv" class="secondary">⬇ Berichtstabelle als CSV</button><button type="button" id="reportPrint" class="secondary">🖨 Bericht drucken / als PDF</button></div>
  <div id="reportSummary" class="objectPanel" aria-live="polite"></div>
  <div id="reportPanels"></div>
 </div>
@@ -123,7 +123,7 @@
 <details class="objectPanel" id="appointmentCalendarPanel"><summary style="font-weight:700;cursor:pointer">📅 Monatskalender und Tagesübersicht anzeigen</summary><div class="caltoolbar" style="margin-top:14px"><button type="button" class="secondary" id="calPrev">←</button><strong id="calendarTitle"></strong><button type="button" class="secondary" id="calNext">→</button></div><div id="calendarGrid" class="calendarGrid" style="margin:14px 0"></div><h2 id="selectedDayTitle">Termine am ausgewählten Tag</h2><div id="selectedDayList" class="status"></div></details><details class="objectPanel" id="appointmentCreatePanel"><summary style="font-weight:700;cursor:pointer">＋ Neuen Termin / Terminserie anlegen</summary><form id="appointmentForm" style="margin-top:16px"><div class="grid"><div><label for="appointmentCustomer">Kunde</label><select id="appointmentCustomer" required></select></div><div><label for="appointmentObject">Geschäftsstelle / Reinigungsobjekt</label><select id="appointmentObject" required></select></div><div><label for="appointmentService">Reinigungsleistung</label><select id="appointmentService" required></select></div><div><label for="appointmentCustomTitle">Auftragsbezeichnung (optional)</label><input id="appointmentCustomTitle" maxlength="160" placeholder="Automatisch: Leistung – Kunde – Gebäude"></div><div><label for="appointmentEmployee">Zuständiger Mitarbeiter</label><select id="appointmentEmployee" required></select></div><div><label for="appointmentDate">Erster Termin</label><div class="microw"><input type="date" id="appointmentDate" lang="de-DE" required><button type="button" class="secondary mic" data-voice="appointmentDate" aria-label="Datum diktieren">🎤</button></div></div><div><label for="appointmentStart">Beginn</label><div class="microw"><input type="time" id="appointmentStart" value="12:30" lang="de-DE" required><button type="button" class="secondary mic" data-voice="appointmentStart" aria-label="Uhrzeit diktieren">🎤</button></div></div><div><label for="appointmentEnd">Geplantes Ende</label><div class="microw"><input type="time" id="appointmentEnd" value="14:30" lang="de-DE" required><button type="button" class="secondary mic" data-voice="appointmentEnd" aria-label="Uhrzeit diktieren">🎤</button></div></div><div><label for="appointmentRepeat">Wiederholung</label><select id="appointmentRepeat"><option value="once">Einmalig</option><option value="weekly">Wöchentlich</option><option value="monthly">Monatlich</option><option value="weekdays">Bestimmte Wochentage (Mo–So)</option><option value="workdays">Alle X Arbeitstage (Mo–Sa)</option><option value="days">Alle X Kalendertage (inkl. Sonntag)</option></select></div><div id="appointmentWeekdaysWrap" class="hidden" style="grid-column:1/-1"><label>Wochentage auswählen (mehrere möglich)</label><div class="row" style="gap:12px;flex-wrap:wrap"><label><input type="checkbox" class="appointmentWeekday" value="1"> Mo</label><label><input type="checkbox" class="appointmentWeekday" value="2"> Di</label><label><input type="checkbox" class="appointmentWeekday" value="3"> Mi</label><label><input type="checkbox" class="appointmentWeekday" value="4"> Do</label><label><input type="checkbox" class="appointmentWeekday" value="5"> Fr</label><label><input type="checkbox" class="appointmentWeekday" value="6"> Sa</label><label><input type="checkbox" class="appointmentWeekday" value="0"> So</label></div><p class="hint">Nur die angehakten Wochentage werden geplant, beispielsweise Mo und Di. Der erste Termin beginnt frühestens am angegebenen Startdatum.</p></div><div id="appointmentIntervalWrap" class="hidden"><label for="appointmentInterval">X Tage (bei individueller Wiederholung)</label><input id="appointmentInterval" type="text" inputmode="numeric" pattern="[0-9]*" min="1" max="365" value="5"></div><div><label for="appointmentUntil">Wiederholen bis (optional)</label><div class="microw"><input type="date" lang="de-DE" id="appointmentUntil"><button type="button" class="secondary mic" data-voice="appointmentUntil" aria-label="Datum diktieren">🎤</button></div></div></div><p><button type="submit">Termin / Terminserie speichern</button></p></form></details>
 <h2>Nächste Termine</h2><div class="row" style="margin:12px 0 18px"><label for="appointmentsFilter">Kunde filtern</label><select id="appointmentsFilter" style="max-width:265px"><option value="">Alle Kunden</option></select></div><details class="backupDetails" id="appointmentAdvancedFilters"><summary>⚙ Weitere Filter &amp; Sortierung</summary><div class="row" style="margin:14px 0;gap:12px"><label for="appointmentsSort">Sortieren nach</label><select id="appointmentsSort" style="max-width:265px"><option value="date">Datum / Uhrzeit</option><option value="customer">Kunde (A–Z)</option></select><label for="appointmentStatus">Anzeige</label><select id="appointmentStatus" style="max-width:190px"><option value="future">Zukünftige Termine</option><option value="done">Geleistete Einsätze</option><option value="all">Alle geplanten Termine</option></select><label for="appointmentMonth">Monat</label><select id="appointmentMonth" style="max-width:165px"><option value="">Alle Monate</option></select><label for="appointmentEmployeeFilter">Mitarbeiter</label><select id="appointmentEmployeeFilter" style="max-width:180px"><option value="">Alle Mitarbeiter</option></select><label for="appointmentConflictFilter">Überschneidungen</label><select id="appointmentConflictFilter" style="max-width:195px"><option value="all">Alle anzeigen</option><option value="yes">Nur Überschneidungen</option><option value="no">Ohne Überschneidungen</option></select><label for="appointmentYear">Jahr</label><select id="appointmentYear" style="max-width:145px"></select><button type="button" id="appointmentPdf" class="secondary">📄 Übersicht als PDF</button></div></details><div id="appointmentsList"></div><details class="objectPanel" id="appointmentTrashPanel"><summary style="cursor:pointer;font-weight:700">🗑 Papierkorb für Terminserien (<span id="appointmentTrashCount">0</span>)</summary><p class="hint">Gelöschte Terminserien lassen sich wiederherstellen oder endgültig löschen. Der Papierkorb wird in der JSON-Vollsicherung gespeichert.</p><div id="appointmentTrashList"></div></details>
 <p class="hint">Einzeltermine können unabhängig von ihrer Serie verschoben oder abgesagt werden. Geplante Termine zählen nicht als geleistete Arbeitszeit.</p></section>
-<section class="screen" id="history"><h2>Auswertungen & Monatsübersicht</h2><div class="row actions"><button type="button" class="secondary" data-jump="backupSection">📁 PDF, Excel & Datensicherung</button><button type="button" class="secondary" data-jump="management">👤 Mitarbeiter verwalten</button></div><div class="historyControls"><div class="monthControl"><label for="reportMode">Zeitraum auswählen</label><div class="row"><select id="reportMode" style="max-width:130px"><option value="day">Tag</option><option value="month" selected>Monat</option><option value="year">Jahr</option></select><input type="date" id="reportDay" aria-label="Tag auswählen" style="max-width:190px;display:none"><select id="reportYear" aria-label="Jahr auswählen" style="max-width:130px;display:none"></select><select id="historyMonth"></select></div><div class="row" style="margin-top:8px"><label><input type="checkbox" id="reportWholeMonth" checked style="width:auto"> Kompletter Monat</label><label><input type="checkbox" id="reportWholeYear" style="width:auto"> Komplettes Jahr</label></div></div></div><p id="historyTotals" class="hint"></p><div class="objectPanel" style="margin:15px 0"><h3>✅ Auftragsübersicht</h3><p class="hint">Geplante Termine und dokumentierte Auftragsstatus im ausgewählten Monat.</p><label for="orderOverviewStatus">Status filtern</label><select id="orderOverviewStatus" style="max-width:320px"><option value="">Alle Status</option><option value="open">Offen / nicht dokumentiert</option><option value="done">Erledigt</option><option value="progress">In Bearbeitung</option><option value="cancelled">Abgebrochen</option><option value="absent">Kunde nicht da</option></select><div class="row" style="margin-top:12px"><label style="display:flex;align-items:center;gap:7px"><input id="reportAllCustomers" type="checkbox" checked style="width:auto"> Alle Kunden</label><select id="reportCustomer" style="max-width:300px" disabled aria-label="Kunde für Bericht auswählen"></select><button type="button" id="orderStatusPdf" class="secondary">📄 Gefilterte Aufträge als PDF</button></div><p id="orderOverviewTotals" class="hint"></p><div id="orderOverviewList"></div><details class="backupDetails"><summary>Änderungsverlauf anzeigen</summary><p class="hint">Änderungen seit Einführung des Protokolls. Die Historie wird in JSON-Vollsicherungen mitgespeichert.</p><div id="auditHistoryList"></div></details></div><div class="tablewrap"><table><thead><tr><th>Datum</th><th>Mitarbeiter</th><th>Tätigkeit</th><th>Kunde / Objekt</th><th>Von–Bis</th><th>Pause</th><th>Stunden</th><th>Aktion</th></tr></thead><tbody id="records"></tbody></table></div></section>
+<section class="screen" id="history"><h2>Auswertungen & Monatsübersicht</h2><div class="row actions"><button type="button" class="secondary" data-jump="backupSection">📁 PDF, Excel & Datensicherung</button><button type="button" class="secondary" data-jump="management">👤 Mitarbeiter verwalten</button></div><div class="historyControls"><div class="monthControl"><label for="reportMode">Zeitraum auswählen</label><div class="row"><select id="reportMode" style="max-width:130px"><option value="day">Tag</option><option value="month" selected>Monat</option><option value="year">Jahr</option></select><input type="date" id="reportDay" aria-label="Tag auswählen" style="max-width:190px;display:none"><select id="reportYear" aria-label="Jahr auswählen" style="max-width:130px;display:none"></select><select id="historyMonth"></select></div><div class="row" style="margin-top:8px"><label><input type="checkbox" id="reportWholeMonth" checked style="width:auto"> Kompletter Monat</label><label><input type="checkbox" id="reportWholeYear" style="width:auto"> Komplettes Jahr</label></div></div></div><p id="historyTotals" class="hint"></p><div class="objectPanel" style="margin:15px 0"><h3>✅ Auftragsübersicht</h3><p class="hint">Geplante Termine und dokumentierte Auftragsstatus im ausgewählten Monat.</p><label for="orderOverviewStatus">Status filtern</label><select id="orderOverviewStatus" style="max-width:320px"><option value="">Alle Status</option><option value="open">Offen / nicht dokumentiert</option><option value="done">Erledigt</option><option value="progress">In Bearbeitung</option><option value="cancelled">Abgebrochen</option><option value="absent">Kunde nicht da</option></select><div class="row" style="margin-top:12px"><label style="display:flex;align-items:center;gap:7px"><input id="reportAllCustomers" type="checkbox" checked style="width:auto"> Alle Kunden</label><select id="reportCustomer" style="max-width:300px" disabled aria-label="Kunde für Bericht auswählen"></select><button type="button" id="orderStatusPdf" class="secondary">📄 AK-Report als PDF</button><button type="button" id="orderStatusCsv" class="secondary">📊 AK-Report als CSV</button></div><p id="orderOverviewTotals" class="hint"></p><details class="objectPanel" style="margin:12px 0"><summary>🖨 Druckvorschau für Kunde und Arbeitskarten</summary><div id="orderPrintPreviewBody" class="tablewrap"></div></details><div id="orderOverviewList"></div><details class="backupDetails"><summary>Änderungsverlauf anzeigen</summary><p class="hint">Änderungen seit Einführung des Protokolls. Die Historie wird in JSON-Vollsicherungen mitgespeichert.</p><div id="auditHistoryList"></div></details></div><div class="tablewrap"><table><thead><tr><th>Datum</th><th>Mitarbeiter</th><th>Tätigkeit</th><th>Kunde / Objekt</th><th>Von–Bis</th><th>Pause</th><th>Stunden</th><th>Aktion</th></tr></thead><tbody id="records"></tbody></table></div></section>
 <div id="dailyBackupNotice" class="objectPanel hidden" role="status"><strong>⚠ Heute noch keine externe Datensicherung</strong><p class="hint">Nach dem Löschen von Browserdaten wären ausschließlich interne Daten verloren. Sichere den aktuellen Stand jetzt als JSON-Datei auf deinem Handy oder in OneDrive.</p><button type="button" id="dailyBackupNoticeButton">📥 Tagesbackup herunterladen</button><button type="button" class="secondary" id="dailyBackupLater">Später</button></div><section class="screen" id="backupSection"><h2>Datensicherung & Export</h2>
 <p class="hint">Daten bleiben lokal in dieser App. Für eine zusätzliche Sicherung auf dem PC wähle deinen M-iCare-Ordner.</p>
 <div class="backupGroup"><h3>📁 Mein Sicherungsordner</h3><div class="backupBtns"><button id="chooseDir">Ordner auswählen</button><button class="secondary" id="saveSnapshot">Jetzt vollständig sichern</button></div><div id="backupStatus" class="status warn" role="status" aria-live="polite">Sicherungsstatus wird geladen.</div></div>
@@ -332,10 +332,99 @@ function reportRange(){
  const day=$('reportDay').value||isoDate();return {from:day,to:day,label:day};
 }
 function reportOccurrences(){const range=reportRange(),customer=$('reportAllCustomers').checked?'':$('reportCustomer').value;return (state.appointments||[]).filter(a=>!customer||a.customerId===customer).flatMap(a=>datesFor(a,range.from,range.to)).filter(o=>o.date>=range.from&&o.date<=range.to)}
+
+/* AK-Reporting: dieselben Datensätze für Bildschirm, CSV, PDF und Druckansicht. */
+function akReportData(from,to,customerId='',employee='',objectId='',service=''){
+ const related=(a)=>(!customerId||a.customerId===customerId)&&(!employee||a.employee===employee)&&(!objectId||a.objectId===objectId)&&(!service||a.service===service);
+ const series=(state.appointments||[]).filter(related);
+ const records=series.flatMap(a=>datesFor(a,from,to)).filter(o=>o.date>=from&&o.date<=to);
+ const entries=new Map();
+ for(const e of state.entries||[]){
+  if(e.appointmentId&&e.appointmentOccurrence)entries.set(e.appointmentId+'|'+e.appointmentOccurrence,e);
+ }
+ const minutes=t=>{const m=/^(\d{2}):(\d{2})$/.exec(String(t||''));return m?Number(m[1])*60+Number(m[2]):0};
+ const labels={open:'Offen',progress:'In Bearbeitung',done:'Erledigt',cancelled:'Abgebrochen',absent:'Kunde nicht da'};
+ const rows=records.map(o=>{
+  const a=o.appointment,e=entries.get(a.id+'|'+o.originalDate),customer=state.customers.find(c=>c.id===a.customerId),object=state.objects.find(v=>v.id===a.objectId);
+  const status=e?.orderStatus||'open',planned=Math.max(0,minutes(o.end)-minutes(o.start));
+  return {id:a.id+'|'+o.originalDate,ak:akLabel(a),date:o.date,originalDate:o.originalDate,start:o.start,end:o.end,
+   customerId:a.customerId,customer:customer?.name||'Ohne Kunde',customerNumber:customer?.publicNumber||'',objectId:a.objectId,
+   object:object?.name||'Ohne Objekt',service:a.service||'',title:orderTitle(a),employee:e?.employee||a.employee||'',
+   status,label:labels[status]||status,planned,actual:e?Math.max(0,Number(e.minutes)||0):null,
+   workDone:e?.workDone||'',remarks:e?.orderRemarks||'',conflicts:[],kind:a.repeat==='once'?'Einzelauftrag':'Dauerauftrag'};
+ }).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.ak.localeCompare(b.ak));
+ // Geplante Überschneidungen: auch dann markieren, wenn ein anderer Auftrag nicht im ausgewählten Kundenfilter liegt.
+ const all=(state.appointments||[]).flatMap(a=>datesFor(a,from,to)).filter(o=>o.date>=from&&o.date<=to);
+ const collisionMap=new Map();
+ for(const o of all){
+  const k=o.date+'|'+(o.appointment.employee||'');
+  if(!collisionMap.has(k))collisionMap.set(k,[]);
+  collisionMap.get(k).push(o);
+ }
+ for(const row of rows){
+  const same=collisionMap.get(row.date+'|'+row.employee)||[];
+  for(const other of same){
+   if(other.appointment.id+'|'+other.originalDate===row.id)continue;
+   if(row.start<other.end&&other.start<row.end){
+    const label=akLabel(other.appointment)+' '+other.start+'–'+other.end;
+    if(!row.conflicts.includes(label))row.conflicts.push(label);
+   }
+  }
+ }
+ const groups={open:rows.filter(x=>x.status==='open'||x.status==='progress'),done:rows.filter(x=>x.status==='done'),other:rows.filter(x=>x.status==='cancelled'||x.status==='absent')};
+ const sum=(arr,key)=>arr.reduce((n,x)=>n+(Number(x[key])||0),0);
+ const metrics={total:rows.length,open:groups.open.length,done:groups.done.length,other:groups.other.length,
+  openPlanned:sum(groups.open,'planned'),donePlanned:sum(groups.done,'planned'),doneActual:sum(groups.done,'actual'),
+  conflictRows:rows.filter(x=>x.conflicts.length).length};
+ return {from,to,customerId,rows,groups,metrics};
+}
+
 function refreshReportCustomers(){const sel=$('reportCustomer'),previous=sel.value;sel.replaceChildren();for(const c of (state.customers||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,'de'))){const option=el('option',customerDisplay(c));option.value=c.id;sel.append(option)}if([...sel.options].some(o=>o.value===previous))sel.value=previous;sel.disabled=$('reportAllCustomers').checked;}
 function reportAddress(obj){return [obj?.address||'', [obj?.zip||'',obj?.city||''].filter(Boolean).join(' ')].filter(Boolean).join(', ')||'Nicht hinterlegt'}
 function setReportMode(){const mode=$('reportMode').value;$('reportDay').style.display=mode==='day'?'':'none';$('historyMonth').style.display=mode==='month'?'':'none';$('reportYear').style.display=mode==='year'?'':'none';$('reportWholeMonth').checked=mode==='month';$('reportWholeYear').checked=mode==='year';renderOrderOverview()}
-function renderOrderOverview(){ensureOrderIdentifiers();refreshReportCustomers();const area=$('orderOverviewList');area.replaceChildren();const filter=$('orderOverviewStatus').value;const all=reportOccurrences();let totals={open:0,done:0,progress:0,cancelled:0,absent:0};for(const o of all){const e=state.entries.find(e=>e.appointmentId===o.appointment.id&&e.appointmentOccurrence===o.originalDate),status=e?.orderStatus||'open';totals[status]=(totals[status]||0)+1;if(filter&&status!==filter)continue;const customer=state.customers.find(c=>c.id===o.appointment.customerId),obj=state.objects.find(x=>x.id===o.appointment.objectId);const labels={open:'Offen',done:'Erledigt',progress:'In Bearbeitung',cancelled:'Abgebrochen',absent:'Kunde nicht da'};const item=document.createElement('div');item.className='objectItem';item.append(el('strong',akLabel(o.appointment)+' · '+formatDate(o.date)+' · '+o.start+'–'+o.end+' · '+customerDisplay(customer)),el('div',orderTitle(o.appointment)+' · '+objectDisplay(obj)+' · '+reportAddress(obj)+' · '+(o.appointment.employee||'Nicht zugeordnet')),el('div','Status: '+(labels[status]||status)));if(e?.workDone)item.append(el('div','Arbeiten: '+e.workDone));if(e?.orderRemarks)item.append(el('div','Bemerkungen: '+e.orderRemarks));if(e?.deviationReason)item.append(el('div','Zeitabweichung: '+e.deviationReason+(e.deviationNote?' · '+e.deviationNote:'')));if(e){const btn=el('button','Eintrag bearbeiten');btn.className='secondary smallbtn';btn.onclick=()=>editEntry(e.id);item.append(btn)}area.append(item)}$('orderOverviewTotals').textContent='Geplant: '+all.length+' · Offen: '+totals.open+' · Erledigt: '+totals.done+' · In Bearbeitung: '+totals.progress+' · Abgebrochen: '+totals.cancelled+' · Kunde nicht da: '+totals.absent;if(!area.children.length)area.append(el('p','Keine passenden Aufträge vorhanden.'))}
+function renderOrderOverview(){
+ ensureOrderIdentifiers();refreshReportCustomers();
+ const area=$('orderOverviewList'),summary=$('orderOverviewTotals'),filter=$('orderOverviewStatus').value;
+ area.replaceChildren();const range=reportRange(),cid=$('reportAllCustomers').checked?'':$('reportCustomer').value;
+ const report=akReportData(range.from,range.to,cid);
+ const m=report.metrics;
+ summary.textContent='Arbeitskarten im Zeitraum: '+m.total+' · Noch zu erledigen: '+m.open+
+  ' ('+reportMinutes(m.openPlanned)+' geplant) · Fertig: '+m.done+' ('+reportMinutes(m.doneActual)+' geleistet) · Ausfall/Abbruch: '+m.other+
+  ' · AK mit Terminkonflikt: '+m.conflictRows;
+ const sections=[['Noch zu erledigen',report.groups.open],['Fertige Arbeitskarten',report.groups.done],['Abgebrochen / kein Zugang',report.groups.other]];
+ for(const [heading,rows] of sections){
+  const visible=rows.filter(r=>!filter||r.status===filter);
+  if(!visible.length)continue;
+  const title=el('h4',heading+' · '+visible.length);title.style.margin='20px 0 10px';area.append(title);
+  for(const r of visible){
+   const item=el('div','');item.className='objectItem';
+   item.append(el('strong',r.ak+' · '+formatDate(r.date)+' · '+r.start+'–'+r.end+' · '+r.customer));
+   item.append(el('div',r.object+' · '+r.service+' · '+r.employee+' · '+r.kind));
+   item.append(el('div','Status: '+r.label+' · Plan: '+reportMinutes(r.planned)+' · Ist: '+(r.actual===null?'noch nicht erfasst':reportMinutes(r.actual))));
+   if(r.conflicts.length){const warn=el('div','⚠ Terminkonflikt mit '+r.conflicts.join(', '));warn.style.color='#ad4915';warn.style.fontWeight='700';item.append(warn)}
+   if(r.workDone)item.append(el('div','Ausgeführt: '+r.workDone));
+   if(r.remarks)item.append(el('div','Hinweis: '+r.remarks));
+   const entry=state.entries.find(e=>e.appointmentId===r.id.split('|')[0]&&e.appointmentOccurrence===r.originalDate);
+   if(entry){const button=el('button','Arbeitskarte bearbeiten');button.type='button';button.className='secondary smallbtn';button.onclick=()=>editEntry(entry.id);item.append(button)}
+   area.append(item);
+  }
+ }
+ if(!area.children.length)area.append(el('p','Keine Arbeitskarten für diesen Zeitraum und Filter.'));
+ const preview=$('orderPrintPreviewBody');
+ if(preview){
+  preview.replaceChildren();
+  preview.append(el('h3','M-iCare · Kunden- und Auftragsbericht'),el('p',range.label+' · '+(cid?(state.customers.find(c=>c.id===cid)?.name||'Kunde'):'Alle Kunden')));
+  preview.append(el('p','Noch zu erledigen: '+m.open+' · '+reportMinutes(m.openPlanned)+' | Fertig: '+m.done+' · '+reportMinutes(m.doneActual)+' | Konflikte: '+m.conflictRows));
+  for(const [heading,rows] of sections){const selected=rows.filter(r=>!filter||r.status===filter);if(!selected.length)continue;
+   const h=el('h4',heading);preview.append(h);
+   const table=document.createElement('table'),thead=document.createElement('thead'),tr=document.createElement('tr');
+   for(const title of ['AK','Datum / Zeit','Kunde / Objekt / Leistung','Mitarbeiter','Soll','Ist','Status / Konflikt'])tr.append(el('th',title));
+   thead.append(tr);table.append(thead);const tbody=document.createElement('tbody');
+   for(const r of selected){const tr=document.createElement('tr');for(const value of [r.ak,formatDate(r.date)+' '+r.start+'–'+r.end,r.customer+' / '+r.object+' / '+r.service,r.employee,reportMinutes(r.planned),r.actual===null?'–':reportMinutes(r.actual),r.label+(r.conflicts.length?' ⚠ '+r.conflicts.join('; '):'')])tr.append(el('td',value));tbody.append(tr)}
+   table.append(tbody);preview.append(table);
+  }
+ }
+}
 function fillMonths(){const current=isoDate().slice(0,7);const yr=$('reportYear');if(yr){const chosen=yr.value||current.slice(0,4);const years=Array.from({length:9},(_,i)=>String(Number(current.slice(0,4))+2-i));yr.replaceChildren(...years.map(y=>{const o=el('option',y);o.value=y;return o}));yr.value=years.includes(chosen)?chosen:current.slice(0,4)}if($('reportDay')&&!$('reportDay').value)$('reportDay').value=isoDate();let values=new Set([current,$('month').value,$('historyMonth').value,...state.entries.map(e=>e.date.slice(0,7))]);let date=new Date();for(let i=-36;i<=12;i++){let d=new Date(date.getFullYear(),date.getMonth()+i,1);values.add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))}for(const id of ['month','historyMonth']){let x=$(id),old=x.value;let opts=[...values].filter(Boolean).sort().reverse().map(v=>{let dt=new Date(v+'-01T12:00:00');let o=el('option',dt.toLocaleDateString('de-DE',{month:'long',year:'numeric'}));o.value=v;return o});x.replaceChildren(...opts);x.value=values.has(old)?old:current}if($('date')?.value)syncMonthToWorkday()}
 
 function customerList(){return (state.customers||[]).filter(c=>!c.archived)}
@@ -460,44 +549,61 @@ function exportAllCustomersPdf(){
  const pdf=new Blob(parts,{type:'application/pdf'});download('M-iCare_Kundenliste_'+new Date().toISOString().slice(0,10)+'.pdf',pdf);notify('Kundenliste als PDF gespeichert');
 }
 function createOrderStatusPdf(month,filter){
- const range=reportRange();
- const occurrences=reportOccurrences();
- const labels={open:'Offen',done:'Erledigt',progress:'In Bearbeitung',cancelled:'Abgebrochen',absent:'Kunde nicht da'};
- const counts={open:0,done:0,progress:0,cancelled:0,absent:0};
- const records=occurrences.map(x=>{
-   const entry=completedAppointmentEntry(x), status=entry?.orderStatus||'open';
-   counts[status]=(counts[status]||0)+1;
-   const customer=state.customers.find(c=>c.id===x.appointment.customerId);
-   const object=state.objects.find(o=>o.id===x.appointment.objectId);
-   return {orderNumber:akLabel(x.appointment),title:orderTitle(x.appointment),date:x.date,time:x.start+'–'+x.end,customer:customerDisplay(customer),object:(object?.publicNumber?object.publicNumber+' · ':'')+(object?.name||''),address:reportAddress(object),service:x.appointment.service||'',employee:entry?.employee||(x.appointment.employee?'gepl. '+x.appointment.employee:'—'),status,label:labels[status]||status};
- }).filter(x=>!filter||x.status===filter).sort((a,b)=>a.date.localeCompare(b.date)||a.customer.localeCompare(b.customer,'de'));
- const fitHeader=text=>String(text).slice(0,106);const w=1123,h=794,perPage=14,pg=Math.max(1,Math.ceil(records.length/perPage)),images=[];
- for(let page=0;page<pg;page++){
-   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-   const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);
-   c.fillStyle='#154b76';c.font='bold 29px Arial';c.fillText('M-iCare · Auftragsstatus',42,55);
-   c.font='18px Arial';const customerLabel=$('reportAllCustomers').checked?'Alle Kunden':customerDisplay(state.customers.find(z=>z.id===$('reportCustomer').value));c.fillText(fitHeader(range.label+' · '+customerLabel+' · '+(labels[filter]||'Alle Status')),42,89);
-   c.font='13px Arial';c.fillStyle='#34495e';c.fillText('Gesamt: '+occurrences.length+'  |  Offen: '+counts.open+'  |  Erledigt: '+counts.done+'  |  In Bearbeitung: '+counts.progress,42,118);
-   c.fillText('Abgebrochen: '+counts.cancelled+'  |  Kunde nicht da: '+counts.absent+'  |  Im Bericht: '+records.length,42,139);
-   const xs=[44,225,797,967],widths=[170,560,155,107],heads=['Datum / Uhrzeit','Kunde / Objekt / Adresse','Mitarbeiter','Status'];
-   c.fillStyle='#e8f2fc';c.fillRect(38,162,1045,34);c.fillStyle='#173954';c.font='bold 14px Arial';
-   heads.forEach((t,i)=>c.fillText(t,xs[i],183));
-   function fit(v,max){let text=String(v??'');while(c.measureText(text).width>max&&text.length>1)text=text.slice(0,-2)+'…';return text}
-   c.font='14px Arial';
-   records.slice(page*perPage,(page+1)*perPage).forEach((x,i)=>{
-     const y=224+i*39;
-     if(i%2===0){c.fillStyle='#f1f5f9';c.fillRect(38,y-24,1045,38)}
-     c.fillStyle='#263747';
-     c.font='bold 13px Arial';c.fillText(formatDate(x.date),xs[0],y-6);c.font='13px Arial';c.fillText(x.time,xs[0],y+11);
-     c.font='bold 13px Arial';c.fillText(fit(x.orderNumber+' · '+x.customer,widths[1]),xs[1],y-9);
-     c.font='13px Arial';const objectLine=[x.title,x.object,x.address].filter(Boolean).join(' · ');
-     c.fillText(fit(objectLine,widths[1]),xs[1],y+9);
-     c.fillText(fit(x.employee,widths[2]),xs[2],y+3);c.fillText(fit(x.label,widths[3]),xs[3],y+3);
-   });
-   if(!records.length){c.fillStyle='#52677b';c.fillText('Keine Aufträge für diesen Filter vorhanden.',45,230)}
-   c.fillStyle='#64748b';c.font='12px Arial';c.fillText('Seite '+(page+1)+' von '+pg+' · Stand: '+new Date().toLocaleString('de-DE')+' · Auftrag-ID 1.1',45,765);
-   const binary=atob(canvas.toDataURL('image/jpeg',0.85).split(',')[1]);const jpg=new Uint8Array(binary.length);
-   for(let i=0;i<binary.length;i++)jpg[i]=binary.charCodeAt(i);images.push(jpg);
+ const range=reportRange(),cid=$('reportAllCustomers').checked?'':$('reportCustomer').value;
+ const data=akReportData(range.from,range.to,cid),m=data.metrics;
+ const customer=cid?state.customers.find(c=>c.id===cid)?.name||'Kunde':'Alle Kunden';
+ const rows=[];
+ for(const [title,group] of [['NOCH ZU ERLEDIGEN',data.groups.open],['ERLEDIGTE ARBEITSKARTEN',data.groups.done],['AUSFALL / ABBRUCH',data.groups.other]]){
+  const items=group.filter(r=>!filter||r.status===filter);
+  if(items.length){rows.push({section:title+' ('+items.length+')'});for(const r of items)rows.push({record:r});}
+ }
+ if(!rows.length)rows.push({section:'KEINE ARBEITSKARTEN IN DIESEM ZEITRAUM'});
+ const pages=[];let index=0;
+ while(index<rows.length){
+  const page=[];
+  while(index<rows.length&&page.length<11){
+   if(rows[index].section&&page.length===10)break;
+   page.push(rows[index++]);
+  }
+  pages.push(page);
+ }
+ const w=1123,h=794,images=[];
+ for(let page=0;page<pages.length;page++){
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+  const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);
+  c.fillStyle='#124b7b';c.font='bold 30px Arial';c.fillText('M-iCare  |  ARBEITSKARTEN',42,50);
+  c.fillStyle='#334b62';c.font='19px Arial';c.fillText(String(customer).slice(0,85),42,82);
+  c.font='15px Arial';c.fillText('Zeitraum: '+formatDate(range.from)+' bis '+formatDate(range.to)+'    |    Erstellt: '+new Date().toLocaleDateString('de-DE'),42,109);
+  c.fillStyle='#eaf3fc';c.fillRect(38,124,1048,42);
+  c.fillStyle='#0d496c';c.font='bold 14px Arial';
+  c.fillText('OFFEN '+m.open+' / '+reportMinutes(m.openPlanned),49,151);
+  c.fillText('FERTIG '+m.done+' / '+reportMinutes(m.doneActual),372,151);
+  c.fillText('KONFLIKTE '+m.conflictRows+' AK',756,151);
+  const xs=[45,125,302,715,871,972],widths=[75,172,397,142,96,108];
+  c.fillStyle='#dce9f4';c.fillRect(38,177,1048,28);c.fillStyle='#153a55';c.font='bold 13px Arial';
+  ['AK','Termin','Kunde / Objekt / Leistung','Mitarbeiter','Soll / Ist','Status'].forEach((val,i)=>c.fillText(val,xs[i],196));
+  function fit(value,max){let text=String(value??'');while(c.measureText(text).width>max&&text.length>1)text=text.slice(0,-2)+'…';return text}
+  pages[page].forEach((line,i)=>{
+   const y=232+i*46;
+   if(line.section){c.fillStyle='#e6eef8';c.fillRect(39,y-23,1046,30);c.fillStyle='#174b76';c.font='bold 15px Arial';c.fillText(line.section,47,y-3);return}
+   const r=line.record;
+   if(i%2===0){c.fillStyle='#f3f6f9';c.fillRect(39,y-29,1046,46)}
+   c.fillStyle='#24384a';c.font='bold 13px Arial';
+   c.fillText(fit(r.ak,widths[0]),xs[0],y-8);
+   c.fillText(formatDate(r.date),xs[1],y-12);c.font='12px Arial';c.fillText(r.start+'–'+r.end,xs[1],y+5);
+   c.font='bold 12px Arial';c.fillText(fit(r.customer+' / '+r.object,widths[2]),xs[2],y-12);
+   c.font='12px Arial';c.fillText(fit(r.service,widths[2]),xs[2],y+1);
+   if(r.conflicts.length){c.fillStyle='#a44c0e';c.font='bold 10px Arial';c.fillText(fit('Konflikt mit '+r.conflicts.join('; '),widths[2]),xs[2],y+15);c.fillStyle='#24384a'}
+   c.fillText(fit(r.employee,widths[3]),xs[3],y-3);
+   c.fillText(fit((r.planned/60).toFixed(1)+'h / '+(r.actual===null?'–':(r.actual/60).toFixed(1)+'h'),widths[4]),xs[4],y-3);
+   c.font='bold 12px Arial';c.fillStyle=r.conflicts.length?'#b45309':'#24384a';
+   c.fillText(fit((r.conflicts.length?'⚠ ':'')+r.label,widths[5]),xs[5],y-3);
+   /* Konflikte stehen vollständig in der breiten Objektspalte. */
+  });
+  c.fillStyle='#64748b';c.font='12px Arial';c.fillText('Seite '+(page+1)+' von '+pages.length+'  |  Stand: '+new Date().toLocaleString('de-DE')+'  |  AK-Report v2',45,766);
+  const binary=atob(canvas.toDataURL('image/jpeg',0.86).split(',')[1]),jpg=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)jpg[i]=binary.charCodeAt(i);
+  images.push(jpg);
  }
  const enc=new TextEncoder(), parts=[],offsets=[0];let pos=0;
  function add(data){let bytes=typeof data==='string'?enc.encode(data):data;parts.push(bytes);pos+=bytes.length}
@@ -800,7 +906,7 @@ async function saveNativeExport(name,data){
   catch(e){nativeExportPending=null;reject(e)}
  });
 }
-async function saveExport(name,data,subdir){if(window.MiCareNative&&typeof window.MiCareNative.saveExport==='function')return await saveNativeExport(name,data);if(folder){try{if((await folder.queryPermission({mode:'readwrite'}))==='granted'){const dir=await folder.getDirectoryHandle(subdir,{create:true});const parts=/^(.*)\.(json|xlsx|pdf)$/i.exec(name);const saved=parts?await writeVersioned(dir,parts[1].replace(/_\d{8}_\d+$/,''),parts[2],data):(await writeHandle(dir,name,data),name);notify('Gespeichert in M-iCare/'+subdir+'/'+saved);return true}}catch(e){console.warn('Ordnerexport fehlgeschlagen',e)}}download(name,data instanceof Blob?data:new Blob([data]));notify('Kein Ordnerzugriff – '+name+' wurde in Downloads gespeichert');return false}
+async function saveExport(name,data,subdir){if(window.MiCareNative&&typeof window.MiCareNative.saveExport==='function')return await saveNativeExport(name,data);if(folder){try{if((await folder.queryPermission({mode:'readwrite'}))==='granted'){const dir=await folder.getDirectoryHandle(subdir,{create:true});const parts=/^(.*)\.(json|xlsx|pdf|csv)$/i.exec(name);const saved=parts?await writeVersioned(dir,parts[1].replace(/_\d{8}_\d+$/,''),parts[2],data):(await writeHandle(dir,name,data),name);notify('Gespeichert in M-iCare/'+subdir+'/'+saved);return true}}catch(e){console.warn('Ordnerexport fehlgeschlagen',e)}}download(name,data instanceof Blob?data:new Blob([data]));notify('Kein Ordnerzugriff – '+name+' wurde in Downloads gespeichert');return false}
 function fileData(kind){if(kind==='customers')return {format:'M-iCare',version:2,type:'customers',exportedAt:new Date().toISOString(),customers:state.customers||[],objects:state.objects||[]};if(kind==='appointments')return {format:'M-iCare',version:1,type:'appointments',exportedAt:new Date().toISOString(),appointments:state.appointments||[]};return {format:'M-iCare',version:1,type:'work',exportedAt:new Date().toISOString(),entries:state.entries||[]}}
 async function exportSeparate(kind,name){await saveExport(name,JSON.stringify(fileData(kind),null,2),kind==='customers'?'Kundendaten':kind==='appointments'?'Termine':'Arbeitszeiten')}
 function markDailyBackup(){try{localStorage.setItem('micare-daily-export',isoDate())}catch{}$('dailyBackupInfo').textContent='Externe Sicherung für heute angestoßen. Bitte kontrollieren, dass die JSON-Datei tatsächlich im Download-Ordner oder in OneDrive liegt.'}
@@ -901,7 +1007,7 @@ function makeAppointmentsXlsx(){const columns=['Arbeitskarte','Auftragsnummer (i
 function makeAllWorkXlsx(){const columns=['Arbeitskarte','Auftragsnummer (intern)','Ausführungsnummer','Datum','Mitarbeiter','Kundennummer','Kunde','Kunden-PLZ','Kundenort','Objektnummer','Objekt','Objekt-PLZ','Objektort','Reinigungsleistung','Beginn','Ende','Pause (Min.)','Stunden','Notiz'];return makeTableXlsx(columns,(state.entries||[]).map(e=>{const c=(state.customers||[]).find(c=>c.id===e.customerId),o=(state.objects||[]).find(o=>o.id===e.objectId);return[e.akNumber?'AK '+e.akNumber:'',e.orderNumber||'',e.executionNumber||'',formatDate(e.date),e.employee,c?.publicNumber||'',c?.name||e.object||'',c?.zip||'',c?.city||'',o?.publicNumber||'',o?.name||'',o?.zip||'',o?.city||'',e.service,e.start,e.end,e.breakMinutes,e.minutes/60,e.notes]}),'Arbeitszeiten')}
 function setAppointmentTimeDefaults(){const d=new Date(),start=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');const endDate=new Date(d.getTime()+60*60000);$('appointmentStart').value=start;$('appointmentEnd').value=endDate.toDateString()===d.toDateString()?String(endDate.getHours()).padStart(2,'0')+':'+String(endDate.getMinutes()).padStart(2,'0'):''}
 async function init(){try{db=await openDb();const s=await read('app');if(s&&Array.isArray(s.entries)&&Array.isArray(s.employees))state=s;state.customers??=[];state.objects??=[];state.appointments??=[];state.appointmentTrash??=[];state.changeHistory??=[];ensureCustomerNumbers();rememberSnapshot();folder=await read('folder')||null;unsavedBackup=!!state.lastSave&&(!state.lastBackup||new Date(state.lastBackup)<new Date(state.lastSave));$('service').replaceChildren(...SERVICES.map(n=>{const e=el('option',n);e.value=n;return e}));const now=isoDate();fillMonths();$('month').value=now.slice(0,7);$('historyMonth').value=now.slice(0,7);$('date').value=formatDate(now);$('endDate').value=formatDate(now);fillEmployees();render();updateCustomerSelects();refreshLinkedAppointments();calc();$('appointmentDate').value=now;setAppointmentTimeDefaults();for(const name of SERVICES){let o=el('option',name);o.value=name;$('appointmentService').append(o)}refreshAppointmentEmployees();toggleAppointmentInterval();if(typeof captureCurrentScreen==='function')captureCurrentScreen();dailyBackupReminder();if(folder)backupAutomatic();if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(console.warn)}catch(e){alert('Lokale Datenbank kann nicht geöffnet werden: '+e.message)}}
-enforcePostalDigits();enableKeyboardForNativePickers();$('form').addEventListener('submit',saveEntry);$('linkedAppointment').addEventListener('change',selectLinkedAppointment);$('orderOverviewStatus').addEventListener('change',renderOrderOverview);$('date').addEventListener('input',refreshLinkedAppointments);$('date').addEventListener('change',refreshLinkedAppointments);$('employee').addEventListener('change',refreshLinkedAppointments);$('addEmployee').onclick=addEmployee;$('cancelEdit').onclick=resetEdit;$('chooseDir').onclick=chooseFolder;$('loadCustomersFolder').onclick=loadCustomersFromFolder;$('loadCustomersFile').onchange=async e=>{await importCustomersFromFile(e.target.files?.[0]);e.target.value=''};$('exportExcel').onclick=exportXlsx;$('exportJson').onclick=exportJson;$('dailyBackupDownload').onclick=dailyExportNow;$('dailyBackupNoticeButton').onclick=dailyExportNow;$('dailyBackupLater').onclick=()=>$('dailyBackupNotice').classList.add('hidden');$('saveSnapshot').onclick=snapshotNow;$('emailSnapshot').onclick=emailSnapshot;$('exportCustomersJson').onclick=()=>exportSeparate('customers','kunden.json');$('exportAppointmentsJson').onclick=()=>exportSeparate('appointments','termine.json');$('exportWorkJson').onclick=()=>exportSeparate('work','arbeitszeiten.json');$('emailBackup').onclick=emailBackup;$('importJson').onchange=importJson;$('pdfExport').onclick=printPdf;$('orderStatusPdf').onclick=exportOrderStatusPdf;$('reportAllCustomers').onchange=()=>{refreshReportCustomers();renderOrderOverview()};$('reportCustomer').onchange=renderOrderOverview;$('reportMode').onchange=setReportMode;$('reportDay').onchange=renderOrderOverview;$('reportYear').onchange=renderOrderOverview;$('reportWholeMonth').onchange=()=>{if($('reportWholeMonth').checked){$('reportWholeYear').checked=false;$('reportMode').value='month';setReportMode()}else renderOrderOverview()};$('reportWholeYear').onchange=()=>{if($('reportWholeYear').checked){$('reportWholeMonth').checked=false;$('reportMode').value='year';setReportMode()}else renderOrderOverview()};
+enforcePostalDigits();enableKeyboardForNativePickers();$('form').addEventListener('submit',saveEntry);$('linkedAppointment').addEventListener('change',selectLinkedAppointment);$('orderOverviewStatus').addEventListener('change',renderOrderOverview);$('date').addEventListener('input',refreshLinkedAppointments);$('date').addEventListener('change',refreshLinkedAppointments);$('employee').addEventListener('change',refreshLinkedAppointments);$('addEmployee').onclick=addEmployee;$('cancelEdit').onclick=resetEdit;$('chooseDir').onclick=chooseFolder;$('loadCustomersFolder').onclick=loadCustomersFromFolder;$('loadCustomersFile').onchange=async e=>{await importCustomersFromFile(e.target.files?.[0]);e.target.value=''};$('exportExcel').onclick=exportXlsx;$('exportJson').onclick=exportJson;$('dailyBackupDownload').onclick=dailyExportNow;$('dailyBackupNoticeButton').onclick=dailyExportNow;$('dailyBackupLater').onclick=()=>$('dailyBackupNotice').classList.add('hidden');$('saveSnapshot').onclick=snapshotNow;$('emailSnapshot').onclick=emailSnapshot;$('exportCustomersJson').onclick=()=>exportSeparate('customers','kunden.json');$('exportAppointmentsJson').onclick=()=>exportSeparate('appointments','termine.json');$('exportWorkJson').onclick=()=>exportSeparate('work','arbeitszeiten.json');$('emailBackup').onclick=emailBackup;$('importJson').onchange=importJson;$('pdfExport').onclick=printPdf;$('orderStatusPdf').onclick=exportOrderStatusPdf;$('orderStatusCsv').onclick=exportOrderStatusCsv;$('reportAllCustomers').onchange=()=>{refreshReportCustomers();renderOrderOverview()};$('reportCustomer').onchange=renderOrderOverview;$('reportMode').onchange=setReportMode;$('reportDay').onchange=renderOrderOverview;$('reportYear').onchange=renderOrderOverview;$('reportWholeMonth').onchange=()=>{if($('reportWholeMonth').checked){$('reportWholeYear').checked=false;$('reportMode').value='month';setReportMode()}else renderOrderOverview()};$('reportWholeYear').onchange=()=>{if($('reportWholeYear').checked){$('reportWholeMonth').checked=false;$('reportMode').value='year';setReportMode()}else renderOrderOverview()};
 function autoFormatWorkInput(field,type){
  const input=$(field);
  input.addEventListener('input',()=>{input.setCustomValidity('')});
@@ -1019,20 +1125,59 @@ function renderReporting(){
   reportTable(panels,'Kundenstamm und Aufwand',['Kunde','Geschäftsstellen','Einsätze','Stunden'],rows);
  }
  if(activeReportTab==='orders'){
-  const compare=d.occ.map(o=>{const e=d.entries.find(e=>e.appointmentId===o.appointment.id&&e.appointmentOccurrence===o.originalDate);const part=x=>{const a=x.split(':').map(Number);return a[0]*60+a[1]};const planned=Math.max(0,part(o.end)-part(o.start));return [o.date,customerNameForReport(o.appointment.customerId),o.appointment.employee,o.start+'–'+o.end,reportMinutes(planned),e?reportMinutes(e.minutes):'Offen',e?reportMinutes(e.minutes-planned):'—',e?.deviationReason||'—']});
-  reportTable(panels,'Geplante Aufträge und Soll-Ist-Vergleich',['Datum','Kunde','Mitarbeiter','Planzeit','Soll','Ist netto','Differenz','Abweichungsgrund'],compare.slice(0,500));
+  const ak=akReportData(d.from,d.to,$('rptCustomer').value,$('reportEmployee').value,$('reportObject').value,$('reportService').value);
+  const statusFilter=$('reportOrderStatus').value;
+  const listed=ak.rows.filter(r=>!statusFilter||(statusFilter==='_none'?r.status==='open':r.status===statusFilter));
+  const percent=(ak.metrics.done+ak.metrics.open)?Math.round(100*ak.metrics.done/(ak.metrics.done+ak.metrics.open)):0;
+  const h=el('div','');h.className='objectPanel';
+  h.append(el('h3','Arbeitskarten · Kundenaufträge'));
+  h.append(el('p','AK gesamt: '+ak.metrics.total+' · Offen / in Bearbeitung: '+ak.metrics.open+
+   ' ('+reportMinutes(ak.metrics.openPlanned)+' geplant) · Fertig: '+ak.metrics.done+
+   ' ('+reportMinutes(ak.metrics.doneActual)+' geleistet) · Erfüllungsquote: '+percent+' % · Konflikte: '+ak.metrics.conflictRows));
+  panels.append(h);
+  reportTable(panels,'Offene Arbeitskarten und abgeschlossene Aufträge',
+   ['AK','Datum','Kunde / Objekt','Leistung','Mitarbeiter','Termin','Soll','Ist','Status','Konflikt'],
+   listed.slice(0,500).map(r=>[r.ak,formatDate(r.date),r.customer+' · '+r.object,r.service,r.employee,r.start+'–'+r.end,reportMinutes(r.planned),r.actual===null?'–':reportMinutes(r.actual),r.label,r.conflicts.length?'⚠ '+r.conflicts.join('; '):'–']));
  }
+
  if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Auftragsstatus',['Status','Einträge'],[...d.statusMap].map(([k,n])=>[k,n]));
  if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Gründe für Zeitabweichungen',['Grund','Einträge'],d.reasons.map(x=>[x.name,x.count]));
  if(activeReportTab==='quality')reportTable(panels,'Überschneidende Arbeitszeiten (gleicher Mitarbeiter)',['Mitarbeiter','Datum','Zeit A','Zeit B'],d.overlaps);
  if(activeReportTab==='quality')reportTable(panels,'Datenqualität',['Prüfung','Anzahl'],[['Arbeitszeiten ohne Kundenzuordnung',d.noCustomer],['Ohne Geschäftsstelle',d.noObject],['Ohne vollständige Uhrzeit',d.badDates]]);
  const note=el('p','Hinweis: Geplante Zeit = Terminfenster ohne Pausenabzug. Dokumentiert = Termin mit verknüpftem Arbeitszeiteintrag. Für einen aussagekräftigen Soll-Ist-Vergleich pro Auftrag müssen die verknüpften Einträge betrachtet werden. Zahlen basieren nur auf lokal vorhandenen Daten; ohne Umsatz- und Kostendaten ist keine Gewinnberechnung möglich.');note.className='hint';panels.append(note);
 }
-function reportExportCsv(){
- const d=reportBuild(),rows=[['Datum','Mitarbeiter','Kunde','Geschäftsstelle','Leistung','Beginn','Ende','Pause Minuten','Geleistete Minuten','Status','Abweichungsgrund','Bemerkung']];
- for(const e of d.entries)rows.push([e.date,e.employee,state.customers.find(c=>c.id===e.customerId)?.name||'',state.objects.find(o=>o.id===e.objectId)?.name||'',e.service,e.start,e.end,e.breakMinutes,e.minutes,e.orderStatus||'',e.deviationReason||'',e.notes||'']);
- const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""').replace(/^[=+@-]/,"'")+'"').join(';')).join('\r\n');
- const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='M-iCare_Reporting_'+d.from+'_'+d.to+'.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)
+function akCsvCell(value){
+ let text=String(value??'').replace(/\r?\n/g,' ');
+ if(/^\s*[=+@-]/.test(text))text="'"+text;
+ return '"'+text.replace(/"/g,'""')+'"';
+}
+function akCsvBlob(rows){
+ return new Blob(['\ufeff'+rows.map(row=>row.map(akCsvCell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+}
+function akCsvRows(data,filter=''){
+ const rows=[['AK','Datum','Geplant von','Geplant bis','Kundennummer','Kunde','Gebäude','Leistung','Auftragstitel','Mitarbeiter','Auftragsart','Status','Soll-Minuten','Ist-Minuten','Konflikt mit','Arbeiten','Bemerkungen']];
+ for(const r of data.rows.filter(x=>!filter||x.status===filter)){
+  rows.push([r.ak,r.date,r.start,r.end,r.customerNumber,r.customer,r.object,r.service,r.title,r.employee,r.kind,r.label,r.planned,r.actual===null?'':r.actual,r.conflicts.join(' | '),r.workDone,r.remarks]);
+ }
+ return rows;
+}
+async function exportOrderStatusCsv(){
+ const range=reportRange(),cid=$('reportAllCustomers').checked?'':$('reportCustomer').value;
+ const data=akReportData(range.from,range.to,cid),filter=$('orderOverviewStatus').value;
+ await saveExport('M-iCare_AK-Report_'+range.label+'_'+(cid||'Alle-Kunden')+'.csv',akCsvBlob(akCsvRows(data,filter)),'Berichte');
+ notify('AK-Report als CSV exportiert');
+}
+async function reportExportCsv(){
+ const d=reportBuild(),data=akReportData(d.from,d.to,$('rptCustomer').value,$('reportEmployee').value,$('reportObject').value,$('reportService').value);
+ const status=$('reportOrderStatus').value,selected=data.rows.filter(r=>!status||(status==='_none'?r.status==='open':r.status===status));
+ const rows=akCsvRows({...data,rows:selected});
+ rows.push([],['FREIE ARBEITSZEITEN (ohne zugeordneten Auftrag)']);
+ rows.push(['Datum','Mitarbeiter','Kunde','Geschäftsstelle','Leistung','Beginn','Ende','Pause Minuten','Geleistete Minuten','Status','Bemerkung']);
+ for(const e of d.entries.filter(e=>!e.appointmentId)){
+  rows.push([e.date,e.employee,state.customers.find(c=>c.id===e.customerId)?.name||'',state.objects.find(o=>o.id===e.objectId)?.name||'',e.service,e.start,e.end,e.breakMinutes,e.minutes,e.orderStatus||'',e.notes||'']);
+ }
+ await saveExport('M-iCare_Reporting_'+d.from+'_'+d.to+'.csv',akCsvBlob(rows),'Berichte');
+ notify('Reporting inklusive offener Arbeitskarten als CSV exportiert');
 }
 
 document.querySelectorAll('#reportFilters select,#reportFilters input[type="date"]').forEach(el=>el.addEventListener('change',()=>{if(el.id==='rptCustomer')$('reportObject').value='';renderReporting()}));
@@ -1042,14 +1187,14 @@ $('reportBack').onclick=reportOpenHome;
 document.querySelectorAll('[data-report-range]').forEach(b=>b.onclick=()=>reportSetRange(b.dataset.reportRange));
 $('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','rptCustomer','reportEmployee','reportObject','reportService','reportEntryKind','reportOrderStatus'])$(id).value='';renderReporting()};
 $('reportCsv').onclick=reportExportCsv;
-$('reportTableCsv').onclick=()=>{
+$('reportTableCsv').onclick=async()=>{
  const rows=[['Bericht',reportTitles[activeReportTab]],['Zeitraum',$('reportFrom').value+' bis '+$('reportTo').value]];
- for(const t of $('reportPanels').querySelectorAll('table')){
-  rows.push([],[t.closest('.objectPanel')?.querySelector('h3')?.textContent||'Tabelle']);
-  for(const tr of t.rows)rows.push([...tr.cells].map(c=>c.textContent));
+ for(const table of $('reportPanels').querySelectorAll('table')){
+  rows.push([],[table.closest('.objectPanel')?.querySelector('h3')?.textContent||'Tabelle']);
+  for(const tr of table.rows)rows.push([...tr.cells].map(cell=>cell.textContent));
  }
- const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""').replace(/^[=+@-]/,"'")+'"').join(';')).join('\r\n');
- const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='M-iCare_Bericht_'+activeReportTab+'_'+$('reportFrom').value+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)
+ await saveExport('M-iCare_Bericht_'+activeReportTab+'_'+$('reportFrom').value+'.csv',akCsvBlob(rows),'Berichte');
+ notify('Berichtstabelle als CSV gespeichert');
 };
 $('reportPrint').onclick=()=>{const style=document.createElement('style');style.id='reportPrintOnly';style.textContent="@media print {\n @page{size:A4 portrait;margin:14mm}\n html,body{width:auto!important;overflow:visible!important;background:white!important}\n body .screen,body #history{display:none!important}\n body #reportingScreen{display:block!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}\n body #reportHome,body #reportFilters,body .reportActions,body #reportBack,body header,body nav,body .backbar,body .footer,body #toast{display:none!important}\n body #reportDetail{display:block!important}\n body #reportingScreen .objectPanel{margin:9px 0!important;padding:8px 0!important;border:0!important;box-shadow:none!important;background:white!important}\n body #reportingScreen #reportSummary{break-inside:avoid}\n body #reportingScreen .reportMetrics{grid-template-columns:repeat(3,1fr)!important}\n body #reportingScreen .reportMetric{padding:8px!important}\n body #reportingScreen .tablewrap{overflow:visible!important}\n body #reportingScreen table{min-width:0!important;width:100%!important;font-size:7.7pt!important}\n body #reportingScreen th,body #reportingScreen td{padding:4px 3px!important;overflow-wrap:anywhere}\n body #reportingScreen thead{display:table-header-group}\n body #reportingScreen tr{break-inside:avoid}\n body #reportingScreen h2,body #reportingScreen h3{break-after:avoid}\n}";document.head.append(style);const cleanup=()=>{style.remove();window.removeEventListener('afterprint',cleanup)};window.addEventListener('afterprint',cleanup);window.print()};
 

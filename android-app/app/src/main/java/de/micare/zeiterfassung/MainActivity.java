@@ -56,11 +56,11 @@ public class MainActivity extends Activity {
         byte[] bytes=android.util.Base64.decode(base64,android.util.Base64.DEFAULT);
         if(bytes.length==0)throw new IllegalArgumentException("Leere Datei");
         String safe=name==null?"M-iCare-Export.pdf":name.replaceAll("[^a-zA-Z0-9._\\-]","_");
-        if(!safe.matches("(?i).+\\.(pdf|json|xlsx)"))throw new IllegalArgumentException("Unbekannter Dateityp");
+        if(!safe.matches("(?i).+\\.(pdf|json|xlsx|csv)"))throw new IllegalArgumentException("Unbekannter Dateityp");
         pendingExportBytes=bytes;
         Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType(safe.toLowerCase(Locale.ROOT).endsWith(".pdf")?"application/pdf":safe.toLowerCase(Locale.ROOT).endsWith(".xlsx")?"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"application/json");
+        intent.setType(safe.toLowerCase(Locale.ROOT).endsWith(".pdf")?"application/pdf":safe.toLowerCase(Locale.ROOT).endsWith(".xlsx")?"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":safe.toLowerCase(Locale.ROOT).endsWith(".csv")?"text/csv":"application/json");
         intent.putExtra(Intent.EXTRA_TITLE,safe);
         startActivityForResult(intent,403);
       }catch(Exception e){pendingExportBytes=null;reportExport(false,"Export fehlgeschlagen: "+e.getMessage());}});}
