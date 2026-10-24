@@ -13,7 +13,11 @@ for(const id of ['reportHome','reportDetail','reportFrom','reportTo','rptCustome
 }
 assert(html.includes('data-open-report="history"'),'Legacy month exports must remain accessible from reporting');
 assert(!html.includes('data-jump="history">📊 Auswertungen'),'Duplicate history home tile still exists');
-assert(html.includes('@page{size:A4 portrait'),'Report print page size was not set');
+const printModule=fs.readFileSync('report-print.js','utf8');
+new vm.Script(printModule,{filename:'report-print.js'});
+assert(html.includes('MiCareReportPrint.print()'),'Report print must use dedicated snapshot');
+assert(printModule.includes('@page{size:A4 landscape'),'Report print must explicitly use A4 landscape');
+assert(printModule.includes('body>*:not(#reportPrintSnapshot)'),'Interactive page must be hidden in PDF');
 const first=script.indexOf('function reportBuild(){'),last=script.indexOf('function customerNameForReport',first);
 assert(first>=0&&last>first,'Calculation function not found');
 const source=script.slice(first,last);
