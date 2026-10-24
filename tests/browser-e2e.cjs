@@ -207,9 +207,24 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.waitForFunction(count=>state.appointments.length===count+1,countBefore);
  assert(await page.evaluate(()=>state.appointments.some(a=>a.date==='2026-11-24'&&a.start==='08:00'&&a.end==='10:00')));
  console.log('E2E step 8: customer creation/edit and appointment creation passed');
+ // Newly editable fields must trigger the unsaved-changes warning.
+ await page.evaluate(()=>{
+  showScreen('customersPanel');
+  document.getElementById('selectedCustomer').value='test-customer-1';
+  renderCustomers();
+  captureCurrentScreen();
+ });
+ await page.locator('#editCustomerPhone').fill('02331 888888');
+ assert.equal(await page.evaluate(()=>screenDirty),true,'Contact edits must mark screen as unsaved');
+ await page.evaluate(()=>captureCurrentScreen());
+ await page.evaluate(()=>editEntry('test-entry-1'));
+ await page.locator('#correctionNote').fill('Grund muss dokumentiert bleiben');
+ assert.equal(await page.evaluate(()=>screenDirty),true,'Correction notes must mark screen as unsaved');
+ console.log('E2E step 9: contact and correction unsaved-data warnings passed');
+
 
  assert.equal(errors.length,0,'Unhandled browser errors: '+errors.join(' | '));
- console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, free time, calendar, JSON export/import');
+ console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, double-save/date changes, unsaved edits, calendar, JSON export/import');
  await browser.close();
  server.close();
 })().catch(e=>{console.error('E2E FAILED:',e);server.close();process.exit(1)});
