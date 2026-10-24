@@ -131,7 +131,7 @@
 <p class="hint">Verschlüsselte Dateiübertragung über dein eigenes Google Drive. <strong>Keine automatische Synchronisierung:</strong> Du speicherst eine Sicherung in Google Drive und wählst dieselbe Datei am zweiten Gerät zum Übernehmen aus. Die Google-Anmeldung erfolgt in Google Drive selbst, nicht in M-iCare.</p>
 <div class="grid">
  <div><label for="cloudOwnerEmail">Google-E-Mail des Besitzers (nur zur Zuordnung)</label><input id="cloudOwnerEmail" type="email" maxlength="254" autocomplete="email" placeholder="z. B. kollege@gmail.com"><p class="hint">Diese Angabe verleiht keinen Drive-Zugriff und wird nicht als Anmeldung verwendet.</p></div>
- <div><label for="cloudPassword">Passphrase zur Sicherungsverschlüsselung</label><input id="cloudPassword" type="password" autocomplete="off" maxlength="256" placeholder="Mindestens 12 Zeichen"><p class="hint">Dieselbe Passphrase wird auf Handy und PC zum Entschlüsseln benötigt. Sie wird nicht gespeichert.</p></div>
+ <div><label for="cloudPassword">Passphrase zur Sicherungsverschlüsselung</label><input id="cloudPassword" type="password" autocomplete="off" maxlength="256" placeholder="Mindestens 12 Zeichen"><p class="hint">Dieselbe Passphrase wird auf Handy und PC zum Entschlüsseln benötigt. Sie wird nicht gespeichert.</p><label for="cloudPasswordConfirm">Zur Erstellung erneut eingeben</label><input id="cloudPasswordConfirm" type="password" autocomplete="off" maxlength="256" placeholder="Passphrase bestätigen"></div>
 </div>
 <div class="row" style="margin-top:10px"><button id="cloudExport" type="button">🔐 Verschlüsselte Sicherung erstellen</button><button id="cloudChooseImport" type="button" class="secondary">📥 Cloud-Datei zum Prüfen auswählen</button><input id="cloudImportFile" type="file" accept=".json,application/json" class="hidden" aria-label="Verschlüsselte M-iCare-Sicherung auswählen"></div>
 <div id="cloudTransferStatus" class="status" role="status" aria-live="polite" style="margin-top:12px">Bereit. Handy: Bei „Speichern“ Google Drive auswählen. Windows: Google-Drive-Ordner oder Download auswählen.</div>
@@ -1166,6 +1166,113 @@ function makeCustomersXlsx(){const columns=['Kundennummer','Kundenname','Kundens
 function makeAppointmentsXlsx(){const columns=['Arbeitskarte','Auftragsnummer (intern)','Auftragsbezeichnung','Kundennummer','Kunde','Kunden-PLZ','Kundenort','Objektnummer','Objekt','Objekt-PLZ','Objektort','Erster Termin','Beginn','Ende','Leistung','Wiederholung','Intervall Tage','Bis','Ausnahmen'];return makeTableXlsx(columns,(state.appointments||[]).map(a=>{const c=(state.customers||[]).find(c=>c.id===a.customerId),o=(state.objects||[]).find(o=>o.id===a.objectId);return[akLabel(a),orderCode(a),orderTitle(a),c?.publicNumber||'',c?.name||'',c?.zip||'',c?.city||'',o?.publicNumber||'',o?.name||'',o?.zip||'',o?.city||'',formatDate(a.date),a.start,a.end,a.service,({once:'Einmalig',weekly:'Wöchentlich',monthly:'Monatlich',days:'Alle X Tage'})[a.repeat]||a.repeat,a.interval||'',a.until?formatDate(a.until):'',JSON.stringify(a.exceptions||{})]}),'Termine')}
 function makeAllWorkXlsx(){const columns=['Arbeitskarte','Auftragsnummer (intern)','Ausführungsnummer','Datum','Mitarbeiter','Kundennummer','Kunde','Kunden-PLZ','Kundenort','Objektnummer','Objekt','Objekt-PLZ','Objektort','Reinigungsleistung','Beginn','Ende','Pause (Min.)','Stunden','Notiz'];return makeTableXlsx(columns,(state.entries||[]).map(e=>{const c=(state.customers||[]).find(c=>c.id===e.customerId),o=(state.objects||[]).find(o=>o.id===e.objectId);return[e.akNumber?'AK '+e.akNumber:'',e.orderNumber||'',e.executionNumber||'',formatDate(e.date),e.employee,c?.publicNumber||'',c?.name||e.object||'',c?.zip||'',c?.city||'',o?.publicNumber||'',o?.name||'',o?.zip||'',o?.city||'',e.service,e.start,e.end,e.breakMinutes,e.minutes/60,e.notes]}),'Arbeitszeiten')}
 function setAppointmentTimeDefaults(){const d=new Date(),start=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');const endDate=new Date(d.getTime()+60*60000);$('appointmentStart').value=start;$('appointmentEnd').value=endDate.toDateString()===d.toDateString()?String(endDate.getHours()).padStart(2,'0')+':'+String(endDate.getMinutes()).padStart(2,'0'):''}
+let cloudPending=null;
+function cloudMessage(value,isError=false){
+ const node=$('cloudTransferStatus');node.textContent=value;node.classList.toggle('warn',isError);
+}
+function cloudOwner(){
+ const value=$('cloudOwnerEmail').value.trim().toLowerCase();
+ if(value&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)||value.length>254))throw Error('Bitte eine gültige Google-E-Mail eintragen oder das Feld leer lassen.');
+ return value;
+}
+function cloudClearPreview(){
+ cloudPending=null;$('cloudOverwriteConsent').checked=false;
+ $('cloudTransferPreview').classList.add('hidden');
+ $('cloudImportCompare').replaceChildren();
+ $('cloudImportSource').textContent='';
+}
+async function cloudExportEncrypted(){
+ const button=$('cloudExport');if(button.disabled)return;button.disabled=true;
+ try{
+  const owner=cloudOwner(),pass=$('cloudPassword').value;
+  MiCareCloudTransfer.checkPassphrase(pass);
+  if(pass!==$('cloudPasswordConfirm').value)throw Error('Die beiden Passphrasen stimmen nicht überein.');
+  if(!confirm('Verschlüsselte vollständige Sicherung erstellen? Bewahre die Passphrase sicher auf. Bei Verlust kann die Datei nicht entschlüsselt werden.'))return;
+  await write('cloud-owner-email',owner);
+  cloudMessage('Verschlüsselung läuft …');
+  const envelope=await MiCareCloudTransfer.encrypt(structuredClone(state),pass,owner);
+  const name='M-iCare_Cloud_'+new Date().toISOString().slice(0,10)+'_'+envelope.snapshotId.slice(0,8)+'.json';
+  $('cloudPassword').value='';$('cloudPasswordConfirm').value='';
+  await saveExport(name,JSON.stringify(envelope,null,2),'Backups');
+  cloudMessage('Sicherung vorbereitet: '+name+'. Bitte kontrollieren, ob die Datei wirklich in deinem Google Drive liegt. Das ist eine manuelle Übergabe, kein automatischer Upload.');
+ }catch(e){cloudMessage('Sicherung nicht erstellt: '+e.message,true)}
+ finally{button.disabled=false}
+}
+async function cloudChooseEncryptedFile(event){
+ const input=event.target,file=input.files?.[0];cloudClearPreview();if(!file)return;
+ try{
+  if(file.size>MiCareCloudTransfer.MAX_BYTES)throw Error('Datei zu groß (maximal 12 MB)');
+  const pass=$('cloudPassword').value;MiCareCloudTransfer.checkPassphrase(pass);
+  cloudMessage('Sicherung wird entschlüsselt und geprüft …');
+  const envelope=JSON.parse(await file.text());
+  const payload=await MiCareCloudTransfer.decrypt(envelope,pass);
+  const owner=cloudOwner();
+  if(owner&&payload.ownerEmail!==owner)throw Error('Die Datei gehört zu einer anderen hinterlegten E-Mail. Bitte den Kontohinweis prüfen. Nichts wurde importiert.');
+  // Prüfen, bevor bestehende lokale Daten geändert oder aktuelle Sicherungen überschrieben werden.
+  const differences=MiCareCloudTransfer.compare(state,payload.state);
+  cloudPending={...payload,fileName:file.name,differences};
+  const lc=MiCareCloudTransfer.counts(state),rc=MiCareCloudTransfer.counts(payload.state);
+  $('cloudImportSource').textContent='Datei: '+file.name+' · Sicherung: '+new Date(payload.exportedAt).toLocaleString('de-DE')+' · Konto: '+(payload.ownerEmail||'Nicht hinterlegt');
+  const labels={customers:'Kunden',objects:'Geschäftsstellen',appointments:'Aufträge',entries:'Arbeitszeiten'};
+  for(const [type,label] of Object.entries(labels)){
+   const d=differences[type],p=document.createElement('p');
+   p.textContent=label+': lokal '+lc[type]+' / Datei '+rc[type]+' · neu '+d.added+', geändert '+d.changed+', fehlen in Datei '+d.removed;
+   $('cloudImportCompare').append(p);
+  }
+  $('cloudTransferPreview').classList.remove('hidden');
+  $('cloudPassword').value='';$('cloudPasswordConfirm').value='';
+  cloudMessage('Datei sicher geprüft. Es wurde noch NICHTS überschrieben. Vergleiche zuerst die Unterschiede.');
+ }catch(e){cloudClearPreview();cloudMessage('Datei nicht übernommen: '+e.message,true)}
+ finally{input.value=''}
+}
+async function cloudApplyEncrypted(){
+ if(!cloudPending)return cloudMessage('Bitte zuerst eine verschlüsselte Sicherung auswählen.',true);
+ if(!$('cloudOverwriteConsent').checked)return cloudMessage('Bitte zuerst die Unterschiede prüfen und die Übernahme bestätigen.',true);
+ if(!confirm('ACHTUNG: Wirklich ALLE derzeitigen Kunden, Aufträge, Mitarbeiter und Arbeitszeiten dieses Geräts durch die geprüfte Datei ersetzen? Andere Änderungen werden NICHT zusammengeführt.'))return;
+ const button=$('cloudApplyImport');button.disabled=true;
+ const pending=cloudPending,old=structuredClone(state);
+ try{
+  // Ein Wiederherstellungspunkt liegt im lokalen IndexedDB und bleibt beim Import zunächst unberührt.
+  await write('cloud-previous-local',old);
+  state=structuredClone(pending.state);
+  state.changeHistory??=[];state.appointmentTrash??=[];
+  state.changeHistory.push({id:crypto.randomUUID(),time:new Date().toISOString(),type:'Datensicherung',action:'Cloud-Import',name:pending.fileName,details:'Manuelle verschlüsselte Übernahme · Sicherung '+pending.snapshotId});
+  state.changeHistory=state.changeHistory.slice(-4000);
+  ensureCustomerNumbers();rememberSnapshot();await saveState();
+  resetEdit();render();cloudClearPreview();
+  cloudMessage('Daten aus '+pending.fileName+' übernommen. Der vorherige Stand kann über „Vorherigen lokalen Stand wiederherstellen“ zurückgeholt werden.');
+  notify('Verschlüsselte Sicherung übernommen · lokalen Rücksprung behalten');
+ }catch(e){
+  state=old;rememberSnapshot();
+  try{await write('app',old)}catch{}
+  cloudMessage('Übernahme fehlgeschlagen; bisherige Daten wurden zurückgesetzt: '+e.message,true);
+ }finally{button.disabled=false}
+}
+async function cloudRestorePrevious(){
+ const old=await read('cloud-previous-local');
+ if(!old)return cloudMessage('Auf diesem Gerät gibt es noch keinen lokalen Rücksprung.',true);
+ try{MiCareCloudTransfer.validateSnapshot(old)}
+ catch(e){return cloudMessage('Rücksprung ist beschädigt: '+e.message,true)}
+ if(!confirm('Den zuletzt vor einem Cloud-Import gespeicherten Stand wiederherstellen? Aktuelle Daten werden dafür ausgetauscht.'))return;
+ const current=structuredClone(state);
+ try{
+  state=structuredClone(old);rememberSnapshot();
+  await write('app',state);await write('cloud-previous-local',current);
+  resetEdit();render();cloudClearPreview();cloudMessage('Vorheriger Stand erfolgreich wiederhergestellt. Die zuletzt ersetzte Version bleibt als Rücksprung erhalten.');
+ }catch(e){state=current;rememberSnapshot();cloudMessage('Wiederherstellung fehlgeschlagen: '+e.message,true)}
+}
+async function initCloudTransfer(){
+ if(!globalThis.MiCareCloudTransfer){cloudMessage('Cloud-Verschlüsselungsmodul nicht verfügbar. Bitte App neu installieren.',true);return}
+ $('cloudOwnerEmail').value=String(await read('cloud-owner-email')||'');
+ $('cloudOwnerEmail').addEventListener('change',async()=>{try{await write('cloud-owner-email',cloudOwner());cloudMessage('E-Mail-Hinweis auf diesem Gerät gespeichert. Die Google-Anmeldung erfolgt separat im Dateidialog.')}catch(e){cloudMessage(e.message,true)}});
+ $('cloudExport').onclick=cloudExportEncrypted;
+ $('cloudChooseImport').onclick=()=>$('cloudImportFile').click();
+ $('cloudImportFile').onchange=cloudChooseEncryptedFile;
+ $('cloudApplyImport').onclick=cloudApplyEncrypted;
+ $('cloudCancelImport').onclick=()=>{cloudClearPreview();cloudMessage('Übernahme abgebrochen. Lokale Daten sind unverändert.')};
+ $('cloudRestorePrevious').onclick=()=>cloudRestorePrevious().catch(e=>cloudMessage(e.message,true));
+}
+
 async function init(){try{db=await openDb();const s=await read('app');if(s&&Array.isArray(s.entries)&&Array.isArray(s.employees))state=s;state.customers??=[];state.objects??=[];state.appointments??=[];state.appointmentTrash??=[];state.changeHistory??=[];ensureCustomerNumbers();rememberSnapshot();folder=await read('folder')||null;unsavedBackup=!!state.lastSave&&(!state.lastBackup||new Date(state.lastBackup)<new Date(state.lastSave));$('service').replaceChildren(...SERVICES.map(n=>{const e=el('option',n);e.value=n;return e}));const now=isoDate();fillMonths();$('month').value=now.slice(0,7);$('historyMonth').value=now.slice(0,7);$('date').value=formatDate(now);$('endDate').value=formatDate(now);fillEmployees();render();updateCustomerSelects();refreshLinkedAppointments();calc();$('appointmentDate').value=now;setAppointmentTimeDefaults();for(const name of SERVICES){let o=el('option',name);o.value=name;$('appointmentService').append(o)}refreshAppointmentEmployees();toggleAppointmentInterval();if(typeof captureCurrentScreen==='function')captureCurrentScreen();dailyBackupReminder();await initCloudTransfer();if(folder)backupAutomatic();if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(console.warn)}catch(e){alert('Lokale Datenbank kann nicht geöffnet werden: '+e.message)}}
 enforcePostalDigits();enableKeyboardForNativePickers();$('form').addEventListener('submit',saveEntry);$('linkedAppointment').addEventListener('change',selectLinkedAppointment);$('orderOverviewStatus').addEventListener('change',renderOrderOverview);$('date').addEventListener('input',refreshLinkedAppointments);$('date').addEventListener('change',refreshLinkedAppointments);$('employee').addEventListener('change',refreshLinkedAppointments);$('addEmployee').onclick=addEmployee;$('cancelEdit').onclick=resetEdit;$('chooseDir').onclick=chooseFolder;$('loadCustomersFolder').onclick=loadCustomersFromFolder;$('loadCustomersFile').onchange=async e=>{await importCustomersFromFile(e.target.files?.[0]);e.target.value=''};$('exportExcel').onclick=exportXlsx;$('exportJson').onclick=exportJson;$('dailyBackupDownload').onclick=dailyExportNow;$('dailyBackupNoticeButton').onclick=dailyExportNow;$('dailyBackupLater').onclick=()=>$('dailyBackupNotice').classList.add('hidden');$('saveSnapshot').onclick=snapshotNow;$('emailSnapshot').onclick=emailSnapshot;$('exportCustomersJson').onclick=()=>exportSeparate('customers','kunden.json');$('exportAppointmentsJson').onclick=()=>exportSeparate('appointments','termine.json');$('exportWorkJson').onclick=()=>exportSeparate('work','arbeitszeiten.json');$('emailBackup').onclick=emailBackup;$('importJson').onchange=importJson;$('pdfExport').onclick=printPdf;$('orderStatusPdf').onclick=exportOrderStatusPdf;$('orderStatusCsv').onclick=exportOrderStatusCsv;$('reportAllCustomers').onchange=()=>{refreshReportCustomers();renderOrderOverview()};$('reportCustomer').onchange=renderOrderOverview;$('reportMode').onchange=setReportMode;$('reportDay').onchange=renderOrderOverview;$('reportYear').onchange=renderOrderOverview;$('reportWholeMonth').onchange=()=>{if($('reportWholeMonth').checked){$('reportWholeYear').checked=false;$('reportMode').value='month';setReportMode()}else renderOrderOverview()};$('reportWholeYear').onchange=()=>{if($('reportWholeYear').checked){$('reportWholeMonth').checked=false;$('reportMode').value='year';setReportMode()}else renderOrderOverview()};
 function autoFormatWorkInput(field,type){
