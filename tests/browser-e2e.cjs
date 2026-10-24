@@ -139,9 +139,11 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.waitForFunction(()=>state.customers.some(c=>c.name==='E2E Musterhaus GmbH'));
  const customerData=await page.evaluate(()=>{const c=state.customers.find(c=>c.name==='E2E Musterhaus GmbH');return {id:c.id,no:c.publicNumber,object:state.objects.find(o=>o.customerId===c.id&&o.name==='E2E Testhalle')}});
  assert(customerData.object?.publicNumber,'Creating customer must also create its office');
+ console.log('Customer after create',JSON.stringify(await page.evaluate(()=>({selected:document.getElementById('selectedCustomer').value,newCustomerMode,customer:state.customers.find(c=>c.name==='E2E Musterhaus GmbH'),object:state.objects.find(o=>o.customerId===state.customers.find(c=>c.name==='E2E Musterhaus GmbH').id),formName:document.getElementById('editCustomerName').value}))));
  await page.locator('#editCustomerPhone').fill('02331 123456');
  await page.locator('#editCustomerEmail').fill('test@example.invalid');
  await page.locator('#saveCustomerChanges').click();
+ console.log('Customer after edit',JSON.stringify(await page.evaluate(()=>({selected:document.getElementById('selectedCustomer').value,newCustomerMode,customer:state.customers.find(c=>c.name==='E2E Musterhaus GmbH'),objectName:document.getElementById('newObjectName').value,formName:document.getElementById('editCustomerName').value,phoneField:document.getElementById('editCustomerPhone').value,emailField:document.getElementById('editCustomerEmail').value}))),JSON.stringify(dialogs.slice(-5)));
  assert(await page.evaluate(()=>state.customers.some(c=>c.name==='E2E Musterhaus GmbH'&&c.phone==='02331 123456'&&c.email==='test@example.invalid')),'Customer edit must persist contact details');
  // Create a new planned appointment through the real appointment form.
  await page.evaluate(()=>showScreen('appointmentsPanel'));
