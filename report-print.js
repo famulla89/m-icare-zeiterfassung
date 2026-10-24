@@ -22,8 +22,17 @@
     copy.classList.add('printMainAK');
     // 13 Spalten -> 10. Korrekturhistorie wird in eigener Liste darunter gedruckt.
     for(const tr of copy.querySelectorAll('tr')){
-     const keep=[0,1,2,3,4,5,6,7,8,11];
-     [...tr.children].forEach((cell,i)=>{if(!keep.includes(i))cell.remove()});
+     const cells=[...tr.children],keep=[0,1,2,3,4,5,6,7,8,11];
+     cells.forEach((cell,i)=>{if(!keep.includes(i))cell.remove()});
+     const conflict=cells[11];
+     if(conflict){
+      if(tr.closest('thead'))conflict.textContent='Konflikt';
+      else{
+       const summary=conflict.querySelector('summary')?.textContent||'';
+       const count=Number(summary.match(/\\d+/)?.[0]||0);
+       conflict.textContent=count>0?'Ja ('+count+')':'Nein';
+      }
+     }
     }
     copy.querySelector('h3').textContent='Arbeitskarten – Übersicht';
    }
