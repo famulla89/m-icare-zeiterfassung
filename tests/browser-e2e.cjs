@@ -106,6 +106,11 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(rescheduled.original,'2026-10-05');
  assert.equal(rescheduled.duplicates,1);
  assert(rescheduled.changes.some(c=>c.field==='date'&&c.before==='2026-10-05'&&c.after==='2026-10-06'));
+ await page.evaluate(()=>{calendarMonth='2026-10';chosenDay='2026-10-06';renderCalendar()});
+ const correctedDayCalendar=await page.locator('#selectedDayList').textContent();
+ assert(correctedDayCalendar.includes('09:00–11:00'),'Corrected actual day should show documented working times');
+ assert(correctedDayCalendar.includes('Zu geplantem Auftrag vom 05.10.2026'),'Rescheduled work should retain the original appointment date');
+
  console.log('E2E step 5b: moved actual workday retains planned link and audit history');
 
  // Free entry and the shared appointment calendar
