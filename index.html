@@ -561,8 +561,8 @@ function createOrderStatusPdf(month,filter){
  const pages=[];let index=0;
  while(index<rows.length){
   const page=[];
-  while(index<rows.length&&page.length<12){
-   if(rows[index].section&&page.length===11)break;
+  while(index<rows.length&&page.length<11){
+   if(rows[index].section&&page.length===10)break;
    page.push(rows[index++]);
   }
   pages.push(page);
@@ -584,20 +584,21 @@ function createOrderStatusPdf(month,filter){
   ['AK','Termin','Kunde / Objekt / Leistung','Mitarbeiter','Soll / Ist','Status'].forEach((val,i)=>c.fillText(val,xs[i],196));
   function fit(value,max){let text=String(value??'');while(c.measureText(text).width>max&&text.length>1)text=text.slice(0,-2)+'…';return text}
   pages[page].forEach((line,i)=>{
-   const y=232+i*42;
+   const y=232+i*46;
    if(line.section){c.fillStyle='#e6eef8';c.fillRect(39,y-23,1046,30);c.fillStyle='#174b76';c.font='bold 15px Arial';c.fillText(line.section,47,y-3);return}
    const r=line.record;
-   if(i%2===0){c.fillStyle='#f3f6f9';c.fillRect(39,y-29,1046,42)}
+   if(i%2===0){c.fillStyle='#f3f6f9';c.fillRect(39,y-29,1046,46)}
    c.fillStyle='#24384a';c.font='bold 13px Arial';
    c.fillText(fit(r.ak,widths[0]),xs[0],y-8);
    c.fillText(formatDate(r.date),xs[1],y-12);c.font='12px Arial';c.fillText(r.start+'–'+r.end,xs[1],y+5);
    c.font='bold 12px Arial';c.fillText(fit(r.customer+' / '+r.object,widths[2]),xs[2],y-12);
-   c.font='12px Arial';c.fillText(fit(r.service,widths[2]),xs[2],y+5);
+   c.font='12px Arial';c.fillText(fit(r.service,widths[2]),xs[2],y+1);
+   if(r.conflicts.length){c.fillStyle='#a44c0e';c.font='bold 10px Arial';c.fillText(fit('Konflikt mit '+r.conflicts.join('; '),widths[2]),xs[2],y+15);c.fillStyle='#24384a'}
    c.fillText(fit(r.employee,widths[3]),xs[3],y-3);
    c.fillText(fit((r.planned/60).toFixed(1)+'h / '+(r.actual===null?'–':(r.actual/60).toFixed(1)+'h'),widths[4]),xs[4],y-3);
    c.font='bold 12px Arial';c.fillStyle=r.conflicts.length?'#b45309':'#24384a';
    c.fillText(fit((r.conflicts.length?'⚠ ':'')+r.label,widths[5]),xs[5],y-3);
-   if(r.conflicts.length){c.font='10px Arial';c.fillText(fit('Konflikt: '+r.conflicts.join('; '),widths[5]),xs[5],y+10)}
+   /* Konflikte stehen vollständig in der breiten Objektspalte. */
   });
   c.fillStyle='#64748b';c.font='12px Arial';c.fillText('Seite '+(page+1)+' von '+pages.length+'  |  Stand: '+new Date().toLocaleString('de-DE')+'  |  AK-Report v2',45,766);
   const binary=atob(canvas.toDataURL('image/jpeg',0.86).split(',')[1]),jpg=new Uint8Array(binary.length);
