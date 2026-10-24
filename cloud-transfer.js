@@ -60,7 +60,9 @@
    }
   }
   if(state.employees.some(x=>typeof x!=='string'||!x.trim()||x.length>80)||new Set(state.employees).size!==state.employees.length)throw Error('Ungültige Mitarbeiterliste');
-  const cid=new Set(state.customers.map(x=>x.id)),oid=new Set(state.objects.map(x=>x.id)),aid=new Set(state.appointments.map(x=>x.id));
+  const cid=new Set(state.customers.map(x=>x.id)),oid=new Set(state.objects.map(x=>x.id));
+  // Bereits erfasste Arbeitszeiten bleiben auch erhalten, wenn die ursprüngliche Terminserie im Papierkorb liegt.
+  const aid=new Set([...state.appointments.map(x=>x.id),...(state.appointmentTrash||[]).map(t=>t?.appointment?.id).filter(Boolean)]);
   if(state.objects.some(o=>o.customerId&&!cid.has(o.customerId)))throw Error('Geschäftsstelle ohne zugehörigen Kunden');
   if(state.appointments.some(a=>(a.customerId&&!cid.has(a.customerId))||(a.objectId&&!oid.has(a.objectId))))throw Error('Auftrag mit unbekanntem Kunden oder Objekt');
   for(const e of state.entries){
