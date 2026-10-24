@@ -478,15 +478,16 @@ function renderCalendar(){
  const firstDate=calendarMonth+'-01',lastDate=calendarMonth+'-'+String(days).padStart(2,'0');
  const planned=(state.appointments||[]).flatMap(a=>datesFor(a,firstDate,lastDate));
  const work=(state.entries||[]).filter(e=>e.date>=firstDate&&e.date<=lastDate);
- const linked=new Set(planned.filter(o=>completedAppointmentEntry(o)).map(o=>appointmentKey(o.appointment,o.originalDate)));
- const freeWork=work.filter(e=>!e.appointmentId||!linked.has(e.appointmentId+'|'+e.appointmentOccurrence));
+ const scheduledByKey=new Map(planned.map(o=>[appointmentKey(o.appointment,o.originalDate),o]));
+ // Show a planned order's actual work on its real date when it differs from the scheduled day.
+ const freeWork=work.filter(e=>{const plannedOccurrence=scheduledByKey.get(e.appointmentId+'|'+e.appointmentOccurrence);return !plannedOccurrence||plannedOccurrence.date!==e.date});
  if(!chosenDay.startsWith(calendarMonth))chosenDay=firstDate;
  for(let day=1;day<=days;day++){
   const value=calendarMonth+'-'+String(day).padStart(2,'0'),events=planned.filter(a=>a.date===value),free=freeWork.filter(e=>e.date===value);
   const count=events.length+free.length,doneCount=events.filter(a=>Boolean(completedAppointmentEntry(a))).length+free.length;
   const b=el('button',String(day)+(count?' · '+count:''));
   b.type='button';b.className=(count?(doneCount===0?'hasEvent ':doneCount===count?'allDone ':'mixedStatus '):'')+(chosenDay===value?'chosen':'');
-  b.title=count?(events.length+' geplante Termine, '+free.length+' weitere Arbeitszeiteinträge'):'Keine Termine oder Arbeitszeiten';
+  b.title=count?(events.length+' geplante Termine, '+free.length+' weitere tatsächliche Arbeitszeiteinträge'):'Keine Termine oder Arbeitszeiten';
   b.onclick=()=>{chosenDay=value;$('appointmentDate').value=value;$('appointmentDate').dispatchEvent(new Event('change',{bubbles:true}));renderCalendar()};
   grid.append(b);
  }
@@ -500,7 +501,8 @@ function renderCalendar(){
  }
  for(const e of extra){
   const c=state.customers.find(z=>z.id===e.customerId);
-  const line=el('div','⏱ '+e.start+'–'+e.end+' · '+(c?customerDisplay(c):(e.object||'Freie Arbeitszeit'))+' · '+e.employee+' · '+e.service+' · '+hours(e.minutes||0)+' Std.');
+  const extraLabel=e.appointmentId?' · Zu geplantem Auftrag vom '+formatDate(e.appointmentOccurrence||e.date):'';
+  const line=el('div','⏱ '+e.start+'–'+e.end+' · '+(c?customerDisplay(c):(e.object||'Freie Arbeitszeit'))+' · '+e.employee+' · '+e.service+' · '+hours(e.minutes||0)+' Std.'+extraLabel);
   line.className='appt';area.append(line);
  }
  if(!events.length&&!extra.length)area.append(el('span','Keine Termine oder Arbeitszeiten an diesem Tag.'));
