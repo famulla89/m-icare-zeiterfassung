@@ -199,11 +199,12 @@ function renderOrderCorrection(){
  history.replaceChildren();
  const corrections=Array.isArray(entry.corrections)?entry.corrections:[];
  for(const record of [...corrections].reverse()){
+  if(!record||typeof record!=='object')continue;
   const row=el('div','');row.className='objectItem';
   const date=new Date(record.time);
   row.append(el('strong',(Number.isFinite(date.getTime())?date.toLocaleString('de-DE'):String(record.time||''))+' · '+(record.reason||'Korrektur')));
   if(record.details)row.append(el('div',record.details));
-  for(const change of record.changes||[])row.append(el('div',(change.label||change.field||'Feld')+': '+String(change.before??'–')+' → '+String(change.after??'–')));
+  for(const change of (Array.isArray(record.changes)?record.changes:[]))if(change&&typeof change==='object')row.append(el('div',(change.label||change.field||'Feld')+': '+String(change.before??'–')+' → '+String(change.after??'–')));
   history.append(row);
  }
  if(!corrections.length)history.append(el('p','Noch keine nachträgliche Korrektur erfasst.'));
@@ -634,7 +635,7 @@ async function saveEntry(ev){
   v.wasCompleted=Boolean(prior?.wasCompleted||prior?.orderStatus==='done'||v.orderStatus==='done');
   if(prior?.createdAt)v.createdAt=prior.createdAt;
   else if(!prior)v.createdAt=now;
-  if(prior?.corrections)v.corrections=[...prior.corrections];
+  if(Array.isArray(prior?.corrections))v.corrections=[...prior.corrections];
   let correction=null;
   if(prior?.appointmentId){
    const reason=$('correctionReason').value.trim(),details=$('correctionNote').value.trim();
@@ -643,7 +644,7 @@ async function saveEntry(ev){
    const changes=orderCorrectionChanges(prior,v);
    if(!changes.length)throw Error('Es wurde noch keine Änderung vorgenommen. Bitte den Auftrag ändern oder die Bearbeitung abbrechen.');
    correction={id:crypto.randomUUID(),time:now,reason,details,employee:v.employee,changes};
-   v.corrections=[...(prior.corrections||[]),correction];
+   v.corrections=[...(Array.isArray(prior.corrections)?prior.corrections:[]),correction];
   }
   if(prior){
    const index=state.entries.findIndex(e=>e.id===editId);
@@ -669,7 +670,7 @@ async function saveEntry(ev){
  }catch(e){alert(e.message)}
 }
 function editEntry(id){const e=state.entries.find(x=>x.id===id);if(!e)return;editId=id;for(const key of ['employee','service','object','date','endDate','start','end','breakMinutes','notes'])$(key).value=(key==='date'||key==='endDate')?formatDate(e[key]):(e[key]??'');$('month').value=e.date.slice(0,7);$('saveBtn').textContent='Änderung speichern';$('cancelEdit').classList.remove('hidden');$('customerChoice').value=e.customerId||'';updateEntryObjects();$('entryObjectChoice').value=e.objectId||'';$('orderStatus').value=e.orderStatus||'';$('workDone').value=e.workDone||'';$('orderRemarks').value=e.orderRemarks||'';if(e.appointmentId){$('plannedFormSlot').append($('form'));setWorkEntryMode('planned');showScreen('plannedEditorScreen');}else{$('entryForm').append($('form'));setWorkEntryMode('free');showScreen('entryForm');}$('endDateWrap').classList.toggle('hidden',e.endDate===e.date);$('deviationReason').value=e.deviationReason||'';$('deviationNote').value=e.deviationNote||'';refreshLinkedAppointments();if(e.appointmentId)$('linkedAppointment').value=appointmentKey({id:e.appointmentId},e.appointmentOccurrence);renderOrderCorrection();calc()}
-async function deleteEntry(id){if(!confirm('Eintrag wirklich löschen? Danach wird ein neues Backup erstellt.'))return;state.entries=state.entries.filter(x=>x.id!==id);try{await saveState();notify('Eintrag gelöscht')}catch(e){alert('Speichern fehlgeschlagen: '+e.message)}}
+async function deleteEntry(id){const e=state.entries.find(x=>x.id===id);if(e?.appointmentId){alert('Ein bereits dokumentierter Auftrag darf aus Gründen der Nachvollziehbarkeit nicht gelöscht werden. Bitte den Auftrag öffnen und mit einem Korrekturgrund ändern.');editEntry(id);return}if(!confirm('Eintrag wirklich löschen? Danach wird ein neues Backup erstellt.'))return;state.entries=state.entries.filter(x=>x.id!==id);try{await saveState();notify('Eintrag gelöscht')}catch(e){alert('Speichern fehlgeschlagen: '+e.message)}}
 function resetEdit(){editId=null;$('form').reset();$('endDateWrap').classList.add('hidden');$('saveBtn').textContent='💾 Eintrag speichern';$('cancelEdit').classList.add('hidden');$('date').value=formatDate(isoDate());$('endDate').value=$('date').value;$('breakMinutes').value='';$('orderStatus').value='';$('workDone').value='';$('orderRemarks').value='';$('linkedAppointment').value='';refreshLinkedAppointments();$('deviationReason').value='';$('deviationNote').value='';$('correctionReason').value='';$('correctionNote').value='';setWorkEntryMode('free');renderOrderCorrection();calc()}
 async function addEmployee(){let n=$('newEmployee').value.trim();if(!n||n.length>80)return alert('Bitte Mitarbeiternamen eingeben.');if(state.employees.some(x=>x.toLocaleLowerCase('de')===n.toLocaleLowerCase('de')))return alert('Mitarbeiter existiert bereits.');state.employees.push(n);$('newEmployee').value='';await saveState();$('employee').value=n;notify('Mitarbeiter hinzugefügt')}
 document.addEventListener('click',async event=>{const button=event.target.closest('[data-copy-field]');if(!button)return;const input=document.getElementById(button.dataset.copyField);const value=input?.value.trim();if(!value){notify('Dieses Kontaktfeld ist leer');return;}try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value)}else{input.focus();input.select();if(!document.execCommand('copy'))throw new Error('Kopieren nicht unterstützt')}notify('Kontaktangabe kopiert')}catch(err){input.focus();input.select();notify('Bitte den markierten Text manuell kopieren')}});
