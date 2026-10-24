@@ -64,7 +64,7 @@
   const floorArea=roomWork?area:windowWork?windowSqm:0;
   const minimumNet=Math.max(minNet,euro(floorArea*minSqm*visits));
   const profitMarkup=fixedProfit>0?fixedProfit:cleaningCost*margin/100;
-  const recommendNet=euro(Math.max(minimumNet,cleaningCost+profitMarkup+windowsNet+liftRental));
+  const recommendNet=euro(Math.max(minimumNet,(scope==='windows'?Math.max(windowsNet,cleaningCost+profitMarkup):cleaningCost+profitMarkup+windowsNet)+liftRental));
   const net=euro(manualNet>0?manualNet:recommendNet);
   const tax=euro(net*vat/100),gross=euro(net+tax);
   const serviceTitle=scope==='rooms'?'Raum- und Bodenreinigung':scope==='combined'?'Raum- und Bodenreinigung':scope==='windows'?'Anfahrt, Rüstzeit und Material':String(v.serviceName||'Sonstige Dienstleistung').trim().slice(0,120)||'Sonstige Dienstleistung';
