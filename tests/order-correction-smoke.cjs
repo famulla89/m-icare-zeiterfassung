@@ -71,6 +71,7 @@ const submit=async()=>await vm.runInContext('saveEntry({preventDefault(){}})',ct
  assert.equal(state.entries[0].corrections[1].editedBy,'Test Mitarbeiter');
  assert(state.entries[0].corrections[1].changes.some(c=>c.field==='start'));
  ctx.editId='original-entry';
+ fields.correctionEditor.value='Test Mitarbeiter';
  fields.correctionReason.value='Sonstiger Korrekturgrund';
  fields.correctionNote.value='';
  input={...input,orderRemarks:'Ergänzende Änderung'};
