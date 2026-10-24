@@ -5,6 +5,7 @@ on:
     paths:
       - 'android-app/**'
       - 'index.html'
+      - 'cloud-transfer.js'
       - 'sw.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
@@ -39,7 +40,7 @@ jobs:
       - name: Bundle current offline web app
         run: |
           mkdir -p android-app/app/src/main/assets
-          cp index.html sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+          cp index.html cloud-transfer.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
