@@ -93,7 +93,7 @@
    <div><label for="rptCustomer">Kunde auswählen</label><select id="rptCustomer"></select></div>
    <div><label for="reportAkSearch">Arbeitskarte suchen</label><input type="search" id="reportAkSearch" placeholder="z. B. AK 13, Nordstern oder Fenster"></div><div><label for="reportAkCorrectionFilter">Korrekturhistorie</label><select id="reportAkCorrectionFilter"><option value="">Alle Arbeitskarten</option><option value="corrected">Nur nachträglich korrigierte AK</option></select></div><div><label for="reportEmployee">Mitarbeiter</label><select id="reportEmployee"></select></div>
    <div><label for="reportObject">Geschäftsstelle / Objekt</label><select id="reportObject"></select></div>
-   <div><label for="reportService">Reinigungsleistung</label><select id="reportService"></select></div><div><label for="reportEntryKind">Erfassungsart</label><select id="reportEntryKind"><option value="">Alle Arten</option><option value="free">Freie Arbeitszeiterfassung</option><option value="planned">Geplanter Auftrag dokumentiert</option></select></div><div><label for="reportOrderStatus">Status erfasster Arbeiten</label><select id="reportOrderStatus"><option value="">Alle Status</option><option value="done">Erledigt</option><option value="progress">In Bearbeitung</option><option value="cancelled">Abgesagt</option><option value="absent">Nicht angetroffen</option><option value="_none">Ohne Status</option></select></div>
+   <div><label for="reportService">Reinigungsleistung</label><select id="reportService"></select></div><div><label for="reportEntryKind">Erfassungsart</label><select id="reportEntryKind"><option value="">Alle Arten</option><option value="free">Freie Arbeitszeiterfassung</option><option value="planned">Geplanter Auftrag dokumentiert</option></select></div><div><label for="reportOrderStatus">Status erfasster Arbeiten</label><select id="reportOrderStatus"><option value="">Alle Status</option><option value="done">Erledigt</option><option value="progress">In Bearbeitung</option><option value="cancelled">Abgebrochen</option><option value="absent">Kunde nicht angetroffen</option><option value="_none">Ohne Status</option></select></div>
   </div>
   <div class="row" style="margin-top:12px"><button type="button" id="reportReset" class="secondary">Filter zurücksetzen</button></div>
  </details>
@@ -251,7 +251,7 @@ function renderPlannedWorkScreen(){
   const row=el('div','');row.className='objectItem';
   row.append(el('strong',akLabel(a)+' · '+formatDate(item.date)+' · '+item.start+'–'+item.end));
   row.append(el('div',(c?.name||'Kunde')+' · '+(o?.name||'Objekt')+' · '+(a.service||'Leistung')+' · '+(a.employee||'Nicht zugeordnet')));
-  row.append(el('div','Status: '+(done?'Erledigt':entry?'Bereits dokumentiert ('+(entry.orderStatus||'ohne Status')+')':'Noch nicht dokumentiert')+(corrections.length?' · '+corrections.length+' Korrektur(en)':'') ));
+  row.append(el('div','Status: '+(done?'Erledigt':entry?'Bereits dokumentiert ('+(orderStatusText(entry.orderStatus))+')':'Noch nicht dokumentiert')+(corrections.length?' · '+corrections.length+' Korrektur(en)':'') ));
   const conflicts=akPlannedConflicts(item);
   if(conflicts.length){
    const details=document.createElement('details'),heading=el('summary','⚠ Geplante Zeitüberschneidung mit '+conflicts.length+' AK');heading.style.color='#ae540c';heading.style.cursor='pointer';details.append(heading);
@@ -386,6 +386,15 @@ function reportRange(){
 function reportOccurrences(){const range=reportRange(),customer=$('reportAllCustomers').checked?'':$('reportCustomer').value;return (state.appointments||[]).filter(a=>!customer||a.customerId===customer).flatMap(a=>datesFor(a,range.from,range.to)).filter(o=>o.date>=range.from&&o.date<=range.to)}
 
 /* AK-Reporting: dieselben Datensätze für Bildschirm, CSV, PDF und Druckansicht. */
+const ORDER_STATUS_LABELS=Object.freeze({
+ open:'Offen',progress:'In Bearbeitung',done:'Erledigt',
+ cancelled:'Abgebrochen',absent:'Kunde nicht angetroffen'
+});
+function orderStatusText(status){
+ if(status===null||status===undefined||status==='')return 'Ohne Status';
+ return Object.prototype.hasOwnProperty.call(ORDER_STATUS_LABELS,status)?ORDER_STATUS_LABELS[status]:String(status);
+}
+
 function akReportData(from,to,customerId='',employee='',objectId='',service=''){
  const related=(a)=>(!customerId||a.customerId===customerId)&&(!employee||a.employee===employee)&&(!objectId||a.objectId===objectId)&&(!service||a.service===service);
  const series=(state.appointments||[]).filter(related);
@@ -395,7 +404,7 @@ function akReportData(from,to,customerId='',employee='',objectId='',service=''){
   if(e.appointmentId&&e.appointmentOccurrence)entries.set(e.appointmentId+'|'+e.appointmentOccurrence,e);
  }
  const minutes=t=>{const m=/^(\d{2}):(\d{2})$/.exec(String(t||''));return m?Number(m[1])*60+Number(m[2]):0};
- const labels={open:'Offen',progress:'In Bearbeitung',done:'Erledigt',cancelled:'Abgebrochen',absent:'Kunde nicht da'};
+ const labels=ORDER_STATUS_LABELS;
  const rows=records.map(o=>{
   const a=o.appointment,e=entries.get(a.id+'|'+o.originalDate),customer=state.customers.find(c=>c.id===a.customerId),object=state.objects.find(v=>v.id===a.objectId);
   const status=e?.orderStatus||'open',planned=Math.max(0,minutes(o.end)-minutes(o.start));
@@ -1228,7 +1237,7 @@ function renderReporting(){
     ['AK','Termin','Kunde','Korrekturen','Letzte Korrektur','Grund','Geänderte Felder'],histories);
  }
 
- if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Auftragsstatus',['Status','Einträge'],[...d.statusMap].map(([k,n])=>[k,n]));
+ if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Auftragsstatus',['Status','Einträge'],[...d.statusMap].map(([k,n])=>[orderStatusText(k),n]));
  if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Gründe für Zeitabweichungen',['Grund','Einträge'],d.reasons.map(x=>[x.name,x.count]));
  if(activeReportTab==='quality')reportTable(panels,'Überschneidende Arbeitszeiten (gleicher Mitarbeiter)',['Mitarbeiter','Datum','Zeit A','Zeit B'],d.overlaps);
  if(activeReportTab==='quality')reportTable(panels,'Datenqualität',['Prüfung','Anzahl'],[['Arbeitszeiten ohne Kundenzuordnung',d.noCustomer],['Ohne Geschäftsstelle',d.noObject],['Ohne vollständige Uhrzeit',d.badDates]]);
@@ -1263,7 +1272,7 @@ async function reportExportCsv(){
  rows.push([],['FREIE ARBEITSZEITEN (ohne zugeordneten Auftrag)']);
  rows.push(['Datum','Mitarbeiter','Kunde','Geschäftsstelle','Leistung','Beginn','Ende','Pause Minuten','Geleistete Minuten','Status','Bemerkung']);
  for(const e of d.entries.filter(e=>!e.appointmentId)){
-  rows.push([e.date,e.employee,state.customers.find(c=>c.id===e.customerId)?.name||'',state.objects.find(o=>o.id===e.objectId)?.name||'',e.service,e.start,e.end,e.breakMinutes,e.minutes,e.orderStatus||'',e.notes||'']);
+  rows.push([e.date,e.employee,state.customers.find(c=>c.id===e.customerId)?.name||'',state.objects.find(o=>o.id===e.objectId)?.name||'',e.service,e.start,e.end,e.breakMinutes,e.minutes,orderStatusText(e.orderStatus),e.notes||'']);
  }
  await saveExport('M-iCare_Reporting_'+d.from+'_'+d.to+'.csv',akCsvBlob(rows),'Berichte');
  notify('Reporting inklusive offener Arbeitskarten als CSV exportiert');
