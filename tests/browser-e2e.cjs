@@ -170,7 +170,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.locator('#qWindowPicker [data-window="standard"]').click();
  await page.locator('.quoteWindowRow input[type="number"]').first().fill('10');
  await page.locator('#qHours').fill('0');
- await page.locator('#qSqmHour').fill('0');
+ await page.evaluate(()=>{document.getElementById('qSqmHour').value='0'}); // hidden for windows-only; ignored by calculation
  await page.locator('#qMaterial').fill('0');
  await page.locator('#qKm').fill('0');
  await page.locator('#qSetupMinutes').fill('0');
