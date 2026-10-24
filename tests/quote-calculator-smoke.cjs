@@ -74,7 +74,7 @@ assert(roomsOnly.rows.every(r=>!r.title.includes('Fenster')));
 assert.throws(()=>create({scope:'rooms',hours:0,sqmPerHour:0}),/m² pro Stunde/);
 assert.throws(()=>create({scope:'windows',windowItems:[]}),/mindestens eine Fensterart/);
 assert.throws(()=>create({scope:'other',hours:0}),/Arbeitszeit in Stunden/);
-const other=create({scope:'other',serviceName:'Sonderreinigung',hours:3,area:200,visits:1,sqmPerHour:0});
+const other=create({scope:'other',serviceName:'Sonderreinigung',hours:3,area:200,visits:1,sqmPerHour:0,setupMinutes:15});
 assert(other.rows[0].title.includes('Sonderreinigung'));
 assert.equal(other.windowSqm,0);
 assert.equal(other.hoursPerVisit,3.25,'Setup time is still part of internal costs');
