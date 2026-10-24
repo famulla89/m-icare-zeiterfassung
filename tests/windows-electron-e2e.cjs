@@ -77,10 +77,16 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
    const pdf=createOrderStatusPdf('2026-10','');
    const csv=akCsvBlob(akCsvRows(akReportData('2026-10-01','2026-10-31')));
    const xlsx=makeXlsx('2026-10');
+   const pdfMonth=createMonthlyPdf('2026-10');
+   const xlsxCustomers=makeCustomersXlsx(),xlsxAppointments=makeAppointmentsXlsx(),xlsxAllWork=makeAllWorkXlsx();
    const backup=JSON.parse(JSON.stringify(state));
    const sig=async blob=>[...new Uint8Array((await blob.slice(0,8).arrayBuffer()))];
    const result={pdfSize:pdf.size,pdfSig:await sig(pdf),csvSize:csv.size,csvContent:await csv.text(),
-    xlsxSize:xlsx.size,xlsxSig:await sig(xlsx),backupCount:backup.entries.length,
+    xlsxSize:xlsx.size,xlsxSig:await sig(xlsx),
+    pdfMonthSize:pdfMonth.size,pdfMonthSig:await sig(pdfMonth),
+    excelSizes:[xlsxCustomers.size,xlsxAppointments.size,xlsxAllWork.size],
+    excelSignatures:await Promise.all([xlsxCustomers,xlsxAppointments,xlsxAllWork].map(sig)),
+    backupCount:backup.entries.length,
     backupAkCount:backup.appointments.filter(a=>Number.isInteger(a.akNumber)).length};
    document.getElementById('reportMode').value=rangeControls.mode;
    document.getElementById('historyMonth').value=rangeControls.month;
@@ -90,6 +96,8 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   assert(exports.pdfSize>5000&&String.fromCharCode(...exports.pdfSig.slice(0,5))==='%PDF-','Windows AK PDF output');
   assert(exports.csvSize>100&&exports.csvContent.startsWith('\ufeff')&&exports.csvContent.includes('Erledigt'),'Windows CSV output');
   assert(exports.xlsxSize>100&&exports.xlsxSig[0]===80&&exports.xlsxSig[1]===75,'Windows Excel ZIP format');
+  assert(exports.pdfMonthSize>5000&&String.fromCharCode(...exports.pdfMonthSig.slice(0,5))==='%PDF-','Windows monthly PDF output');
+  assert(exports.excelSizes.every(size=>size>100)&&exports.excelSignatures.every(sig=>sig[0]===80&&sig[1]===75),'Windows customer/appointment/work Excel exports');
   assert(exports.backupCount===fixture.entries.length&&exports.backupAkCount===fixture.appointments.length,'Windows backup retains AK data');
 
   assert(!pageerrors.length,'Windows renderer JavaScript errors: '+pageerrors.join('; '));
