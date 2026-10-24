@@ -30,6 +30,29 @@ assert.throws(()=>create({visits:0}),/Einsätze/);
 assert.throws(()=>create({hourly:-5}),/Ungültiger/);
 assert.throws(()=>create({productivity:0}),/Produktivität/);
 assert.throws(()=>create({vat:101}),/Ungültiger/);
+const multiple=create({
+ mode:'solo',setupMinutes:15,liftRental:85,minimumSqm:0,fixedProfit:75,
+ windowItems:[
+  {id:'a',label:'Standardfenster',qty:5,each:1.5,rate:3,sides:1,soil:1,frame:true,ladder:false,lift:false},
+  {id:'b',label:'Große Glasflächen',qty:2,each:4,rate:3,sides:2,soil:1.3,frame:false,ladder:true,lift:false}
+ ]
+});
+assert.equal(multiple.windowItems.length,2);
+assert.equal(multiple.windowSqm,15.5);
+assert.equal(multiple.windowItems[0].total,27);
+assert.equal(multiple.windowItems[1].total,81.12);
+assert.equal(multiple.windowsNet,108.12);
+assert.equal(multiple.liftRental,85);
+assert.equal(multiple.rows.length,4);
+assert.equal(multiple.rows.reduce((a,r)=>a+r.total,0),multiple.net,'Every euro accounted for in PDF positions');
+assert(multiple.hoursPerVisit>base.hoursPerVisit,'Setup minutes counted');
+assert(create({minimumSqm:20,area:200}).net>=4000,'Minimum net per sqm honored');
+assert.throws(()=>create({windowItems:[{label:'Fenster',qty:0,each:1,rate:3,sides:1,soil:1}]}),/Stückzahl/);
+assert.throws(()=>create({windowItems:Array(9).fill({label:'Test',qty:1,each:1,rate:3,sides:1,soil:1})}),/Maximal acht/);
+assert.throws(()=>create({mode:'invalid'}),/Betriebsmodus/);
+const invoice={...m.createDocument({id:'t',kind:'invoice',number:'RG-QA',customerName:'Muster GmbH',sellerName:'Test',service:'Fenster',rows:multiple.rows,net:multiple.net,tax:multiple.tax,gross:multiple.gross,vat:multiple.vat})};
+assert.equal(m.validateDocument(invoice),invoice);
+
 const doc={
  id:'qa-document',kind:'quote',number:'KV-QA-001',customerName:'Musterfirma GmbH',
  customerAddress:'Musterstraße 1, Hagen',sellerName:'Reinigung Test GmbH',
