@@ -41,6 +41,21 @@
 #quoteCalculator .quoteSummary{border-radius:16px;background:linear-gradient(120deg,#153f74,#224fbe);color:white;padding:22px;margin:15px 0;font-size:1.05rem}
 #quoteCalculator .quoteSummary strong{font-size:1.6rem}
 #quoteCalculator .quoteSummary .hint{color:#e1eafa}
+
+#quoteCalculator .quoteModes{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+#quoteCalculator .quoteModes label{display:flex;align-items:center;gap:8px;border:1px solid #c7dcf2;border-radius:12px;padding:12px 16px;background:#f2f7fe;cursor:pointer;flex:1}
+#quoteCalculator .quoteModes input{width:auto;height:18px}
+#quoteCalculator .quoteWindowPicker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#quoteCalculator .quoteWindowPicker button{text-align:left;background:#f5faff;border:1px dashed #a5c4e2;color:#1c4d7b;padding:12px}
+#quoteCalculator .quoteWindowPicker small{display:block;color:#58738c;font-weight:400}
+#quoteCalculator .quoteWindowRow{margin:12px 0;border:1px solid #c8d8eb;border-radius:13px;padding:14px;background:white}
+#quoteCalculator .quoteWindowHead{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#quoteCalculator .quoteWindowHead button{min-height:34px;padding:6px 12px}
+#quoteCalculator .quoteWindowGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+#quoteCalculator .quoteWindowExtras{display:flex;flex-wrap:wrap;gap:10px}
+#quoteCalculator .quoteWindowExtras label{display:flex;align-items:center;gap:6px;background:#e9f3ff;padding:8px;border-radius:10px;font-size:.93rem}
+#quoteCalculator .quoteWindowExtras input{width:auto}
+@media(max-width:600px){#quoteCalculator .quoteWindowPicker{grid-template-columns:1fr}}
 #quoteCalculator .quoteSavedItem{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:13px;border-bottom:1px solid #dbe7f2;flex-wrap:wrap}
 #quoteCalculator .quoteSavedItem button{padding:9px 13px;min-height:38px}
 @media(max-width:650px){#quoteCalculator .quoteBox{padding:14px}#quoteCalculator .quoteSummary strong{font-size:1.3rem}}
@@ -62,7 +77,7 @@
    <div><label for="qObjectType">Objektart</label><select id="qObjectType"><option>Büro</option><option>Praxis</option><option>Treppenhaus</option><option>Industrie</option><option>Privathaus</option><option>Einzelhandel</option><option>Andere</option></select></div>
    <div><label for="qArea">Gesamtfläche in m²</label><input id="qArea" type="number" min="0" max="1000000" step="1" value="200"></div>
   </div>
-  <div class="quotePills" id="qAreas"><button type="button" data-area="50" class="secondary">50 m²</button><button type="button" data-area="100" class="secondary">100 m²</button><button type="button" data-area="200" class="secondary">200 m²</button><button type="button" data-area="500" class="secondary">500 m²</button></div>
+  <div class="quotePills" id="qAreas"><button type="button" data-area="50" class="secondary">50 m²</button><button type="button" data-area="100" class="secondary">100 m²</button><button type="button" data-area="200" class="secondary">200 m²</button><button type="button" data-area="500" class="secondary">500 m²</button><button type="button" data-area="1000" class="secondary">1000 m²</button></div>
   <label class="quoteToggle"><input type="checkbox" id="qWc"> WC / Sanitär · größerer Reinigungsaufwand</label>
   <label class="quoteToggle"><input type="checkbox" id="qKitchen"> Küche · Fett und zusätzliche Oberflächen</label>
   <label class="quoteToggle"><input type="checkbox" id="qHeavy"> Starke Nutzung / hohe Frequentierung</label>
@@ -70,6 +85,7 @@
  <div class="quoteBox">
   <h3>2 · Eigene Kosten und Preise</h3>
   <p class="hint">Die Werte sind deine frei veränderbaren Annahmen. Automatisch berechnete Vorschläge sind keine verbindlichen Marktpreise.</p>
+  <div class="quoteModes" role="group" aria-label="Betriebsmodus"><label><input type="radio" name="qMode" value="business" checked> 🧑‍🔧 Betrieb / Personal</label><label><input type="radio" name="qMode" value="solo"> 👤 Solo</label></div>
   <div class="grid">
    <div><label for="qVisits">Reinigungseinsätze im Abrechnungszeitraum</label><input id="qVisits" type="number" min="1" max="10000" step="1" value="8"></div>
    <div><label for="qHours">Stunden pro Einsatz (0 = Fläche automatisch berechnen)</label><input id="qHours" type="number" min="0" step="0.25" value="0"></div>
@@ -81,20 +97,27 @@
    <div><label for="qMaterial">Materialkosten pro Einsatz €</label><input id="qMaterial" type="number" min="0" step="0.5" value="2"></div>
    <div><label for="qKm">Anfahrt einfach (km)</label><input id="qKm" type="number" min="0" step="0.5" value="8"></div>
    <div><label for="qKmPrice">Kosten pro gefahrenem Kilometer €</label><input id="qKmPrice" type="number" min="0" step="0.05" value="0.70"></div>
+   <div><label for="qSetupMinutes">Rüst- und Abbauzeit pro Einsatz (Minuten)</label><input id="qSetupMinutes" type="number" min="0" step="5" value="15"></div>
+   <div><label for="qLiftRental">Hebebühnen-Miete / Aufwand gesamt (€)</label><input id="qLiftRental" type="number" min="0" step="5" value="0"></div>
+   <div><label for="qMinimumSqm">Dein Mindestpreis pro m² (€)</label><input id="qMinimumSqm" type="number" min="0" step="0.10" value="0"></div>
+   <div><label for="qFixedProfit">Gewinnaufschlag als Festbetrag (€; 0 = Prozentangabe)</label><input id="qFixedProfit" type="number" min="0" step="5" value="0"></div>
    <div><label for="qMargin">Gewinnaufschlag auf Kosten %</label><input id="qMargin" type="number" min="0" step="1" value="25"></div>
+   <div class="quoteProfitPills"><label>Gewinn als fester Betrag wählen</label><div class="quotePills" id="qProfits"><button type="button" data-profit="50" class="secondary">+50 €</button><button type="button" data-profit="75" class="secondary">+75 €</button><button type="button" data-profit="100" class="secondary">+100 €</button><button type="button" data-profit="0" class="secondary">Prozentual</button></div></div>
    <div><label for="qMinNet">Mindestpreis netto € (0 = keiner)</label><input id="qMinNet" type="number" min="0" step="1" value="0"></div>
   </div>
  </div>
  <div class="quoteBox">
-  <h3>3 · Fensterreinigung (optional)</h3>
-  <div class="grid">
-   <div><label for="qWindowType">Fensterart</label><select id="qWindowType"><option value="none">– keine Fenster –</option><option value="standard">Standardfenster · 1,5 m²</option><option value="large">Große Glasflächen · 4,0 m²</option><option value="sliding">Schiebeelemente · 2,5 m²</option><option value="mullion">Sprossenfenster · 1,2 m²</option><option value="winter">Wintergarten · manuelle Fläche</option><option value="roof">Glasdach · manuelle Fläche</option></select></div>
-   <div><label for="qWindowQty">Stückzahl</label><input id="qWindowQty" type="number" min="0" step="1" value="0"></div>
-   <div><label for="qWindowEach">Fläche pro Fenster m²</label><input id="qWindowEach" type="number" min="0" step="0.1" value="1.5"></div>
-   <div><label for="qWindowRate">Dein Preis pro m² und Seite (€)</label><input id="qWindowRate" type="number" min="0" step="0.5" value="3"></div>
-   <div><label for="qWindowSides">Reinigungsseiten</label><select id="qWindowSides"><option value="1">Einseitig</option><option value="2">Beidseitig</option></select></div>
-   <div><label for="qWindowDirt">Verschmutzung</label><select id="qWindowDirt"><option value="1">Normal · Faktor 1,0</option><option value="1.3">Erhöht · Faktor 1,3</option><option value="1.6">Stark · Faktor 1,6</option></select></div>
-   <div><label for="qWindowEquip">Zusatzaufwand</label><select id="qWindowEquip"><option value="1">Keiner</option><option value="1.2">Rahmen / Falz · Faktor 1,2</option><option value="1.3">Leiter · Faktor 1,3</option><option value="1.7">Hebebühne · Faktor 1,7</option></select></div>
+  <h3>3 · Fensterarten erfassen (optional)</h3>
+  <p class="hint">Mehrere Fensterarten hinzufügen. Pro Fensterart lassen sich <strong>Stückzahl, individuelle Größe in m², Preis pro m², Reinigungsseite, Verschmutzung, Rahmen/Falz, Leiter und Hebebühne</strong> separat einstellen.</p>
+  <div id="qWindowItems" aria-live="polite" class="quoteWindowItems"></div>
+  <h4>+ Fensterart hinzufügen</h4>
+  <div class="quoteWindowPicker" id="qWindowPicker">
+   <button type="button" data-window="standard">🪟 Standardfenster<small>1,5 m² / Stück</small></button>
+   <button type="button" data-window="large">🏢 Große Glasflächen<small>4,0 m² / Stück</small></button>
+   <button type="button" data-window="sliding">🚪 Schiebeelemente<small>2,5 m² / Stück</small></button>
+   <button type="button" data-window="mullion">🪟 Sprossenfenster<small>1,2 m² / Stück</small></button>
+   <button type="button" data-window="winter">🏡 Wintergarten<small>Eigene Fläche</small></button>
+   <button type="button" data-window="roof">🏠 Glasüberdachung<small>Eigene Fläche</small></button>
   </div>
   <p class="hint" id="qWindowArea">Fensterfläche: 0 m²</p>
  </div>
