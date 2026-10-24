@@ -13,6 +13,46 @@
 - `ensureOrderIdentifiers()` vergibt kurze numerische `AK`-Nummern lokal. Zwei Geräte können offline dieselbe Nummer vergeben. Maßgebliche technische Datensatz-ID muss die stabile UUID bleiben. Kein stilles Überschreiben/Umnummerieren.
 - AK-Termine, Ist-Arbeitszeiten, Mitarbeiter, Kunden, Standorte und Korrekturprotokolle müssen gemeinsam übertragen werden. Nur `entries` zu übertragen würde Aufträge und Zuordnungen beschädigen.
 
+## Präzisierung: Lizenzfreigabe per Kunden-E-Mail – genaues gewünschtes Produktverhalten
+
+**Ziel:** Der M-iCare-Eigentümer kann die App an Kunden/Kollegen verteilen, deren **Google-E-Mail-Adressen** in einem ausschließlich für ihn freigeschalteten Admin-Bereich hinterlegen und Freigaben widerrufen. Die bloße Kopie der APK/EXE auf einen anderen Rechner oder an eine fremde Adresse soll **nicht** zur regulären App-Nutzung berechtigen. Die Drive-Synchronisierung ist davon getrennt.
+
+### Gewünschter Ablauf
+
+1. Admin meldet sich mit einem **eigenen Admin-Konto** plus Admin-Passwort an (ggf. zweiter Faktor). Die Zugangsdaten werden **außerhalb der ausgelieferten EXE/APK** sicher verifiziert – ein fest in der App eingebautes Passwort wäre auslesbar und ist **nicht ausreichend**.
+2. Unter `Verwaltung → Lizenzen` trägt er `kunde@gmail.com` ein. Er sieht Einladung/Freigabe, zuletzt geprüften Zugriff, Geräte, Lizenzstatus (aktiv/gesperrt), optional Ablaufdatum. Die Oberfläche setzt beim Erstellen/Ändern **serverseitige** Berechtigungen durch.
+3. Bei der ersten Installation meldet sich der Kunde mit **Google-Login** an. Das System prüft die von Google bestätigte E-Mail (`email_verified`), bindet die Freigabe möglichst an die stabile Google/Firebase UID und schreibt die Gerätregistrierung. Eine bloß frei eintragbare E-Mail in einem Textfeld ist **kein** Lizenznachweis.
+4. App wird erst nach erfolgreicher Online-Aktivierung für normalen Betrieb freigegeben. Für den Offlinebetrieb dient ein **kurzlebiger signierter Aktivierungsnachweis**, der zur Benutzer-/Geräteidentität und zum Ablauf passt. Signaturschlüssel bzw. Server-Admin-Geheimnis befinden sich **nie** im Client. Nach Ablauf muss online erneuert werden. Bei Widerruf endet die Berechtigung spätestens mit Ende der Offline-Frist.
+5. Spätere Änderungen im Admin-Bereich werden beim nächsten Onlinecheck übernommen. Falls der Kunde die EXE/APK weitergibt, kann die andere Person mit nicht freigegebener Identität regulär nicht starten. **Keine absolute Kopierschutzgarantie**: Ein Angreifer kann Offline-Clientcode patchen oder bestehende Dateien kopieren. Geschützte Kunden-/Cloud-Daten sind deshalb zusätzlich zu verschlüsseln.
+
+### Technische Variante für kleines Budget (ca. zehn Kunden)
+
+- **Firebase Authentication** mit Google-Login für Kunden und separatem starken Admin-Login; **Cloud Firestore** als kleine Lizenzliste (E-Mail-Einladung, gebundene UID, Status, freigegebene Geräte, Zeitstempel). Firestore Security Rules erzwingen, dass **nur die festgelegte Admin-UID** Freigaben verändert. Keine allgemein lesbare Kundenliste, keine clientseitig frei schreibbaren Rollen.
+- Inhaber kann **innerhalb von M-iCare** Lizenzen verwalten; das Backend authentifiziert jede schreibende Aktion. E-Mail wird nicht als geheimes Passwort missbraucht.
+- Google Drive bleibt für **verschlüsselte Kundendaten-Backups**; die Firebase-Lizenzverwaltung verwaltet **nur Berechtigungen** und nicht sämtliche Kundendaten.
+- Google/Firebase **Spark** mit kostenfreien Kontingenten kann bei dieser Größe ohne Abonnement ausreichen. Vor Freigabe Cloud-Funktionen, Login-Mechanismus, offline signierte Nachweise, Kontingente und mögliche kostenpflichtige Abhängigkeiten gesondert prüfen. Falls signierte Offline-Nachweise einen kostenpflichtigen Vertrauensdienst erfordern, Preis/Alternative vor Umsetzung entscheiden.
+- Ein reiner clientseitiger Schutz mit `adminPassword` in `config.js`, `index.html`, Electron-ASAR oder Android-APK **darf nicht als wirksame Lizenzsperre vermarktet werden**. Das gilt auch bei privatem GitHub-Repository.
+
+### Kleine Akzeptanzliste
+
+- Nicht freigegebene Google-Adresse → Aktivierung verweigert; keine Produktdaten lesen.
+- Freigegebene, verifizierte Adresse → Lizenz aktiv; in App nach Anmeldung nutzbar.
+- Google-Adresse vorgetäuscht (nur Eingabetext) → verweigert.
+- Installer an fremdes Google-Konto weitergereicht → verweigert.
+- Benutzer sperren → spätestens nach festgelegter Offline-Frist blockiert.
+- Person ohne Adminrolle ruft API direkt auf/ändert Browseroberfläche → Berechtigungsänderung serverseitig verweigert.
+- Admin-Passwort/Schlüssel aus ASAR/APK extrahieren → kein Freigabegeheimnis vorhanden.
+- Backup/Restore, Google-Drive-Sync und Kundendaten getrennt von Lizenzidentität; kein Datenverlust beim Lizenzablauf.
+- App ohne Netzwerk startet nur mit gültigem befristeten Offline-Nachweis; danach Meldung zur Online-Verifizierung; lokale Daten bleiben sicher erhalten.
+
+Quellen:
+- https://firebase.google.com/docs/rules/rules-and-auth
+- https://firebase.google.com/docs/firestore/security/rules-conditions
+- https://firebase.google.com/pricing
+- https://www.electronjs.org/docs/latest/tutorial/asar-archives
+
+---
+
 ## Ergänzung: Geschützter Adminbereich, Google-Konto und Weitergabeschutz (Anforderung 24.10.2026)
 
 **Nutzerwunsch:** Zuerst mit eigenem Google-Konto testen; anschließend M-iCare an Kollegen mit wenigen Kunden geben. Nur der Eigentümer soll Cloud-/Benutzer-/Geräteeinstellungen verwalten können. Eine kopierte EXE/APK soll nicht ohne Berechtigung Zugang zu seinen Kundendaten geben.
