@@ -13,6 +13,41 @@
 - `ensureOrderIdentifiers()` vergibt kurze numerische `AK`-Nummern lokal. Zwei Geräte können offline dieselbe Nummer vergeben. Maßgebliche technische Datensatz-ID muss die stabile UUID bleiben. Kein stilles Überschreiben/Umnummerieren.
 - AK-Termine, Ist-Arbeitszeiten, Mitarbeiter, Kunden, Standorte und Korrekturprotokolle müssen gemeinsam übertragen werden. Nur `entries` zu übertragen würde Aufträge und Zuordnungen beschädigen.
 
+## Ergänzung: Geschützter Adminbereich, Google-Konto und Weitergabeschutz (Anforderung 24.10.2026)
+
+**Nutzerwunsch:** Zuerst mit eigenem Google-Konto testen; anschließend M-iCare an Kollegen mit wenigen Kunden geben. Nur der Eigentümer soll Cloud-/Benutzer-/Geräteeinstellungen verwalten können. Eine kopierte EXE/APK soll nicht ohne Berechtigung Zugang zu seinen Kundendaten geben.
+
+### Bedienoberfläche und Rollen
+
+- Unter **Einstellungen → Verwaltung (🔒)** einen Adminbereich vorsehen. Zugriff nach Entsperrung mit eigener **Admin-Passphrase**, auf Wunsch zusätzlich Windows Hello oder Android-Gerätesperre. Nach Inaktivität automatisch sperren; Sperren auch beim Wechsel der Google-Identität, nach Systemneustart und nach Benutzerwechsel.
+- Im Adminbereich: **„Google-Konto verbinden“** (Google-Dialog im Systembrowser), verifizierte E-Mail **nur anzeigen**, Workspace/Drive-Berechtigungen, Nutzer und freigegebene Geräte, Cloud-Sicherungen, Verschlüsselungs-Schlüsselzustand, Wiederherstellung, Zugriffs-/Backup-Logs und Kontoverbindung trennen.
+- Mitarbeiterrolle: Kunden und Aufträge gemäß Freigaben bearbeiten, Auswertung lesen; **keine** Kontowechsel, Cloud-Berechtigungen, Benutzereinladungen, Verschlüsselungs-/Backup-Schlüssel oder Löschung sämtlicher Sicherungen. Einzelheiten durch spätere Rollen-Tests absichern.
+- Für erste Tests eigene E-Mail nur über Google OAuth **verifizieren**. **Kein Formular, das Google-Passwort oder OAuth-Token direkt in M-iCare abfragt.** Eine eingetippte E-Mail ist kein Identitätsbeweis. Intern die bei Google verifizierte stabile `sub`-ID als Kontoreferenz verwenden; E-Mail für Bedienungsanzeige.
+- Die **Admin-Passphrase** ist nicht das **Google-Passwort** und nicht zwangsläufig die **Datenverschlüsselungs-Passphrase**. Passphrase nicht im Code, GitHub, HTML oder lokalen Klartext speichern. Kein fest einprogrammiertes Master-Passwort.
+- Admin-Schutz muss die echten Operationen absichern, nicht nur den Menüpunkt verstecken: Drive-Verknüpfung, Import/Überschreiben, Backup löschen, Nutzer/Device ändern durch vertrauenswürdigen nativen Code oder Server prüfen. UI-Check allein ist umgehbar.
+- **Aktueller IST-Stand:** IndexedDB enthält Klartext-Geschäftsdaten. Vor Auslieferung einer Version, die ihren lokalen Datenbestand gegen unbefugten Zugriff absichern soll: at-rest-Verschlüsselung/Migrationspfad mit Wiederherstellungstest, starkem KDF und verschlüsselten Backups entwickeln. Ein separater PIN-Screen auf unverschlüsselter IndexedDB wäre kein Datenzugriffsschutz.
+
+### Was man mit Kopierschutz tatsächlich erreichen kann
+
+1. **Cloud-Zugriff sperren:** App an autorisiertes Google-Konto und Workspace binden, zulässige Konten/Scopes prüfen. Wer die EXE/APK weiterleitet, erlangt dadurch keinen Google-Drive-Zugriff auf fremde Daten.
+2. **Lokale Daten schützen:** Clientseitige Verschlüsselung mit Passphrase + sicher verwahrten Geräteschlüsseln. Kopierte Programmdateien enthalten keine Kunden- oder Cloud-Passwörter. Google-Sicherungen nur für berechtigte Benutzer mit Schlüssel entschlüsselbar.
+3. **Unberechtigte *App-Nutzung* wirksam begrenzen:** Für individuelle Benutzer-/Gerätefreigaben, Abmelden anderer Geräte, Sperren und jederzeitigen Widerruf wird ein **vertrauenswürdiger Lizenz-/Identitätsdienst auf einem Server** benötigt. Lokale Passwort-/Lizenzprüfungen in einer kopierbaren Offline-App sind manipulierbar; absolute Weitergabeverhinderung ist nicht möglich. Offlinebetrieb benötigt befristete, signierte Zugriffsnachweise mit bewusst gewählter Frist; ein solcher Nachweis lässt sich bis zum Ablauf nicht sofort aus der Ferne widerrufen.
+4. **Privatbetrieb mit einem Kollegen:** Zunächst nur Admin + ein Benutzer, Google-Konto des Eigentümers für dessen private **synthetische** Tests. Später Kollege mit eigenem Google-Konto und **eigenem Workspace**, niemals das private Google-Passwort weitergeben. Ob echte geschäftliche Daten in privatem Drive erlaubt sind, vorher organisatorisch/DSGVO-rechtlich prüfen.
+
+### Akzeptanztests für den Admin-/App-Schutz
+
+- Ohne Admin-Entsperrung keine Änderung der Cloud-Verbindung, keine Rolle zuweisen, keine Sicherung löschen, keine gefährliche Datenübernahme.
+- Falsche Passphrase, wiederholte Versuche und gesperrter Bildschirm: kein Zugriff auf geschützte Funktionen; legitimes Zurücksetzen nur über dokumentierten Recovery-Flow.
+- Falsche Google-Identität trotz eingetragener E-Mail: Ablehnung. Kein Google-Passwort in M-iCare, nicht in Logs, Quelltext, Crashreport, IndexedDB oder Sicherung.
+- Dateiübertragung EXE/APK an ein unberechtigtes Gerät: **kein** Zugriff auf Cloud-Workspace oder verschlüsselte lokale Kundendaten; die bloße Ausführbarkeit der weitergegebenen App bleibt technisch möglich.
+- Fremder Nutzer kann nicht per Renderer-DOM/DevTools die Freigaben allein durch UI-Manipulation umgehen.
+- Windows-Konto bzw. Android-Gerät gewechselt: Schlüsselmaterial nicht still wiederverwendbar; nach Account-Wechsel Backup-Workspace überprüfen.
+- Zwei Offline-Geräte bearbeiten dieselbe AK: keine Überschreibung, unabhängig von Admin-Status; Cloud- und Sperrzustand sauber getrennt.
+- Vorhandene lokale Kundendaten bei Migration zur Verschlüsselung zuerst separat und wiederherstellbar sichern; Migration atomar, Rückfall ohne Datenverlust.
+
+**Reihenfolge:** Admin-/Rollenmodell und sichere Backup-Migration im selben Design abschließen, bevor behauptet wird, die kopierte App sei vor Weitergabe geschützt. Phase A (manuelle Drive-Sicherung) kann zunächst ohne Lizenzdienst entwickelt werden; Zugriffs-/Gerätefreigabe ist eine getrennte spätere Phase.
+
+
 ## 2. Produktentscheidung: zwei ausdrücklich getrennte Phasen
 
 ### Phase A — sichere Cloud-Sicherung / manuelle Übergabe (MVP)
