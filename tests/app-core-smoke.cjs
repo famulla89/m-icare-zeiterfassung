@@ -27,7 +27,7 @@ assert.throws(()=>duration(row('2026-10-20','2026-10-20','11:00','11:00')),/Arbe
 assert.throws(()=>duration(row('2026-10-20','2026-10-20','11:00','13:00',120)),/Pause/);
 assert.throws(()=>duration(row('2026-10-20','2026-10-20','99:00','13:00')),/Uhrzeit/);
 assert.throws(()=>duration(row('2026-10-20','2026-10-22','10:00','11:00')),/Arbeitszeit/);
-const get=(a,from,to)=>sandbox.datesFor(a,from,to).map(x=>x.date);
+const get=(a,from,to)=>Array.from(sandbox.datesFor(a,from,to),x=>x.date);
 const base={date:'2026-10-05',start:'09:00',end:'10:00',repeat:'once',interval:1,until:'',weekdays:[],exceptions:{}};
 assert.deepEqual(get(base,'2026-10-05','2026-10-31'),['2026-10-05']);
 assert.deepEqual(get({...base,repeat:'weekly'},'2026-10-05','2026-10-20'),['2026-10-05','2026-10-12','2026-10-19']);
