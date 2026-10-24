@@ -136,11 +136,12 @@
   async function loadBrandLogo(){
    const picture=new Image();
    picture.decoding='async';
-   picture.src=new URL('./logo.svg',document.baseURI).href;
+   // Die Eventhandler müssen vor dem Setzen der Quelle stehen (Android WebView / Cache).
    await new Promise((resolve,reject)=>{
-    if(picture.complete&&picture.naturalWidth>0)return resolve();
     picture.onload=resolve;
     picture.onerror=()=>reject(Error('Das M-iCare-Logo konnte nicht geladen werden. Bitte App-Dateien überprüfen.'));
+    picture.src=new URL('./logo.svg',document.baseURI).href;
+    if(picture.complete&&picture.naturalWidth>0)resolve();
    });
    if(picture.naturalWidth<1||picture.naturalHeight<1)throw Error('M-iCare-Logo ist leer');
    return picture;
