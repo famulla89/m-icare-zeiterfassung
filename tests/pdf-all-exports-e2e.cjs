@@ -64,7 +64,9 @@ function verifyPdf(name,bytes,{text,expectPagesMin=1}={}){
  await fromBlob('03_AK_Status_alle_Oktober.pdf',"createOrderStatusPdf('2026-10','')");
  await fromBlob('04_AK_Status_offen.pdf',"createOrderStatusPdf('2026-10','open')");
  await fromBlob('05_AK_Status_fertig.pdf',"createOrderStatusPdf('2026-10','done')");
- await page.evaluate(()=>{document.getElementById('historyMonth').value='2028-01'});
+ await page.evaluate(()=>{document.getElementById('historyMonth').value='2028-01';document.getElementById('reportMode').value='month';document.getElementById('reportWholeMonth').checked=true;document.getElementById('reportWholeYear').checked=false;});
+ const emptyRange=await page.evaluate(()=>reportRange());
+ assert.equal(emptyRange.from,'2028-01-01','Empty AK report must actually cover January 2028');
  await fromBlob('06_AK_Status_ohne_Termine.pdf',"createOrderStatusPdf('2028-01','')");
  await page.evaluate(()=>{document.getElementById('historyMonth').value='2026-10'});
  // 3. Kundenübersicht und Kundendetail: auch archivierte Kunden.
@@ -120,6 +122,9 @@ function verifyPdf(name,bytes,{text,expectPagesMin=1}={}){
   if(tab==='orders'){
    assert.equal(data.cols.length,10,'13-column AK table reduced to 10');
    assert(!data.cols.includes('Aktion'),'No clickable action column');
+   const conflicts=await page.evaluate(()=>[...document.querySelectorAll('#reportPrintSnapshot .printMainAK tbody tr')].map(tr=>tr.lastElementChild.textContent));
+   assert(conflicts.every(v=>/^(Nein|Ja \([0-9]+\))$/.test(v)),'Conflict details must be compact in print');
+
   }
   await page.emulateMedia({media:'print'});
   const hidden=await page.evaluate(()=>({
@@ -130,6 +135,7 @@ function verifyPdf(name,bytes,{text,expectPagesMin=1}={}){
   assert.equal(hidden.original,'none','Original interactive report MUST be hidden in PDF');
   const bytes=await page.pdf({format:'A4',landscape:true,printBackground:true,preferCSSPageSize:true,displayHeaderFooter:false});
   const o=verifyPdf(filename,bytes,{text:{must:[data.h,'Zeitraum:'],not:['Arbeitskarte direkt suchen','Ansehen / korrigieren','Dokumentieren','Tagesbackup herunterladen','Alle Berichte']}});
+  if(tab==='orders')assert(o.pages<=4,'Order report excessively long for synthetic dataset: '+o.pages+' pages');
   results.push(o);console.log('REPORT PDF PASS',filename,o.pages,'pages');
   await page.emulateMedia({media:'screen'});
   await page.evaluate(()=>{document.getElementById('reportPrintSnapshot')?.remove();document.getElementById('reportPrintOnly')?.remove()});
