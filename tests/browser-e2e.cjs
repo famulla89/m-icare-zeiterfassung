@@ -249,6 +249,65 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(await page.evaluate(()=>editId),'test-entry-1','Report edit opens same persisted entry');
  console.log('E2E step 5c: corrected AK filter and edit-through-report passed');
 
+ // Closed AK -> progress -> done again: each genuine correction requires a reason and is audit logged.
+ await page.locator('#orderStatus').selectOption('done');
+ await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
+ await page.locator('#saveBtn').click();
+ await page.waitForFunction(()=>state.entries.find(e=>e.id==='test-entry-1')?.orderStatus==='done');
+ const reopened=await page.evaluate(()=>{
+  const e=state.entries.find(x=>x.id==='test-entry-1');
+  return {count:state.entries.filter(x=>x.appointmentId===e.appointmentId&&x.appointmentOccurrence===e.appointmentOccurrence).length,
+   wasCompleted:e.wasCompleted,corrections:e.corrections?.length,last:e.corrections?.at(-1)};
+ });
+ assert.equal(reopened.count,1,'Reopening an AK must not create duplicate entries');
+ assert(reopened.wasCompleted&&reopened.corrections>=3,'Reclosing must preserve closure history');
+ assert.equal(reopened.last.reason,'Auftragsstatus falsch gewählt');
+ assert(reopened.last.changes.some(x=>x.field==='orderStatus'&&x.before==='progress'&&x.after==='done'));
+ // Same value + correction reason is not a change and must not grow the audit trail.
+ await page.evaluate(()=>editEntry('test-entry-1'));
+ await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
+ await page.locator('#saveBtn').click();
+ assert(dialogs.some(x=>x.includes('noch keine Änderung')),'No-op correction must not be saved');
+ assert.equal(await page.evaluate(()=>state.entries.find(e=>e.id==='test-entry-1').corrections.length),reopened.corrections);
+ // Scheduled overlaps are only planning signals; exact overlap times should be available in the editor.
+ const conflictBanner=await page.evaluate(()=>{
+  const a=state.appointments.find(x=>x.id==='test-appointment-1');
+  const partner={...a,id:'qa-plan-conflict',akNumber:987,date:'2026-10-05',start:'10:00',end:'11:30',employee:'Inhaber'};
+  const otherEmployee={...a,id:'qa-other-employee',akNumber:988,date:'2026-10-05',start:'10:00',end:'11:30',employee:'Anna Test'};
+  state.appointments.push(partner,otherEmployee);
+  try{
+   editEntry('test-entry-1');
+   const txt=document.getElementById('plannedEditorConflictInfo').textContent;
+   const quality=akReportData('2026-10-01','2026-10-31').rows;
+   return {txt,conflict:quality.find(r=>r.id==='test-appointment-1|2026-10-05')?.conflicts||[]};
+  }finally{state.appointments=state.appointments.filter(x=>!['qa-plan-conflict','qa-other-employee'].includes(x.id))}
+ });
+ assert(conflictBanner.txt.includes('AK 987')&&conflictBanner.txt.includes('60 Minuten'),'Editor conflict details show correct planned overlap');
+ assert(!conflictBanner.txt.includes('AK 988'),'Different employees must not be flagged as conflicting');
+ assert(conflictBanner.conflict.some(x=>x.includes('AK 987')),'Report and editor use the same planned conflict');
+ await page.evaluate(()=>{showScreen('reportingScreen');reportOpenTab('quality');document.getElementById('reportFrom').value='2026-10-01';document.getElementById('reportTo').value='2026-10-31';renderReporting()});
+ const qaPanel=await page.locator('#reportPanels').innerText();
+ assert(qaPanel.includes('Geplante AK-Überschneidungen')&&qaPanel.includes('Tatsächlich erfasste Arbeitszeitüberschneidungen'),'Planned and actual overlaps are separately explained');
+ console.log('E2E step 5d: closing with reason, no-op correction block, planned-vs-actual overlap reporting passed');
+ const shiftedConflict=await page.evaluate(()=>{
+  const a=state.appointments.find(x=>x.id==='test-appointment-1');
+  const modified={...a,id:'qa-moved',akNumber:911,exceptions:{'2026-10-05':{date:'2026-10-06',start:'10:00',end:'12:00'}}};
+  const partner={...a,id:'qa-on-target',akNumber:912,date:'2026-10-06',start:'11:00',end:'13:00',employee:a.employee,exceptions:{}};
+  state.appointments.push(modified,partner);
+  try{
+   updatePlannedEditorConflict(modified,'2026-10-05');
+   const movedText=document.getElementById('plannedEditorConflictInfo').textContent;
+   modified.exceptions['2026-10-05']={cancelled:true};
+   updatePlannedEditorConflict(modified,'2026-10-05');
+   return {movedText,hidden:document.getElementById('plannedEditorConflictInfo').classList.contains('hidden')};
+  }finally{state.appointments=state.appointments.filter(x=>!['qa-moved','qa-on-target'].includes(x.id))}
+ });
+ assert(shiftedConflict.movedText.includes('AK 912')&&shiftedConflict.movedText.includes('60 Minuten'),'Moved order must check conflicts on actual planned date');
+ assert(shiftedConflict.hidden,'Cancelled appointment must not show a conflict');
+ console.log('E2E step 5e: rescheduled vs cancelled planned conflicts passed');
+
+
+
 
  // Free entry and the shared appointment calendar
  await page.evaluate(()=>{resetEdit();openFreeWorkScreen()});
