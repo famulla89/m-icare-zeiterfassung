@@ -729,8 +729,8 @@ function reportBuild(){
  const total=entries.reduce((n,e)=>n+(Number(e.minutes)||0),0);
  const totalPlan=occ.reduce((n,x)=>{const a=x.start.split(':').map(Number),b=x.end.split(':').map(Number);return n+Math.max(0,(b[0]*60+b[1])-(a[0]*60+a[1]))},0);
  const grouped=(arr,key)=>{const m=new Map();for(const x of arr){const k=key(x)||'Ohne Zuordnung';const old=m.get(k)||{name:k,count:0,minutes:0};old.count++;old.minutes+=Number(x.minutes)||0;m.set(k,old)}return [...m.values()].sort((a,b)=>b.minutes-a.minutes)};
- const customerName=id=>state.customers.find(c=>c.id===id)?.name||'Ohne Kunde';
- const objectName=id=>state.objects.find(o=>o.id===id)?.name||'Ohne Geschäftsstelle';
+ const customerName=id=>{const c=state.customers.find(c=>c.id===id);return c?(c.publicNumber||String(c.id).slice(0,8))+' · '+c.name:'Ohne Kunde'};
+ const objectName=id=>{const o=state.objects.find(o=>o.id===id);return o?(o.publicNumber||String(o.id).slice(0,8))+' · '+o.name:'Ohne Geschäftsstelle'};
  const byCustomer=grouped(entries,e=>customerName(e.customerId)),byObject=grouped(entries,e=>objectName(e.objectId)),byEmployee=grouped(entries,e=>e.employee),byService=grouped(entries,e=>e.service),byDate=grouped(entries,e=>e.date.slice(0,7));
  const exceptions=entries.filter(e=>e.deviationReason||e.deviationNote);
  const free=entries.filter(e=>!e.appointmentId);
@@ -739,7 +739,7 @@ function reportBuild(){
  const noObject=entries.filter(e=>!e.objectId).length;
  const badDates=entries.filter(e=>!e.start||!e.end).length;
  const overlaps=[];
- const indexed=entries.map(e=>({e,start:Date.parse(e.date+'T'+e.start+':00'),end:Date.parse((e.endDate||e.date)+'T'+e.end+':00')})).filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end));
+ const indexed=entries.map(e=>({e,start:Date.parse(e.date+'T'+e.start+':00'),end:Date.parse((e.endDate||e.date)+'T'+e.end+':00')})).filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start);
  for(let i=0;i<indexed.length;i++)for(let j=i+1;j<indexed.length;j++){const a=indexed[i],b=indexed[j];if(a.e.employee===b.e.employee&&a.start<b.end&&b.start<a.end){overlaps.push([a.e.employee,a.e.date,a.e.start+'–'+a.e.end,b.e.start+'–'+b.e.end]);if(overlaps.length>=100)break}if(overlaps.length>=100)break}
  const reasons=grouped(exceptions,e=>e.deviationReason||'Ohne Grund');
  const statusMap=new Map();for(const e of entries){const k=e.orderStatus||'Ohne Status';statusMap.set(k,(statusMap.get(k)||0)+1)}
@@ -794,7 +794,7 @@ function renderReporting(){
  }
  if(activeReportTab==='services'){reportBars(panels,'Stunden nach Reinigungsleistung',d.byService);reportTable(panels,'Leistungsarten',['Leistung','Einsätze','Geleistete Stunden'],d.byService.map(g=>[g.name,g.count,reportMinutes(g.minutes)]))}
  if(activeReportTab==='customers'){reportBars(panels,'Geleistete Stunden nach Kunde',d.byCustomer);
-  const rows=d.byCustomer.map(g=>{const customer=state.customers.find(c=>c.name===g.name),ob=customer?state.objects.filter(o=>o.customerId===customer.id).length:0;return [g.name,ob,g.count,reportMinutes(g.minutes)]});
+  const rows=d.byCustomer.map(g=>{const customer=state.customers.find(c=>(c.publicNumber||String(c.id).slice(0,8))+' · '+c.name===g.name),ob=customer?state.objects.filter(o=>o.customerId===customer.id).length:0;return [g.name,ob,g.count,reportMinutes(g.minutes)]});
   reportTable(panels,'Kundenstamm und Aufwand',['Kunde','Geschäftsstellen','Einsätze','Stunden'],rows);
  }
  if(activeReportTab==='orders'){
