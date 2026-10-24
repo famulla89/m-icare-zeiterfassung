@@ -100,7 +100,10 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.waitForFunction(()=>state.entries.some(e=>e.date==='2026-10-28'&&e.start==='14:00'&&e.end==='16:00'));
  assert(await page.evaluate(()=>state.entries.some(e=>e.date==='2026-10-28'&&e.minutes===120)));
  await page.evaluate(()=>{showScreen('appointmentsPanel');calendarMonth='2026-10';chosenDay='2026-10-28';renderCalendar()});
- assert((await page.locator('#selectedDayList').innerText()).includes('14:00–16:00'),'Free entries should appear in calendar');
+ const calendarText=await page.locator('#selectedDayList').textContent();
+ const calendarDebug=await page.evaluate(()=>({chosenDay,calendarMonth,selected:state.entries.filter(e=>e.date==='2026-10-28').map(e=>({start:e.start,end:e.end,date:e.date,appointmentId:e.appointmentId})),html:document.getElementById('selectedDayList').innerHTML.slice(0,1000)}));
+ console.log('Calendar debug',JSON.stringify({calendarText,calendarDebug}));
+ assert(calendarText.includes('14:00–16:00'),'Free entries should appear in calendar');
  console.log('E2E step 6: free work and calendar passed');
  // Navigation and backups
  await page.locator('#goHome').click();
