@@ -71,6 +71,27 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(pdf.length>2500,'Generated PDF should not be empty');
  await page.emulateMedia({media:'screen'});
  console.log('E2E step 4: reporting export and print passed');
+ // Deutsche Status-Bezeichnungen nur bei der Ausgabe, Datenwerte bleiben stabil.
+ const statusTranslation=await page.evaluate(()=>{
+  showScreen('reportingScreen');reportOpenTab('orders');
+  document.getElementById('reportFrom').value='2026-10-01';
+  document.getElementById('reportTo').value='2026-10-31';
+  document.getElementById('rptCustomer').value='';
+  renderReporting();
+  const section=[...document.querySelectorAll('#reportPanels .objectPanel')]
+   .find(panel=>panel.querySelector('h3')?.textContent==='Auftragsstatus');
+  const labels=section?[...section.querySelectorAll('tbody tr td:first-child')].map(td=>td.textContent):[];
+  return {labels,raw:state.entries.map(e=>e.orderStatus),source:reportBuild().statusMap};
+ });
+ for(const label of ['Erledigt','In Bearbeitung','Abgebrochen','Kunde nicht angetroffen']){
+  assert(statusTranslation.labels.includes(label),'Missing German status: '+label);
+ }
+ for(const key of ['done','progress','cancelled','absent']){
+  assert(!statusTranslation.labels.includes(key),'Internal status must not appear as English label: '+key);
+  assert(statusTranslation.raw.includes(key),'Internal status code must stay unchanged: '+key);
+ }
+ console.log('E2E step 4a: German reporting status labels and unchanged source keys passed');
+
 
  // AK report: customer-specific open/done/actual totals, cross-customer scheduling conflicts,
  // CSV with planned (not yet completed) orders and a byte-valid exported PDF.
