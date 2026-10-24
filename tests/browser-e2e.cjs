@@ -83,7 +83,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('E2E step 3: customer navigation passed');
 
  // Cloud handoff: actual AES-256-GCM file, restore preview and local rollback.
- await page.locator('[data-jump="backupSection"]').click();
+ await page.locator('#home [data-jump="backupSection"]').click();
  assert(await page.locator('#cloudTransferPanel').isVisible(),'Cloud handoff must be visible in backups');
  await page.locator('#cloudOwnerEmail').fill('qa-cloud@gmail.com');
  await page.locator('#cloudOwnerEmail').dispatchEvent('change');
