@@ -633,6 +633,7 @@ function filteredCustomers(){
  return (state.customers||[]).filter(c=>(filter==='all'||(filter==='archived'?!!c.archived:!c.archived))&&customerMatchesQuery(c,mode))
   .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'de'));
 }
+function customerObjectsForSearch(c){const objects=(state.objects||[]).filter(o=>o.customerId===c.id),mode=customerSearchMode($('customerSearch').value);return mode.kind==='objectNumber'?objects.filter(o=>customerObjectMatches(o,mode)):objects}
 function renderAllCustomers(){
  const area=$('allCustomersList');area.replaceChildren();
  const customers=filteredCustomers(),mode=customerSearchMode($('customerSearch').value),total=(state.customers||[]).length;
@@ -643,7 +644,7 @@ function renderAllCustomers(){
  for(const c of customers){
   const row=document.createElement('div');row.className='objectItem';
   const allObjects=(state.objects||[]).filter(o=>o.customerId===c.id);
-  const objects=mode.kind==='objectNumber'?allObjects.filter(o=>customerObjectMatches(o,mode)):allObjects;
+  const objects=customerObjectsForSearch(c);
   const btn=el('button',(c.publicNumber||'–')+' · '+c.name+' · '+allObjects.length+' Objekte'+(c.archived?' · Archiviert':''));
   btn.className='secondary';
   btn.onclick=()=>{if(c.archived){if(!confirm('Archivierten Kunden '+c.name+' wieder aktivieren?'))return;c.archived=false;saveState().then(()=>renderCustomers());return}$('selectedCustomer').value=c.id;renderCustomers();showScreen('customersPanel')};
@@ -656,7 +657,7 @@ function renderAllCustomers(){
 function renderCustomers(preferredObjectId){updateCustomerSelects();fillCustomerEditor(preferredObjectId);renderObjectList();renderAllCustomers();const id=$('selectedCustomer').value;const customer=state.customers.find(x=>x.id===id);$('customerOverview').textContent=customer?'Kunde '+(customer.publicNumber||'')+' · '+customer.name:'Kein Kunde ausgewählt';const currentObject=state.objects.find(o=>o.id===$('selectedObject').value&&o.customerId===id);$('customerNumberPanel').textContent=customer?'Kundennummer: '+(customer.publicNumber||'wird vergeben')+' · Objektnummer: '+(currentObject?.publicNumber||'wird bei Neuanlage vergeben'):'Bei Neuanlage werden Kundennummer und Objektnummer automatisch vergeben.';renderAppointments()}
 
 function exportAllCustomersPdf(){
- const customers=filteredCustomers(),rows=customers.flatMap(c=>{const objs=(state.objects||[]).filter(o=>o.customerId===c.id);return (objs.length?objs:[null]).map(o=>({no:c.publicNumber||'—',name:c.name,address:[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '),obj:o?.name||'—',objNo:o?.publicNumber||'—',objAddr:o?reportAddress(o):'—',status:c.archived?'Archiviert':'Aktiv'}))});
+ const customers=filteredCustomers(),rows=customers.flatMap(c=>{const objs=customerObjectsForSearch(c);return (objs.length?objs:[null]).map(o=>({no:c.publicNumber||'—',name:c.name,address:[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '),obj:o?.name||'—',objNo:o?.publicNumber||'—',objAddr:o?reportAddress(o):'—',status:c.archived?'Archiviert':'Aktiv'}))});
  const w=1123,h=794,perPage=18,pages=Math.max(1,Math.ceil(rows.length/perPage)),images=[];
  for(let page=0;page<pages;page++){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);c.fillStyle='#154b76';c.font='bold 28px Arial';c.fillText('M-iCare · Kundenliste',40,57);c.font='15px Arial';c.fillText('Kunden: '+customers.length+' · '+$('customerStateFilter').selectedOptions[0].text+' · Stand: '+new Date().toLocaleDateString('de-DE'),40,87);
  const xs=[40,160,370,580,780,990],widths=[110,198,200,190,198,90],headers=['Nr.','Kunde','Kundenadresse','Objekt / Nr.','Objektadresse','Status'];c.fillStyle='#e8f2fc';c.fillRect(36,115,1050,34);c.fillStyle='#173954';c.font='bold 13px Arial';headers.forEach((x,i)=>c.fillText(x,xs[i],137));
