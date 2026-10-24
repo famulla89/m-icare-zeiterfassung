@@ -10,6 +10,7 @@ Du brauchst **kein M-iCare-Adminportal**, **keine Anmeldung beim Entwickler**, *
 - Android: Google Drive App installiert/eingeloggt, Drive muss im Android-Dateidialog als Speicheranbieter auswählbar sein (geräteabhängig).
 - Windows: Google Drive für Desktop installiert **oder** Google Drive im Browser (`drive.google.com`) öffnen und die Dateien manuell herunterladen/hochladen.
 - Auf **beiden Geräten die gleiche M-iCare-Version** und die gleiche **Verschlüsselungs-Passphrase** (mindestens 12 Zeichen).
+- **Android-Schutz:** Die APK heißt **M-iCare Cloud TEST** und hat absichtlich eine **eigene Paket-ID**. Sie installiert sich zusätzlich zur alten M-iCare-App, statt deren lokale Daten wegen wechselnder Android-Debug-Signaturen zu gefährden. Die Test-App startet mit leerem Datenbestand; zum Testen zunächst synthetische Testkunden anlegen oder vorhandene Daten bewusst per JSON importieren. Die alte App bleibt separat erhalten.
 - **Am Anfang nur Testdaten.** Vor jeder Übernahme vorhandene M-iCare-Daten zusätzlich als normale JSON-Vollsicherung exportieren.
 
 ## Testablauf: Handy → PC
