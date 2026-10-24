@@ -6,6 +6,18 @@
  if(root)root.MiCareQuote=m;
 })(typeof globalThis!=='undefined'?globalThis:null,function(){
  const euro=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+ // Nur die Anzeige im PDF umwandeln. Date-Inputs und gespeicherte Entwürfe behalten YYYY-MM-DD.
+ // Keine Date.parse-/Timezone-Umrechnung: 2026-11-23 bleibt sicher der 23. November.
+ function formatPdfDate(value){
+  const text=String(value??'').trim();
+  const parts=/^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if(!parts)return text; // bereits deutsch formatierte oder frei beschriebene Leistungszeiträume
+  const year=Number(parts[1]),month=Number(parts[2]),day=Number(parts[3]);
+  const check=new Date(Date.UTC(year,month-1,day));
+  if(!Number.isFinite(check.getTime())||check.getUTCFullYear()!==year||check.getUTCMonth()+1!==month||check.getUTCDate()!==day)return text;
+  return parts[3]+'.'+parts[2]+'.'+parts[1];
+ }
+
  const amount=(n,max=100000000)=>{const v=Number(n);if(!Number.isFinite(v)||v<0||v>max)throw Error('Ungültiger Geldbetrag oder Zahlenwert');return v};
  function compute(v){
   const euroCents=n=>Math.round((Number(n)+Number.EPSILON)*100);
@@ -144,8 +156,8 @@
     right=[d.customerAddress,d.objectName,d.objectAddress];
     for(let i=0;i<3;i++)y+=Math.max(write(left[i]||'',70,y,490),write(right[i]||'',670,y,490),29);
     y=Math.max(y+35,420);
-    write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+d.date,700,y,470,'23px Arial');y+=45;
-    write('Leistungszeitraum: '+(d.serviceDate||'bitte ergänzen'),70,y,1050);y+=42;
+    write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+formatPdfDate(d.date),700,y,470,'23px Arial');y+=45;
+    write('Leistungszeitraum: '+(formatPdfDate(d.serviceDate)||'bitte ergänzen'),70,y,1050);y+=42;
     write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;
     y+=write(d.service,70,y,1080,'bold 25px Arial');
    }else{
@@ -168,9 +180,9 @@
     write('Netto',710,y,230);write(euros(d.net),1000,y,180,'bold 24px Arial');y+=49;
     write('USt. '+d.vat+' %',710,y,240);write(euros(d.tax),1000,y,180,'bold 24px Arial');y+=62;
     c.fillStyle=blue;c.fillRect(700,y-40,470,70);write('Gesamt',720,y+5,250,'bold 29px Arial','#fff');write(euros(d.gross),970,y+5,185,'bold 29px Arial','#fff');y+=100;
-    if(d.kind==='quote')y+=write('Angebot gültig bis: '+(d.validUntil||'bitte ergänzen'),70,y,1030);
+    if(d.kind==='quote')y+=write('Angebot gültig bis: '+(formatPdfDate(d.validUntil)||'bitte ergänzen'),70,y,1030);
     else{
-     y+=write('Zahlbar bis: '+(d.dueDate||'bitte ergänzen'),70,y,1030);
+     y+=write('Zahlbar bis: '+(formatPdfDate(d.dueDate)||'bitte ergänzen'),70,y,1030);
      y+=write('IBAN: '+(d.iban||'bitte ergänzen'),70,y,1030);
     }
     y+=write(d.notes||'Leistungsumfang und Konditionen vor Versand überprüfen.',70,y+12,1075,'20px Arial');
@@ -212,5 +224,5 @@
   add('trailer\n<< /Size '+(max+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
   return new Blob(parts,{type:'application/pdf'});
  }
- return {compute,validateDocument,createDocument,pdf,euro};
+ return {compute,validateDocument,createDocument,pdf,euro,formatPdfDate};
 });
