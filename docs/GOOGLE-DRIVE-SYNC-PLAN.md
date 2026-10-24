@@ -4,6 +4,23 @@
 **Ausgangspunkt:** Testbranch `feature/auftragskennungen-20261024`, Web-Oberfläche `index.html`, Android-WebView, Windows/Electron.  
 **Ziele:** Lokal/offline nutzbar; vollständige Arbeitskarten-/Kunden-/Mitarbeiterdaten sicher sichern; kontrolliert auf zweitem Gerät übernehmen; keine stillen Überschreibungen; später echte bidirektionale Synchronisierung.
 
+## Verbindliche Anforderung – Kunden-Self-Service statt Lizenzverwaltung (letzte Klarstellung)
+
+**Diese Anforderung ersetzt die weiter unten dokumentierte, inzwischen verworfene Idee einer zentral vom M-iCare-Hersteller gepflegten Lizenz-/Freigabeliste.**
+
+Der Hersteller konfiguriert bei der Einrichtung optional die gewünschte **Google-E-Mail-Adresse** des einzelnen Kollegen in dessen Android- und Windows-App (oder der Kollege wählt sie selbst). **Danach verwaltet der Kollege Google Drive und seine Backups eigenständig.** Der Hersteller braucht keine Drive-Freigabe, keinen Zugriff auf dessen Gmail, keine Passwörter und keinen zentralen Lizenz-/Cloud-Benutzerverwaltungsdienst.
+
+**Richtiger Ablauf:**
+1. Der Kollege hat oder erstellt selbst ein Google-Konto.
+2. Android und Windows zeigen unter `Einstellungen → Google Drive` die konfigurierte E-Mail als Anmeldehinweis (kein gespeichertes Google-Passwort). Der Kollege öffnet mit `Google-Konto verbinden` die Google-eigene Anmeldung auf **jedem Gerät** und erteilt die Drive-Berechtigung selbst. Die OAuth-Antwort identifiziert das **tatsächlich** verbundene Konto; wenn eine E-Mail vorgegeben wurde, muss die App es damit abgleichen. Bloßes Eintippen der E-Mail liefert **keine** Berechtigung, auf den Google Drive zuzugreifen.
+3. Nach Zustimmung sucht M-iCare im Drive des **angemeldeten Kollegen** einen eigenen, von M-iCare erstellten Ordner `M-iCare Sicherungen` bzw. erstellt ihn selbst. Im Ordner liegen verschlüsselte, versionierte Sicherungen der **Daten dieses Kollegen**.
+4. Beide Geräte erkennen ihren eigenen verknüpften Google-Account-/Workspace-Stand und zeigen Datum/Anzahl der Backups; Sicherung, Abruf und Restore laufen mit dem Benutzerkonto des Kollegen. Es gibt **keinen** globalen M-iCare-Administrator mit Zugriff auf diese Dateien.
+5. Offlinebetrieb bleibt lokal. Stufe A: Sicherung und Übernahme mit Cloudstand-/Konfliktprüfung. Erst Stufe B bietet automatischen, revisionsbasierten bidirektionalen Sync ohne Überschreiben paralleler Änderungen.
+
+**Grenzen:** Eine voreingestellte E-Mail ist kein sicheres Lizenzsystem und verhindert das Weiterkopieren der EXE/APK nicht zuverlässig. Wenn ein separater App-Kopierschutz doch benötigt wird, ist das ein anderes Projekt. Google-Zugangstoken müssen auf beiden Geräten sicher gespeichert werden, **nicht** in Konfigurationsdateien. Für geschäftliche personenbezogene Daten braucht es die datenschutzrechtliche Prüfung und eine geeignete Konto-/Speicherumgebung.
+
+---
+
 ## 1. Bestehende Architektur und konkrete Risiken
 
 - `index.html` speichert `state` unter Schlüssel `app` in IndexedDB. `saveState()` mutiert `lastSave` und schreibt den kompletten Zustand; bestehende dateibasierte Backups sind optional.
