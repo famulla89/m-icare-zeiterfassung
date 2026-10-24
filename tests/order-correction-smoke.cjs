@@ -39,7 +39,7 @@ const ctx=vm.createContext({
  renderOrderOverview:()=>{},renderAppointments:()=>{},renderOrderCorrection:()=>{},
  notify:()=>{},editEntry:id=>opened.push(id)
 });
-vm.runInContext(helpers+'\n'+save,ctx,{timeout:3000});
+vm.runInContext(helpers+'\nlet workEntrySaveInProgress=false;\n'+save,ctx,{timeout:3000});
 const submit=async()=>await vm.runInContext('saveEntry({preventDefault(){}})',ctx,{timeout:3000});
 (async()=>{
  const before=JSON.stringify(state);
