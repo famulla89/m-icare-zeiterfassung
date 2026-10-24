@@ -286,7 +286,7 @@ function linkedOccurrence(){
  return original||{appointment,date:prior.date,originalDate:prior.appointmentOccurrence,start:appointment.start,end:appointment.end};
 }
 function syncMonthToWorkday(){try{const day=germanToIso($('date').value),month=day.slice(0,7);if($('month').value!==month){if(![...$('month').options].some(o=>o.value===month)){const dt=new Date(month+'-01T12:00:00'),o=el('option',dt.toLocaleDateString('de-DE',{month:'long',year:'numeric'}));o.value=month;$('month').append(o)}$('month').value=month}}catch{}}
-function refreshLinkedAppointments(){syncMonthToWorkday();let date;try{date=germanToIso($('date').value)}catch{date=''}const select=$('linkedAppointment'),old=select.value;select.replaceChildren();const empty=el('option','– Ohne geplanten Termin erfassen –');empty.value='';select.append(empty);if(!date){$('linkedAppointmentInfo').textContent='Bitte ein gültiges Datum auswählen.';return}const occurrences=state.appointments.flatMap(a=>datesFor(a,date,date)).filter(x=>!x.appointment.employee||x.appointment.employee===$('employee').value);for(const x of occurrences){const c=state.customers.find(c=>c.id===x.appointment.customerId),o=state.objects.find(o=>o.id===x.appointment.objectId),opt=el('option',x.start+'–'+x.end+' · '+(c?.name||'Kunde unbekannt')+(o?' · '+o.name:''));opt.value=appointmentKey(x.appointment,x.originalDate);select.append(opt)}const prior=editId?state.entries.find(e=>e.id===editId):null;
+function refreshLinkedAppointments(){syncMonthToWorkday();let date;try{date=germanToIso($('date').value)}catch{date=''}const select=$('linkedAppointment'),old=select.value;select.replaceChildren();const empty=el('option','– Ohne geplanten Termin erfassen –');empty.value='';select.append(empty);if(!date){$('linkedAppointmentInfo').textContent='Bitte ein gültiges Datum auswählen.';return}const occurrences=state.appointments.flatMap(a=>datesFor(a,date,date)).filter(x=>!x.appointment.employee||x.appointment.employee===$('employee').value);for(const x of occurrences){const c=state.customers.find(c=>c.id===x.appointment.customerId),o=state.objects.find(o=>o.id===x.appointment.objectId),opt=el('option',x.start+'–'+x.end+' · '+(c?.name||'Kunde unbekannt')+(o?' · '+o.name:''));opt.value=appointmentKey(x.appointment,x.originalDate);const order=state.orders?.find(o=>o.id===x.appointment.orderId);if(order)opt.textContent+=' · '+order.number+' '+order.title;select.append(opt)}const prior=editId?state.entries.find(e=>e.id===editId):null;
  if(prior?.appointmentId){
   const key=appointmentKey({id:prior.appointmentId},prior.appointmentOccurrence);
   if(![...select.options].some(o=>o.value===key)){
@@ -350,7 +350,7 @@ function renderObjectList(){const area=$('objectsList');area.replaceChildren();c
 async function addObject(){const cid=$('selectedCustomer').value,name=$('newObjectName').value.trim(),address=$('newObjectAddress').value.trim(),keyLocation=$('keyLocation').value.trim();if(!state.customers.some(c=>c.id===cid&&!c.archived))return alert('Zuerst einen Kunden auswählen');if(!name||name.length>100||address.length>180||keyLocation.length>100)return alert('Objektdaten prüfen');state.objects??=[];state.objects.push({id:crypto.randomUUID(),publicNumber:allocatePublicNumber(state.objects,'O',cid),customerId:cid,name,address,keyHolder:$('keyHolder').value,keyLocation,archived:false});$('newObjectName').value='';$('newObjectAddress').value='';$('keyLocation').value='';await saveState();renderCustomers();notify('Objekt gespeichert')}
 function updateAppointmentObjects(){const x=$('appointmentObject'),old=x.value,cid=$('appointmentCustomer').value;const list=(state.objects||[]).filter(o=>o.customerId===cid&&!o.archived);x.replaceChildren();const first=el('option',list.length?'– Geschäftsstelle auswählen –':'– Keine Geschäftsstelle vorhanden –');first.value='';x.append(first);for(const o of list){const option=el('option',objectDisplay(o)+(o.address?' · '+o.address:''));option.value=o.id;x.append(option)}if(list.some(o=>o.id===old))x.value=old;else if(list.length===1)x.value=list[0].id;x.required=list.length>0}
 function updateCustomerSelects(){for(const id of ['customerChoice','selectedCustomer','appointmentCustomer']){const x=$(id),old=x.value;x.replaceChildren();if(id==='customerChoice'||id==='selectedCustomer'){let z=el('option',id==='selectedCustomer'?'– Bitte Kunden auswählen –':'– Kunde frei eingeben –');z.value='';x.append(z)}for(const c of customerList()){let z=el('option',customerDisplay(c));z.value=c.id;x.append(z)}if(old&&[...x.options].some(o=>o.value===old))x.value=old;else if(id==='appointmentCustomer'&&x.options.length)x.selectedIndex=0}updateEntryObjects();updateAppointmentObjects()}
-function datesFor(a,from,to){let out=[],base=new Date(a.date+'T12:00:00'),start=new Date(from+'T12:00:00'),finish=new Date(to+'T12:00:00');if(!Number.isFinite(base.getTime()))return out;for(let n=0;n<(['weekdays','workdays'].includes(a.repeat)?3660:500);n++){let d=new Date(base);if(a.repeat==='once'&&n)break;if(a.repeat==='weekdays'){d.setDate(d.getDate()+n);if(!(a.weekdays||[]).includes(d.getDay()))continue}if(a.repeat==='workdays'){if(d.getDay()===0)d.setDate(d.getDate()+1);const steps=n*Math.max(1,Number(a.interval)||1);const weekday=d.getDay();d.setDate(d.getDate()+steps+Math.floor((weekday-1+steps)/6))}if(a.repeat==='weekly')d.setDate(d.getDate()+7*n);if(a.repeat==='monthly'){const target=new Date(base.getFullYear(),base.getMonth()+n,1);target.setDate(Math.min(base.getDate(),new Date(target.getFullYear(),target.getMonth()+1,0).getDate()));d=target}if(a.repeat==='days')d.setDate(d.getDate()+Math.max(1,a.interval)*n);if(a.until&&d>new Date(a.until+'T12:00:00'))break;if(d>finish)break;const key=isoDate(d),override=(a.exceptions||{})[key];if(override?.cancelled)continue;const actual=override?.date||key;if(actual<from||actual>to)continue;out.push({appointment:a,date:actual,start:override?.start||a.start,end:override?.end||a.end,originalDate:key});if(out.length>300)break}return out}
+function datesFor(a,from,to){let out=[],base=new Date(a.date+'T12:00:00'),start=new Date(from+'T12:00:00'),finish=new Date(to+'T12:00:00');if(!Number.isFinite(base.getTime()))return out;for(let n=0;n<(['weekdays','workdays'].includes(a.repeat)?3660:500);n++){let d=new Date(base);if(a.repeat==='once'&&n)break;if(a.repeat==='weekdays'){d.setDate(d.getDate()+n);if(!(a.weekdays||[]).includes(d.getDay()))continue}if(a.repeat==='workdays'){if(d.getDay()===0)d.setDate(d.getDate()+1);const steps=n*Math.max(1,Number(a.interval)||1);const weekday=d.getDay();d.setDate(d.getDate()+steps+Math.floor((weekday-1+steps)/6))}if(a.repeat==='weekly')d.setDate(d.getDate()+7*n);if(a.repeat==='monthly'){const target=new Date(base.getFullYear(),base.getMonth()+n,1);target.setDate(Math.min(base.getDate(),new Date(target.getFullYear(),target.getMonth()+1,0).getDate()));d=target}if(a.repeat==='days')d.setDate(d.getDate()+Math.max(1,a.interval)*n);if(a.until&&d>new Date(a.until+'T12:00:00'))break;if(d>finish)break;const key=isoDate(d),override=(a.exceptions||{})[key];if(override?.cancelled)continue;const actual=override?.date||key;if(actual<from||actual>to)continue;out.push({appointment:a,date:actual,start:override?.start||a.start,end:override?.end||a.end,originalDate:key});if(out.length>1000)break}return out}
 function customerStats(id){const c=(state.customers||[]).find(x=>x.id===id);if(!c)return 'Bitte einen Kunden auswählen.';const work=state.entries.filter(e=>e.customerId===id||(!e.customerId&&e.object.trim().toLowerCase()===c.name.toLowerCase()));const minutes=work.reduce((n,e)=>n+e.minutes,0),now=isoDate(),future=(state.appointments||[]).filter(a=>a.customerId===id).flatMap(a=>datesFor(a,now,isoDate(new Date(Date.now()+90*864e5)))).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,7);return c.name+' – '+work.length+' geleistete Einsätze, '+hours(minutes)+' Stunden. Arbeitstage: '+(work.map(e=>formatDate(e.date)).join(', ')||'keine')+'. Nächste Termine: '+(future.map(x=>formatDate(x.date)+' '+x.start).join(', ')||'keine in den nächsten 90 Tagen')+'.'}
 function customerReportData(id){const c=state.customers.find(x=>x.id===id);if(!c)return null;const work=state.entries.filter(e=>e.customerId===id||(!e.customerId&&e.object?.trim().toLowerCase()===c.name.toLowerCase())).sort((a,b)=>a.date.localeCompare(b.date));const today=isoDate(),end=new Date();end.setFullYear(end.getFullYear()+1);const through=isoDate(end);const planned=(state.appointments||[]).filter(a=>a.customerId===id).flatMap(a=>datesFor(a,today,through)).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));return {customer:c,work,planned,minutes:work.reduce((n,e)=>n+e.minutes,0)}}
 let newCustomerMode=false,lastSelectedCustomer='',newObjectMode=false;
@@ -608,12 +608,12 @@ function render(){fillMonths();fillEmployees();let month=$('historyMonth').value
 const total=list.reduce((s,e)=>s+e.minutes,0);$('historyTotals').textContent=list.length+' Einträge · '+hours(total)+' Stunden gesamt'+(list.length?' · inkl. aller Mitarbeiter':'');if(!list.length){let tr=document.createElement('tr'),td=el('td','Noch keine Einträge in diesem Monat.');td.colSpan=8;tr.append(td);tbody.append(tr)}updateStatus();renderOrderOverview();renderAuditHistory()}
 function updateStatus(){const x=$('backupStatus');let message=folder?'Sicherungsordner eingerichtet.':'Kein externer Sicherungsordner eingerichtet.';if(state.lastBackup&&!unsavedBackup)message+=' Letzte externe Sicherung: '+new Date(state.lastBackup).toLocaleString('de-DE')+'.';if(unsavedBackup)message+=' ACHTUNG: Neueste Änderungen wurden noch nicht extern gesichert. '+(backupError||'Bitte Ordnerzugriff prüfen.');if(!folder)message+=' Lokale Daten können bei Browser-/App-Datenlöschung verloren gehen.';x.textContent=message;x.className='status '+(unsavedBackup||!folder?'warn':'good')}
 let previousSavedSnapshot=null;
-function rememberSnapshot(){previousSavedSnapshot=JSON.parse(JSON.stringify({customers:state.customers||[],objects:state.objects||[],appointments:state.appointments||[],entries:state.entries||[],employees:state.employees||[]}))}
+function rememberSnapshot(){previousSavedSnapshot=JSON.parse(JSON.stringify({customers:state.customers||[],objects:state.objects||[],appointments:state.appointments||[],entries:state.entries||[],orders:state.orders||[],employees:state.employees||[]}))}
 function trackChanges(){
  if(!previousSavedSnapshot){rememberSnapshot();return}
  state.changeHistory??=[];
  const now=new Date().toISOString();
- const kinds=[['customers','Kunde'],['objects','Geschäftsstelle'],['appointments','Termin'],['entries','Arbeitszeit']];
+ const kinds=[['customers','Kunde'],['objects','Geschäftsstelle'],['appointments','Termin'],['entries','Arbeitszeit'],['orders','Auftrag']];
  for(const [key,label] of kinds){
   const before=new Map((previousSavedSnapshot[key]||[]).map(x=>[x.id,x]));
   const after=new Map((state[key]||[]).map(x=>[x.id,x]));
@@ -705,6 +705,7 @@ async function saveEntry(ev){
    }
    v.appointmentId=link.appointment.id;
    v.appointmentOccurrence=link.originalDate;
+   v.orderId=link.appointment.orderId||null;
   }
   if((v.orderStatus==='absent'||v.orderStatus==='cancelled')&&v.start===v.end&&v.date===v.endDate&&v.breakMinutes===0)v.minutes=0;
   else v.minutes=duration(v);
@@ -930,9 +931,199 @@ document.querySelectorAll('[data-picker]').forEach(b=>b.addEventListener('click'
 $('saveCustomerChanges').onclick=saveCustomerChanges;$('selectedObject').onchange=()=>{if(!confirmDiscardChanges())return;newObjectMode=false;fillObjectEditor();captureCurrentScreen()};$('newObjectMode').onclick=()=>{if(!newObjectMode&&!state.customers.some(c=>c.id===$('selectedCustomer').value&&!c.archived))return alert('Bitte zuerst einen Kunden auswählen');if(!confirmDiscardChanges())return;newObjectMode=!newObjectMode;updateObjectPicker();fillObjectEditor();captureCurrentScreen();if(newObjectMode){$('newObjectName').focus();notify('Neue Geschäftsstelle: Namen und Adresse eintragen, dann speichern')}};$('newCustomerMode').onclick=()=>{if(!confirmDiscardChanges())return;if(!newCustomerMode){lastSelectedCustomer=$('selectedCustomer').value;newCustomerMode=true;newObjectMode=false;$('selectedCustomer').value=''}else{newCustomerMode=false;newObjectMode=false;$('selectedCustomer').disabled=false;$('selectedCustomer').value=lastSelectedCustomer;renderCustomers()}fillCustomerEditor();captureCurrentScreen();if(newCustomerMode)$('editCustomerName').focus()};$('customerSearch').oninput=renderAllCustomers;$('customerStateFilter').onchange=renderAllCustomers;$('allCustomersPdf').onclick=exportAllCustomersPdf;$('appointmentForm').onsubmit=addAppointment;$('appointmentRepeat').onchange=toggleAppointmentInterval;$('appointmentEmployeeFilter').onchange=renderAppointments;$('appointmentConflictFilter').onchange=renderAppointments;$('appointmentCustomer').onchange=()=>{updateAppointmentObjects();captureCurrentScreen()};$('appointmentsSort').onchange=renderAppointments;$('appointmentsFilter').onchange=renderAppointments;$('appointmentStatus').onchange=renderAppointments;$('appointmentMonth').onchange=renderAppointments;$('appointmentYear').onchange=renderAppointments;$('selectedCustomer').onchange=()=>{newCustomerMode=false;newObjectMode=false;renderCustomers();captureCurrentScreen()};$('customerChoice').onchange=()=>{const c=state.customers.find(x=>x.id===$('customerChoice').value);if(c)$('object').value=c.name;updateEntryObjects()};$('deleteCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c)return;const entries=state.entries.filter(e=>e.customerId===c.id||(!e.customerId&&e.object?.trim().toLowerCase()===c.name.toLowerCase()));const appointments=state.appointments.filter(a=>a.customerId===c.id);if(entries.length||appointments.length){$('linkedCustomerMessage').textContent='Dieser Kunde hat '+entries.length+' Arbeitszeiteinträge und '+appointments.length+' Terminserien. Diese Daten bleiben erhalten.';const dlg=$('linkedCustomerDialog');$('linkedCustomerNo').onclick=()=>dlg.close();$('linkedCustomerArchive').onclick=async()=>{dlg.close();c.archived=true;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde archiviert – Einträge bleiben erhalten')};dlg.showModal();return}const count=state.objects.filter(o=>o.customerId===c.id).length;if(!confirm('ACHTUNG: Soll der Kunde „'+c.name+'“ mit '+count+' Geschäftsstelle(n) wirklich endgültig gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.'))return;state.customers=state.customers.filter(x=>x.id!==c.id);state.objects=state.objects.filter(o=>o.customerId!==c.id);newCustomerMode=false;newObjectMode=false;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde endgültig gelöscht')};$('archiveCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c||!confirm('Kunden archivieren?'))return;c.archived=true;await saveState();renderCustomers();notify('Kunde archiviert')};
 $('calPrev').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m-2,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};$('calNext').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};
 for(let i=1;i<=12;i++){let o=el('option',new Date(2026,i-1,1).toLocaleDateString('de-DE',{month:'long'}));o.value=String(i).padStart(2,'0');$('appointmentMonth').append(o)}$('appointmentPdf').onclick=()=>{const rows=appointmentRows();const title=$('appointmentStatus').value==='done'?'Geleistete Einsätze':'Geplante Termine';const w=window.open('','_blank');if(!w)return alert('Popup blockiert. Bitte Popups zulassen');const safe=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));w.document.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>M-iCare Terminübersicht</title><style>body{font:14px Arial;margin:30px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #bbb;padding:8px;text-align:left}h1{color:#145284}</style></head><body><h1>'+title+'</h1><p>Gefilterte Übersicht · '+rows.length+' Einträge</p><table><tr><th>Datum</th><th>Uhrzeit</th><th>Kunde / ID</th><th>Objekt / ID</th><th>Leistung</th></tr>'+rows.map(x=>'<tr><td>'+safe(formatDate(x.date))+'</td><td>'+safe(x.start+'–'+x.end)+'</td><td>'+safe(customerDisplay(state.customers.find(c=>c.id===x.customerId)))+'</td><td>'+safe(objectDisplay(state.objects.find(o=>o.id===x.appointment?.objectId)))+'</td><td>'+safe(x.service)+'</td></tr>').join('')+'</table><p>Drucken → Als PDF speichern</p></body></html>');w.document.close();w.focus();w.print()};
-document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['home','ordersScreen','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
+document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));/* Business orders: stable contract IDs, distinct from appointments and timesheets. */
+function orderLinkedAppointments(order){return (state.appointments||[]).filter(a=>a.orderId===order.id)}
+function orderProgress(order){
+ const list=orderLinkedAppointments(order),all=new Map(),linked=new Map();
+ for(const a of list){
+  if(!a?.date||!a.start||!a.end)continue;
+  const first=a.date>order.startDate?a.date:order.startDate,last=a.until&&a.until<order.endDate?a.until:order.endDate;
+  if(first>last)continue;
+  // Generate the agreed schedule before cancellations, so cancelled visits remain visible.
+  for(const occ of datesFor({...a,exceptions:{}},first,last))all.set(appointmentKey(a,occ.originalDate),occ);
+ }
+ for(const e of state.entries||[]){
+  const key=e.appointmentId+'|'+e.appointmentOccurrence;
+  if(all.has(key))linked.set(key,e);
+ }
+ const visits=[...all].map(([key,occ])=>{
+  const entry=linked.get(key);
+  const change=occ.appointment.exceptions?.[occ.originalDate];
+  const status=entry?.orderStatus||(change?.cancelled?'cancelled':'open');
+  return {key,occ,entry,status}
+ });
+ const done=visits.filter(v=>v.status==='done').length;
+ const cancelled=visits.filter(v=>v.status==='cancelled'||v.status==='absent').length;
+ const progress=visits.filter(v=>v.status==='progress').length;
+ const total=visits.length;
+ const minutes=(state.entries||[]).filter(e=>list.some(a=>a.id===e.appointmentId)||e.orderId===order.id).reduce((sum,e)=>sum+(Number(e.minutes)||0),0);
+ return {total,done,cancelled,progress,open:Math.max(0,total-done-cancelled-progress),percent:total?Math.min(100,Math.round(done/total*1000)/10):0,minutes,visits}
+}
+function orderFollowupDue(order,stats){
+ return stats.total>0&&stats.percent>=Number(order.followUpThreshold||70)&&!['contacted','offer','declined'].includes(order.followUpStatus);
+}
+function orderFillSelect(id,items,placeholder){
+ const select=$(id),old=select.value;select.replaceChildren();
+ if(placeholder!==null){const o=el('option',placeholder);o.value='';select.append(o)}
+ for(const item of items){const o=el('option',item.label);o.value=String(item.id);select.append(o)}
+ if([...select.options].some(o=>o.value===old))select.value=old;
+}
+function orderUpdateObjects(){
+ const cid=$('orderCustomer').value;
+ orderFillSelect('orderObject',(state.objects||[]).filter(o=>o.customerId===cid&&!o.archived).map(o=>({id:o.id,label:(o.publicNumber||'')+' '+o.name})),'– Geschäftsstelle wählen –')
+}
+function orderUpdateRepeat(){
+ const recurring=$('orderType').value==='recurring',repeat=$('orderRepeat').value;
+ $('orderUntilWrap').classList.toggle('hidden',!recurring);
+ $('orderRepeatWrap').classList.toggle('hidden',!recurring);
+ $('orderWeekdaysWrap').classList.toggle('hidden',!recurring||repeat!=='weekdays');
+ $('orderIntervalWrap').classList.toggle('hidden',!recurring||!['days','workdays'].includes(repeat));
+ $('orderUntil').required=recurring
+}
+function orderRefreshForm(){
+ orderFillSelect('orderCustomer',customerList().map(c=>({id:c.id,label:customerDisplay(c)})),'– Kunde auswählen –');
+ orderUpdateObjects();
+ orderFillSelect('orderEmployee',state.employees.map(e=>({id:e,label:e})),null);
+ orderFillSelect('orderService',SERVICES.map(e=>({id:e,label:e})),null);
+ if(!$('orderStartDate').value)$('orderStartDate').value=isoDate();
+ if(!$('orderUntil').value){const d=new Date($('orderStartDate').value+'T12:00:00');if(Number.isFinite(d.getTime())){d.setFullYear(d.getFullYear()+1);d.setDate(d.getDate()-1);$('orderUntil').value=isoDate(d)}}
+ orderUpdateRepeat()
+}
+function orderName(order){
+ const customer=state.customers.find(c=>c.id===order.customerId);
+ return (order.number||'Auftrag')+' · '+order.title+' · '+(customer?.name||'Kunde fehlt')
+}
+function renderOrders(){
+ state.orders??=[];
+ orderRefreshForm();
+ const all=state.orders.map(o=>({o,s:orderProgress(o)})),area=$('orderList');
+ const due=all.filter(({o,s})=>orderFollowupDue(o,s)).length;
+ const kpis=[['Aufträge',all.length],['Aktiv',all.filter(x=>x.o.status==='active').length],['Vollständig erledigt',all.filter(x=>x.s.total>0&&x.s.done===x.s.total).length],['Nachbetreuung fällig',due]];
+ const summary=$('orderKpis');summary.replaceChildren();
+ for(const [label,value] of kpis){const card=el('div','');card.className='reportMetric';card.append(el('strong',String(value)),el('span',label));summary.append(card)}
+ orderFillSelect('orderCustomerFilter',customerList().map(c=>({id:c.id,label:customerDisplay(c)})),'Alle Kunden');
+ orderFillSelect('orderLinkOrder',state.orders.map(o=>({id:o.id,label:orderName(o)})),'– Auftrag auswählen –');
+ const existingOrder=state.orders.find(o=>o.id===$('orderLinkOrder').value);
+ orderFillSelect('orderLinkAppointment',(state.appointments||[]).filter(a=>!a.orderId&&(!existingOrder||a.customerId===existingOrder.customerId&&a.objectId===existingOrder.objectId)).map(a=>({id:a.id,label:a.date+' · '+a.service+' · '+a.employee})).slice(0,500),'– Terminserie auswählen –');
+ area.replaceChildren();
+ const search=$('orderSearch').value.trim().toLocaleLowerCase('de');
+ const filtered=all.filter(({o,s})=>(!$('orderCustomerFilter').value||o.customerId===$('orderCustomerFilter').value)&&(!$('orderStateFilter').value||o.status===$('orderStateFilter').value)&&(!$('orderTypeFilter').value||o.type===$('orderTypeFilter').value)&&(!$('orderFollowupFilter').value||($('orderFollowupFilter').value==='due'?orderFollowupDue(o,s):o.followUpStatus===$('orderFollowupFilter').value))&&(!search||[orderName(o),state.objects.find(x=>x.id===o.objectId)?.name||'',o.scope||''].join(' ').toLocaleLowerCase('de').includes(search)));
+ const statuses={active:'Aktiv',paused:'Pausiert',completed:'Manuell abgeschlossen',cancelled:'Abgebrochen'};
+ for(const {o,s:stats} of filtered){
+  const card=el('article','');card.className='orderCard';
+  card.append(el('h3',o.number+' · '+o.title));
+  const meta=el('div','');meta.className='orderMeta';
+  const customer=state.customers.find(c=>c.id===o.customerId),obj=state.objects.find(v=>v.id===o.objectId);
+  meta.append(el('span',customer?.name||'Kunde unbekannt'),el('span',obj?.name||'Objekt unbekannt'),el('span',o.type==='once'?'Einmalauftrag':'Dauerauftrag'),el('span',statuses[o.status]||'Aktiv'));
+  card.append(meta);
+  card.append(el('div','Vertragszeitraum: '+formatDate(o.startDate)+' – '+formatDate(o.endDate)+' · '+o.service));
+  if(o.scope){const scope=el('div',o.scope);scope.className='orderScope';card.append(scope)}
+  const done=el('div',stats.done+' von '+stats.total+' Einsätzen abgeschlossen · '+stats.percent.toLocaleString('de-DE')+' % · '+stats.progress+' in Bearbeitung · '+stats.cancelled+' abgesagt/ausgefallen · '+reportMinutes(stats.minutes)+' tatsächlich erfasst');
+  done.style.margin='14px 0 8px';card.append(done);
+  const track=el('div','');track.className='orderProgressTrack';const bar=el('div','');bar.className='orderProgressBar';bar.style.width=stats.percent+'%';track.append(bar);card.append(track);
+  const actions=el('div','');actions.className='orderActions';
+  const view=el('button','Termine ansehen / bearbeiten');view.className='secondary';view.onclick=()=>{
+   const box=card.querySelector('.orderVisits');box.classList.toggle('hidden')
+  };actions.append(view);
+  const statusBtn=el('button','Auftragsstatus ändern');statusBtn.className='secondary';
+  statusBtn.onclick=async()=>{
+   const value=prompt('Status wählen: active (aktiv), paused (pausiert), completed (abgeschlossen), cancelled (abgebrochen)',o.status||'active');
+   if(value===null)return;const next=value.trim().toLowerCase();
+   if(!['active','paused','completed','cancelled'].includes(next)){alert('Ungültiger Status');return}
+   if(o.status===next)return;
+   const reason=prompt('Grund für die Statusänderung (Pflicht):','');
+   if(!reason?.trim())return alert('Ohne Begründung keine Statusänderung.');
+   o.events??=[];o.events.push({time:new Date().toISOString(),kind:'Status',from:o.status,to:next,reason:reason.trim().slice(0,300)});
+   o.status=next;await saveState();renderOrders()
+  };actions.append(statusBtn);
+  card.append(actions);
+  const visitBox=el('div','');visitBox.className='orderVisits hidden';visitBox.style.marginTop='14px';
+  const shown=stats.visits.filter(v=>v.occ.date>=isoDate()).slice(0,10);
+  const visitHeading=el('strong','Nächste Einsätze (max. 10):');visitBox.append(visitHeading);
+  const recent=shown.length?shown:stats.visits.slice(-10);
+  for(const visit of recent){const line=el('div','');line.className='objectItem';
+   line.append(el('span',formatDate(visit.occ.date)+' · '+visit.occ.start+'–'+visit.occ.end+' · '+({done:'Erledigt',progress:'In Bearbeitung',cancelled:'Abgesagt',absent:'Nicht angetroffen',open:'Offen'}[visit.status]||visit.status)));
+   if(visit.status!=='cancelled'){const edit=el('button',visit.entry?'Dokumentation korrigieren':'Einsatz dokumentieren');edit.className='secondary smallbtn';edit.style.marginLeft='12px';edit.onclick=()=>completeAppointment(visit.occ);line.append(edit)}
+   visitBox.append(line)}
+  card.append(visitBox);
+  const follow=el('div','');follow.className='orderFollowup';
+  const due=orderFollowupDue(o,stats);
+  follow.append(el('strong',due?'☎ Kunden-Nachbetreuung fällig':'☎ Kunden-Nachbetreuung'));
+  follow.append(el('p',due?'Der vereinbarte Fortschritt von '+(o.followUpThreshold||70)+' % ist erreicht. Kundenkontakt für möglichen Folgeauftrag prüfen.':'Erinnerung ab '+(o.followUpThreshold||70)+' % tatsächlichem Abschluss; kein automatischer Anruf und keine automatische Werbung.'));
+  const phone=customer?.mobile||customer?.phone||'',email=customer?.email||'';
+  if(phone){const a=document.createElement('a');a.textContent='📞 '+phone;a.href='tel:'+String(phone).replace(/[^0-9+]/g,'');a.style.marginRight='14px';follow.append(a)}
+  if(email){const mail=document.createElement('a');mail.textContent='✉ '+email;mail.href='mailto:'+encodeURIComponent(email);follow.append(mail)}
+  const label=el('label','Ergebnis des Kundenkontakts');follow.append(label);
+  const status=document.createElement('select');
+  for(const [val,title] of [['pending','Noch nicht kontaktiert'],['contacted','Kunde kontaktiert'],['offer','Neues Angebot gewünscht'],['declined','Derzeit kein Interesse']]){const opt=el('option',title);opt.value=val;status.append(opt)}
+  status.value=o.followUpStatus||'pending';follow.append(status);
+  const noteLabel=el('label','Gesprächsnotiz (optional)');follow.append(noteLabel);
+  const note=document.createElement('textarea');note.rows=2;note.maxLength=600;note.placeholder='z. B. Kunde wünscht Angebot für Treppenhausreinigung';note.value=o.followUpNote||'';follow.append(note);
+  const save=el('button','Nachbetreuung dokumentieren');save.className='secondary';
+  save.onclick=async()=>{const text=note.value.trim(),changed=(o.followUpStatus||'pending')!==status.value||(o.followUpNote||'')!==text;if(!changed)return notify('Keine Änderungen');
+   o.events??=[];o.events.push({time:new Date().toISOString(),kind:'Kunden-Nachbetreuung',from:o.followUpStatus||'pending',to:status.value,note:text});
+   o.followUpStatus=status.value;o.followUpNote=text;o.followUpAt=new Date().toISOString();await saveState();renderOrders();notify('Kundenkontakt dokumentiert')
+  };follow.append(save);
+  if(o.events?.length){const history=document.createElement('details');const sum=document.createElement('summary');sum.textContent='🕘 Auftragshistorie ('+o.events.length+')';history.append(sum);for(const e of [...o.events].reverse()){history.append(el('div',new Date(e.time).toLocaleString('de-DE')+' · '+e.kind+' · '+(e.reason||e.note||e.to||'')))}follow.append(history)}
+  card.append(follow);area.append(card)
+ }
+ if(!filtered.length)area.append(el('p','Keine passenden Aufträge. Einmal- und Daueraufträge kannst du oben anlegen.'));
+}
+let orderCreateSaving=false;
+async function orderCreate(ev){
+ ev.preventDefault();
+ if(orderCreateSaving)return;
+ const cid=$('orderCustomer').value,oid=$('orderObject').value,employee=$('orderEmployee').value,service=$('orderService').value,
+ startDate=$('orderStartDate').value,type=$('orderType').value,recurring=type==='recurring',endDate=recurring?$('orderUntil').value:startDate,
+ start=$('orderStartTime').value,end=$('orderEndTime').value,repeat=recurring?$('orderRepeat').value:'once',interval=['days','workdays'].includes(repeat)?Number($('orderInterval').value):1,
+ weekdays=[...document.querySelectorAll('.orderWeekday:checked')].map(x=>Number(x.value)),
+ title=$('orderTitle').value.trim(),scope=$('orderScope').value.trim(),threshold=Number($('orderFollowupThreshold').value);
+ if(!state.customers.some(c=>c.id===cid&&!c.archived))return alert('Bitte einen aktiven Kunden auswählen.');
+ if(!state.objects.some(o=>o.id===oid&&o.customerId===cid&&!o.archived))return alert('Bitte ein Objekt dieses Kunden auswählen.');
+ if(!title||title.length>130||!SERVICES.includes(service)||!state.employees.includes(employee))return alert('Auftragsname, Reinigungsleistung oder Mitarbeiter fehlt.');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||endDate<startDate)return alert('Start- und Enddatum prüfen.');
+ const max=new Date(startDate+'T12:00:00');max.setFullYear(max.getFullYear()+2);
+ if(endDate>isoDate(max))return alert('Ein Dauerauftrag darf höchstens zwei Jahre im Voraus geplant werden. Für die Fortsetzung danach einen Folgeauftrag erstellen.');
+ if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||end<=start)return alert('Geplante Uhrzeit prüfen (Ende nach Beginn).');
+ if(!Number.isInteger(interval)||interval<1||interval>365||!Number.isInteger(threshold)||threshold<1||threshold>100)return alert('Intervall oder Nachfass-Schwelle prüfen.');
+ if(repeat==='weekdays'&&!weekdays.length)return alert('Mindestens einen Wochentag auswählen.');
+ const appointment={id:crypto.randomUUID(),customerId:cid,objectId:oid,employee,service,date:startDate,start,end,repeat,interval,weekdays,until:recurring?endDate:'',exceptions:{}};
+ if(!datesFor(appointment,startDate,endDate).length)return alert('Für diese Wiederholung gibt es keine Termine im Zeitraum.');
+ const conflicts=employeeConflicts(appointment);
+ if(conflicts.length&&!confirm('Achtung: '+conflicts.length+' Terminüberschneidung(en) für '+employee+'. Trotzdem Auftrag und Terminserie anlegen?'))return;
+ orderCreateSaving=true;$('orderCreateSave').disabled=true;
+ try{
+  const number='A-'+new Date().getFullYear()+'-'+String(Math.max(0,...state.orders.map(o=>Number((o.number||'').match(/-(\d+)$/)?.[1]||0)))+1).padStart(4,'0'),
+  order={id:crypto.randomUUID(),number,title,scope,customerId:cid,objectId:oid,employee,service,startDate,endDate,type,status:'active',followUpThreshold:threshold,followUpStatus:'pending',followUpNote:'',events:[{time:new Date().toISOString(),kind:'Erstellt',note:type==='once'?'Einmalauftrag':'Dauerauftrag'}],createdAt:new Date().toISOString()};
+  appointment.orderId=order.id;
+  state.orders.push(order);state.appointments.push(appointment);
+  await saveState();$('orderCreateForm').reset();$('orderCreateBox').open=false;renderOrders();notify('Auftrag '+number+' mit Terminen angelegt')
+ }catch(e){alert('Auftrag konnte nicht gespeichert werden: '+e.message)}
+ finally{orderCreateSaving=false;$('orderCreateSave').disabled=false}
+}
+async function orderLinkExisting(){
+ const id=$('orderLinkOrder').value,appointmentId=$('orderLinkAppointment').value;
+ const order=state.orders.find(o=>o.id===id),a=state.appointments.find(a=>a.id===appointmentId);
+ if(!order||!a)return alert('Auftrag und bestehende Terminserie auswählen.');
+ if(a.orderId||a.customerId!==order.customerId||a.objectId!==order.objectId)return alert('Termin gehört zu einem anderen Auftrag, Kunden oder Objekt.');
+ if(a.date<order.startDate||a.date>order.endDate||(a.repeat!=='once'&&(!a.until||a.until>order.endDate)))return alert('Terminserie liegt außerhalb des Auftragszeitraums. Bitte passenden Dauerauftrag verwenden.');
+ if(!confirm('Bestehenden Termin mit '+order.number+' verbinden? Bereits erfasste Arbeitszeiten bleiben unverändert.'))return;
+ a.orderId=order.id;order.events??=[];order.events.push({time:new Date().toISOString(),kind:'Terminserie zugeordnet',note:a.date+' · '+a.service});
+ await saveState();renderOrders();notify('Terminserie zugeordnet')
+}
+$('orderCustomer').onchange=orderUpdateObjects;
+$('orderType').onchange=orderUpdateRepeat;
+$('orderRepeat').onchange=orderUpdateRepeat;
+$('orderCreateForm').addEventListener('submit',orderCreate);
+$('newOrderToggle').onclick=()=>{$('orderCreateBox').open=true;orderRefreshForm();$('orderCreateBox').scrollIntoView({behavior:'smooth',block:'start'})};
+$('orderToReporting').onclick=()=>{showScreen('reportingScreen');reportOpenTab('contracts')};
+for(const id of ['orderSearch','orderCustomerFilter','orderStateFilter','orderTypeFilter','orderFollowupFilter'])$(id).addEventListener(id==='orderSearch'?'input':'change',renderOrders);
+$('orderLinkOrder').addEventListener('change',renderOrders);
+$('orderLinkSave').onclick=orderLinkExisting;
+
+const screenIds=['home','ordersScreen','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
 let screenDirty=false;
-const editableFields=new Set(['editCustomerName','editCustomerAddress','editCustomerZip','editCustomerCity','newObjectName','newObjectAddress','newObjectZip','newObjectCity','keyHolder','keyLocation','employee','service','object','date','endDate','start','end','breakMinutes','notes','linkedAppointment','orderStatus','workDone','orderRemarks','appointmentDate','appointmentStart','appointmentEnd','appointmentRepeat','appointmentInterval','appointmentUntil','newEmployee','editCustomerPhone','editCustomerMobile','editCustomerEmail','customerChoice','entryObjectChoice','deviationReason','deviationNote','correctionReason','correctionNote','appointmentCustomer','appointmentObject','appointmentEmployee','appointmentService','newCustomerName','newCustomerAddress']);
+const editableFields=new Set(['orderCustomer','orderObject','orderTitle','orderService','orderEmployee','orderType','orderStartDate','orderUntil','orderStartTime','orderEndTime','orderRepeat','orderInterval','orderFollowupThreshold','orderScope','editCustomerName','editCustomerAddress','editCustomerZip','editCustomerCity','newObjectName','newObjectAddress','newObjectZip','newObjectCity','keyHolder','keyLocation','employee','service','object','date','endDate','start','end','breakMinutes','notes','linkedAppointment','orderStatus','workDone','orderRemarks','appointmentDate','appointmentStart','appointmentEnd','appointmentRepeat','appointmentInterval','appointmentUntil','newEmployee','editCustomerPhone','editCustomerMobile','editCustomerEmail','customerChoice','entryObjectChoice','deviationReason','deviationNote','correctionReason','correctionNote','appointmentCustomer','appointmentObject','appointmentEmployee','appointmentService','newCustomerName','newCustomerAddress']);
 function captureCurrentScreen(){screenDirty=false}
 function confirmDiscardChanges(){if(!screenDirty)return true;return confirm('Du hast ungespeicherte Eingaben. Möchtest du wirklich zurück oder die Maske wechseln? Deine nicht gespeicherten Änderungen gehen verloren.')}
 document.addEventListener('input',e=>{if(e.isTrusted&&(editableFields.has(e.target?.id)||e.target?.classList?.contains('appointmentWeekday')))screenDirty=true});
