@@ -1,0 +1,32 @@
+name: M-iCare Browser E2E Regression
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/audited-order-corrections-20261024
+    paths:
+      - index.html
+      - tests/browser-e2e.cjs
+      - .github/workflows/browser-e2e.yml
+  pull_request:
+    paths:
+      - index.html
+      - tests/browser-e2e.cjs
+      - .github/workflows/browser-e2e.yml
+jobs:
+  chromium-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test runner
+        run: npm install --no-save --no-audit --no-fund playwright
+      - name: Install headless Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test customer, worktime, planned correction, reporting, PDF, backup
+        run: node tests/browser-e2e.cjs
