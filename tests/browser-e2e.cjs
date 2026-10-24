@@ -118,6 +118,51 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.locator('#goHome').click();
  console.log('E2E cloud: encrypted download, safe diff preview, confirmed replace and recovery passed');
 
+
+ // Rechner: zwei Fensterarten, Größen, Seiten, Zuschläge, eigener Netto-Preis und PDF im echten Browser.
+ await page.locator('#home [data-jump="quoteCalculator"]').click();
+ assert(await page.locator('#quoteCalculator').isVisible(),'Rechner muss über Startseite geöffnet werden');
+ await page.locator('#qCustomer').selectOption('test-customer-1');
+ assert((await page.locator('#qObject option').count())>1,'Geschäftsstellen der Kunden laden');
+ await page.locator('#qObject').selectOption({index:1});
+ const appointmentCount=await page.locator('#qAppointment option').count();
+ assert(appointmentCount>=1,'AK-Auswahl vorhanden');
+ if(appointmentCount>1)await page.locator('#qAppointment').selectOption({index:1});
+ await page.locator('#qAreas [data-area="200"]').click();
+ await page.locator('#qWindowPicker [data-window="standard"]').click();
+ await page.locator('#qWindowPicker [data-window="large"]').click();
+ assert.equal(await page.locator('.quoteWindowRow').count(),2,'Zwei verschiedene Fensterarten werden erfasst');
+ await page.locator('.quoteWindowRow').nth(0).locator('input[type="number"]').nth(0).fill('5');
+ await page.locator('.quoteWindowRow').nth(0).locator('input[type="number"]').nth(1).fill('1.8');
+ await page.locator('.quoteWindowRow').nth(1).locator('input[type="number"]').nth(0).fill('2');
+ await page.locator('.quoteWindowRow').nth(1).locator('select').first().selectOption('2');
+ await page.locator('.quoteWindowRow').nth(1).locator('input[type="checkbox"]').first().check();
+ await page.locator('#qProfits [data-profit="75"]').click();
+ const check=await page.evaluate(()=>MiCareQuoteUI.calculate());
+ assert.equal(check.windowItems.length,2);
+ assert.equal(check.windowItems[0].sqm,9);
+ assert.equal(check.windowItems[1].sides,2);
+ assert.equal(check.windowItems[1].frame,true);
+ assert(check.gross>check.net&&check.rows.length>=3);
+ await page.locator('#qManualNet').fill('950');
+ assert.equal((await page.evaluate(()=>MiCareQuoteUI.calculate())).net,950,'Manuellen Angebotspreis übernehmen');
+ await page.locator('#qSellerName').fill('M-iCare Testfirma');
+ await page.locator('#qSave').click();
+ await page.waitForFunction(()=>state.quotes?.length===1);
+ assert.equal(await page.evaluate(()=>state.quotes[0].formValues.WindowItems.length),2,'Fensterliste wird im Entwurf dauerhaft gespeichert');
+ const quotePdfDownload=page.waitForEvent('download');
+ await page.locator('#qPdf').click();
+ const quotePdf=await quotePdfDownload;
+ const quotePdfBytes=fs.readFileSync(await quotePdf.path());
+ assert(quotePdfBytes.length>5000&&quotePdfBytes.subarray(0,5).toString()==='%PDF-','Angebots-PDF ist gültig');
+ await page.locator('#goHome').click();
+ await page.locator('#home [data-jump="quoteCalculator"]').click();
+ assert((await page.locator('#qSavedList').innerText()).includes('KV-'),'Gespeicherter Entwurf wird angezeigt');
+ await page.locator('#qSavedList button').first().click();
+ assert.equal(await page.locator('.quoteWindowRow').count(),2,'Wiederöffnen stellt Fenstergrößen und Bedingungen her');
+ await page.locator('#goHome').click();
+ console.log('E2E quote: customer, office, AK, 2 window sizes, soil, profit presets, custom price, storage and PDF passed');
+
  // Reporting: search + customer filter, CSV and print
  await page.locator('[data-jump="reportingScreen"]').click();
  assert(await page.locator('#reportHome').isVisible());
