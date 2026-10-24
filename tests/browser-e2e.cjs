@@ -292,6 +292,22 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(orderBackupData.orders?.some(o=>o.title==='Jahresauftrag Fensterreinigung'&&o.followUpStatus==='offer'),'Order and follow-up should persist in JSON full backup');
  assert(orderBackupData.appointments.some(a=>a.orderId===orderBackupData.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung').id),'Appointment linked to contract');
  console.log('E2E step 11: 70% progress, follow-up and backup passed');
+ // Full backup restore must bring orders, occurrences, additional hours and follow-up back.
+ const preRestore=page.waitForEvent('download');
+ await page.locator('#importJson').setInputFiles(await orderBackup.path());
+ await preRestore;
+ await page.waitForFunction(()=>state.orders?.some(o=>o.title==='Jahresauftrag Fensterreinigung'&&o.followUpStatus==='offer'));
+ const restoredOrder=await page.evaluate(()=>{
+  const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),p=orderProgress(o);
+  return {total:p.total,done:p.done,minutes:p.minutes,followUp:o.followUpStatus,events:o.events?.length||0}
+ });
+ assert.equal(restoredOrder.total,52);
+ assert.equal(restoredOrder.done,37);
+ assert.equal(restoredOrder.minutes,37*120+60);
+ assert.equal(restoredOrder.followUp,'offer');
+ assert(restoredOrder.events>=2);
+ console.log('E2E step 12: full order backup and restore passed');
+
 
  assert.equal(errors.length,0,'Unhandled browser errors: '+errors.join(' | '));
  console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, double-save/date changes, unsaved edits, calendar, JSON export/import and annual orders/follow-ups');
