@@ -28,6 +28,20 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
    refreshLinkedAppointments();
   },fixture);
   await page.waitForFunction(()=>state.customers.length===10);
+  // Real installed Windows renderer must filter customer number exactly.
+  await page.evaluate(()=>{showScreen('customerOverviewScreen');document.getElementById('customerStateFilter').value='all';renderAllCustomers()});
+  await page.locator('#customerSearch').fill('1');
+  assert.equal(await page.locator('#allCustomersList > .objectItem').count(),1,'Windows search: customer 1 must match one customer');
+  await page.locator('#customerSearch').fill('1.2');
+  assert.equal(await page.locator('#allCustomersList > .objectItem').count(),1);
+  assert((await page.locator('#allCustomersList').innerText()).includes('1.2'));
+  assert(!(await page.locator('#allCustomersList').innerText()).includes('1.1 ·'),'Windows object search must not show siblings');
+  await page.locator('#customerSearch').fill('no-such-customer');
+  assert.equal(await page.locator('#allCustomersList > .objectItem').count(),0);
+  await page.locator('#customerSearch').fill('');
+  assert.equal(await page.locator('#allCustomersList > .objectItem').count(),10);
+  console.log('NATIVE WINDOWS CUSTOMER SEARCH PASS: exact customer and object numbers, empty, reset');
+
   const ak=await page.evaluate(()=>akLabel(state.appointments.find(a=>a.id==='test-appointment-1')));
   assert(/^AK \d+$/.test(ak));
 
