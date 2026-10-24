@@ -2,9 +2,9 @@
 /* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
 (function(){
  const byId=id=>document.getElementById(id);
- const numeric=['Area','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','WindowQty','WindowEach','WindowRate','ManualNet'];
- const tracked=['Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','WindowType','WindowQty','WindowEach','WindowRate','WindowSides','WindowDirt','WindowEquip','ManualNet','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
- const typeAreas={none:0,standard:1.5,large:4,sliding:2.5,mullion:1.2,winter:0,roof:0};
+ const tracked=['Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
+ const typeAreas={standard:{label:'Standardfenster',sqm:1.5},large:{label:'Große Glasflächen',sqm:4},sliding:{label:'Schiebeelemente',sqm:2.5},mullion:{label:'Sprossenfenster',sqm:1.2},winter:{label:'Wintergarten',sqm:1},roof:{label:'Glasüberdachung',sqm:1}};
+ let windowItems=[];
  const de=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
  let activeId=null;
  function value(key){return byId('q'+key)?.value||''}
@@ -39,17 +39,67 @@
   // Dauerauftrag: Anzahl der abzurechnenden Einsätze bleibt frei wählbar.
   calculate();
  }
+ function windowEntries(){
+  return windowItems.map(item=>({...item}));
+ }
+ function numberField(label,value,min,max,step,onChange){
+  const wrapper=document.createElement('div');
+  const text=document.createElement('label');text.textContent=label;
+  const n=document.createElement('input');n.type='number';n.min=min;n.max=max;n.step=step;n.value=String(value);
+  n.addEventListener('input',()=>onChange(n.value));
+  wrapper.append(text,n);return wrapper;
+ }
+ function dropdown(label,values,current,onChange){
+  const wrapper=document.createElement('div'),text=document.createElement('label'),s=document.createElement('select');
+  text.textContent=label;
+  for(const [val,name] of values)option(s,String(val),name);
+  s.value=String(current);s.addEventListener('change',()=>onChange(s.value));
+  wrapper.append(text,s);return wrapper;
+ }
+ function renderWindowItems(){
+  const area=byId('qWindowItems');area.replaceChildren();
+  if(!windowItems.length){const p=document.createElement('p');p.className='hint';p.textContent='Noch keine Fensterart erfasst. Wähle unten eine oder mehrere Fensterarten aus.';area.append(p)}
+  windowItems.forEach((item,i)=>{
+   const block=document.createElement('div');block.className='quoteWindowRow';
+   const head=document.createElement('div');head.className='quoteWindowHead';
+   const title=document.createElement('strong');title.textContent=(i+1)+'. '+item.label;
+   const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='🗑 Entfernen';
+   del.onclick=()=>{windowItems.splice(i,1);renderWindowItems();calculate()};
+   head.append(title,del);block.append(head);
+   const grid=document.createElement('div');grid.className='quoteWindowGrid';
+   const update=(field,raw)=>{item[field]=Number(raw);calculate()};
+   grid.append(
+    numberField('Stückzahl',item.qty,1,100000,1,v=>update('qty',v)),
+    numberField('Fläche pro Stück in m²',item.each,0.01,100000,0.1,v=>update('each',v)),
+    numberField('Dein Preis pro m²/Seite (€)',item.rate,0,10000,0.1,v=>update('rate',v)),
+    dropdown('Reinigungsseite',[['1','Einseitig'],['2','Beidseitig']],item.sides,v=>update('sides',v)),
+    dropdown('Verschmutzungsgrad',[['1','Normal'],['1.3','Erhöht'],['1.6','Stark']],item.soil,v=>update('soil',v))
+   );block.append(grid);
+   const extras=document.createElement('div');extras.className='quoteWindowExtras';
+   for(const [key,text] of [['frame','Rahmen & Falz (+20 %)'],['ladder','Leiter (+30 %)'],['lift','Hebebühne (+70 %)']]){
+    const label=document.createElement('label'),checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!!item[key];
+    checkbox.addEventListener('change',()=>{item[key]=checkbox.checked;calculate()});
+    label.append(checkbox,document.createTextNode(text));extras.append(label);
+   }
+   block.append(extras);area.append(block);
+  });
+ }
+ function addWindow(type){
+  const config=typeAreas[type];if(!config)return;
+  if(windowItems.length>=8){alert('Maximal acht verschiedene Fensterpositionen pro Kostenvoranschlag.');return}
+  windowItems.push({id:crypto.randomUUID(),label:config.label,qty:1,each:config.sqm,rate:3,sides:1,soil:1,frame:false,ladder:false,lift:false});
+  renderWindowItems();calculate();
+ }
  function readInput(){
   const wc=byId('qWc').checked,kitchen=byId('qKitchen').checked,heavy=byId('qHeavy').checked;
   const factor=1+(wc?0.12:0)+(kitchen?0.08:0)+(heavy?0.15:0);
-  const windowSqm=value('WindowType')==='none'?0:Math.round(num('WindowQty')*num('WindowEach')*100)/100;
   return {
    area:num('Area'),visits:num('Visits'),hours:num('Hours'),sqmPerHour:num('SqmHour')/factor,
-   hourly:num('Hourly'),nonwage:num('Nonwage'),overhead:num('Overhead'),
+   hourly:num('Hourly'),nonwage:num('Nonwage'),overhead:num('Overhead'),mode:document.querySelector('input[name="qMode"]:checked')?.value||'business',
    productivity:num('Productivity'),material:num('Material'),km:num('Km'),perKm:num('KmPrice'),
    margin:num('Margin'),minNet:num('MinNet'),manualNet:num('ManualNet'),
-   vat:Number(value('Vat')),windowSqm,windowRate:num('WindowRate'),
-   sides:Number(value('WindowSides')),soil:Number(value('WindowDirt')),extras:Number(value('WindowEquip'))
+   minimumSqm:num('MinimumSqm'),setupMinutes:num('SetupMinutes'),liftRental:num('LiftRental'),fixedProfit:num('FixedProfit'),
+   vat:Number(value('Vat')),windowItems:windowEntries()
   };
  }
  function renderSummary(out){
@@ -60,7 +110,7 @@
   info.textContent='Netto '+de(out.net)+' · Umsatzsteuer '+de(out.tax)+' ('+out.vat+' %) · '+out.visits+' Einsätze à ca. '+out.hoursPerVisit+' Std.';
   node.append(info);
   const info2=document.createElement('p');info2.className='hint';
-  info2.textContent='Geschätzte interne Kosten '+de(out.cleaningCost)+' · Fensteraufschlag '+de(out.windowsNet)+' · Kalkulierter Überschuss ca. '+de(out.profit);
+  info2.textContent='Geschätzte interne Kosten '+de(out.cleaningCost)+' · Fensterleistungen '+de(out.windowsNet)+' · Hebebühnen-Aufwand '+de(out.liftRental)+' · Kalkulierter Überschuss ca. '+de(out.profit);
   node.append(info2);
   const info3=document.createElement('p');info3.className='hint';
   info3.textContent='Preisvorschlag '+de(out.recommendNet)+' netto'+(num('ManualNet')>0?' · Dein abweichender Festpreis wurde übernommen.':'');
@@ -70,7 +120,7 @@
   try{
    const out=MiCareQuote.compute(readInput());
    byId('qCalculationMessage').textContent='';
-   byId('qWindowArea').textContent='Fensterfläche: '+out.windowSqm.toLocaleString('de-DE')+' m²';
+   byId('qWindowArea').textContent='Fensterfläche gesamt: '+out.windowSqm.toLocaleString('de-DE')+' m² · '+out.windowItems.length+' Position(en) · '+de(out.windowsNet)+' netto';
    renderSummary(out);return out;
   }catch(e){
    byId('qCalculationMessage').textContent='Bitte Eingaben prüfen: '+e.message;
@@ -85,7 +135,7 @@
   return number;
  }
  function readValues(){
-  const entries={};for(const k of tracked){const el=byId('q'+k);entries[k]=el.type==='checkbox'?el.checked:el.value}return entries;
+  const entries={};for(const k of tracked){const el=byId('q'+k);entries[k]=el.type==='checkbox'?el.checked:el.value}entries.WindowItems=windowEntries();entries.Mode=document.querySelector('input[name="qMode"]:checked')?.value||'business';return entries;
  }
  function updateNumber(){if(!activeId)byId('qNumber').value=nextNumber(value('Kind'))}
  function collect(){
@@ -137,12 +187,14 @@
   const doc=(state.quotes||[]).find(q=>q.id===id);if(!doc)return;
   activeId=id;const values=doc.formValues||{};
   for(const [k,v] of Object.entries(values)){
+   if(k==='WindowItems'){windowItems=Array.isArray(v)?structuredClone(v).slice(0,8):[];continue}
+   if(k==='Mode'){const radio=document.querySelector('input[name="qMode"][value="'+v+'"]');if(radio)radio.checked=true;continue}
    const node=byId('q'+k);if(!node)continue;if(node.type==='checkbox')node.checked=!!v;
    else if(!['Customer','Object','Appointment'].includes(k))node.value=v;
   }
   byId('qCustomer').value=doc.customerId;updateObjects();
   byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
-  calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
+  renderWindowItems();calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
  }
  function showSaved(){
   const area=byId('qSavedList');area.replaceChildren();
@@ -159,7 +211,9 @@
   }
  }
  function clear(){
-  activeId=null;for(const k of ['Customer','Object','Appointment'])byId('q'+k).value='';
+  activeId=null;windowItems=[];renderWindowItems();
+  const radio=document.querySelector('input[name="qMode"][value="business"]');if(radio)radio.checked=true;
+  for(const k of ['Customer','Object','Appointment'])byId('q'+k).value='';
   byId('qService').value='Unterhaltsreinigung';
   byId('qKind').value='quote';byId('qManualNet').value='0';
   byId('qNotes').value='';byId('qServiceDate').value='';
@@ -182,12 +236,15 @@
   byId('qObject').addEventListener('change',()=>{updateAppointments();calculate()});
   byId('qAppointment').addEventListener('change',selectAppointment);
   byId('qKind').addEventListener('change',updateNumber);
-  byId('qWindowType').addEventListener('change',()=>{
-   const type=value('WindowType'),sq=typeAreas[type];
-   if(sq)byId('qWindowEach').value=sq;
-   if(type==='none')byId('qWindowQty').value=0;
-   calculate();
+  byId('qWindowPicker').addEventListener('click',e=>{
+   const btn=e.target.closest('button[data-window]');if(btn)addWindow(btn.dataset.window)
   });
+  byId('qProfits').addEventListener('click',e=>{
+   const btn=e.target.closest('button[data-profit]');if(!btn)return;
+   byId('qFixedProfit').value=btn.dataset.profit;calculate();
+  });
+  for(const mode of document.querySelectorAll('input[name="qMode"]'))mode.addEventListener('change',calculate);
+  renderWindowItems();
   byId('qAreas').addEventListener('click',e=>{const target=e.target.closest('button[data-area]');if(!target)return;byId('qArea').value=target.dataset.area;calculate()});
   byId('qSave').onclick=()=>persist().catch(e=>alert('Kalkulation nicht gespeichert: '+e.message));
   byId('qPdf').onclick=makePdf;
