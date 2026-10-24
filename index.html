@@ -62,8 +62,8 @@
 </form>
 <p class="hint">Du kannst Einträge aus jedem Monat bearbeiten. Bei Änderungen wird immer der gesamte Datenstand für die Sicherung verwendet.</p>
 </section>
-<section class="screen" id="plannedWorkScreen"><h2>📋 Geplante Aufträge abschließen</h2><p class="hint">Wähle zuerst den Mitarbeiter und das Datum, anschließend den geplanten Auftrag. Die tatsächliche Zeit und der Auftragsstatus werden erst danach erfasst.</p><div class="grid"><div><label for="plannedListDate">Arbeitstag</label><input id="plannedListDate" type="date"></div><div><label for="plannedListEmployee">Mitarbeiter</label><select id="plannedListEmployee"></select></div></div><div id="plannedListItems" class="objectPanel"></div></section>
-<section class="screen" id="plannedEditorScreen"><h2>📋 Geplanten Auftrag dokumentieren</h2><p class="hint">Geplante Daten prüfen, tatsächlich geleistete Zeiten, Status und bei Abweichungen die Begründung dokumentieren.</p><div id="plannedFormSlot"></div></section>
+<section class="screen" id="plannedWorkScreen"><h2>📋 Geplante Arbeitskarten dokumentieren</h2><p class="hint">Suche eine AK-Nummer oder wähle Mitarbeiter und Datum. Neue Arbeitskarten werden dokumentiert, bereits erfasste kannst du ansehen und mit Korrekturgrund ändern.</p><div class="grid"><div><label for="plannedListDate">Arbeitstag</label><input id="plannedListDate" type="date"></div><div><label for="plannedListEmployee">Mitarbeiter</label><select id="plannedListEmployee"></select></div></div><div class="objectPanel" style="margin-top:14px"><label for="plannedAkSearch">Arbeitskarte suchen (AK-Nummer, Kunde, Gebäude oder Leistung)</label><input type="search" id="plannedAkSearch" placeholder="z. B. AK 13 oder Nordstern" autocomplete="off"><p class="hint">Bei einer AK-Suche wird auch außerhalb des gewählten Tages und Mitarbeiters gesucht. Ohne Suche siehst du wie bisher die Termine für den ausgewählten Arbeitstag.</p></div><div id="plannedListItems" class="objectPanel"></div></section>
+<section class="screen" id="plannedEditorScreen"><h2>📋 Geplanten Auftrag dokumentieren</h2><p class="hint">Geplante Daten prüfen, tatsächlich geleistete Zeiten, Status und bei Abweichungen die Begründung dokumentieren.</p><div id="plannedEditorAkInfo" class="status" style="margin-bottom:12px" aria-live="polite">Arbeitskarte auswählen</div><div id="plannedFormSlot"></div></section>
 <section class="screen" id="dailyWorkOverview"><h2>📅 Tagesübersicht der Arbeitszeiten</h2><p class="hint">Arbeitszeiten und geplante Aufträge eines Mitarbeiters an einem Tag. Auch mehrere Einsätze beim gleichen Kunden bleiben getrennte Einträge.</p><div class="grid"><div><label for="dailyOverviewDate">Datum</label><input type="date" id="dailyOverviewDate"></div><div><label for="dailyOverviewEmployee">Mitarbeiter</label><select id="dailyOverviewEmployee"></select></div></div><div id="dailyOverviewTotals" class="status" style="margin-top:14px"></div><h3>Erfasste Arbeitszeiten</h3><div id="dailyOverviewEntries"></div><h3>Geplante Termine</h3><div id="dailyOverviewAppointments"></div><div class="row"><button type="button" id="dailyOverviewNew" class="secondary">+ Freie Arbeitszeit hinzufügen</button></div></section>
 <section class="screen" id="reportingScreen">
 <div id="reportHome">
@@ -91,14 +91,14 @@
    <div><label for="reportTo">Bis</label><input type="date" id="reportTo"></div>
    <div><label for="reportCustomerSearch">Kunde suchen (optional)</label><input type="search" id="reportCustomerSearch" placeholder="Name oder Kundennummer eingeben"></div>
    <div><label for="rptCustomer">Kunde auswählen</label><select id="rptCustomer"></select></div>
-   <div><label for="reportEmployee">Mitarbeiter</label><select id="reportEmployee"></select></div>
+   <div><label for="reportAkSearch">Arbeitskarte suchen</label><input type="search" id="reportAkSearch" placeholder="z. B. AK 13, Nordstern oder Fenster"></div><div><label for="reportAkCorrectionFilter">Korrekturhistorie</label><select id="reportAkCorrectionFilter"><option value="">Alle Arbeitskarten</option><option value="corrected">Nur nachträglich korrigierte AK</option></select></div><div><label for="reportEmployee">Mitarbeiter</label><select id="reportEmployee"></select></div>
    <div><label for="reportObject">Geschäftsstelle / Objekt</label><select id="reportObject"></select></div>
    <div><label for="reportService">Reinigungsleistung</label><select id="reportService"></select></div><div><label for="reportEntryKind">Erfassungsart</label><select id="reportEntryKind"><option value="">Alle Arten</option><option value="free">Freie Arbeitszeiterfassung</option><option value="planned">Geplanter Auftrag dokumentiert</option></select></div><div><label for="reportOrderStatus">Status erfasster Arbeiten</label><select id="reportOrderStatus"><option value="">Alle Status</option><option value="done">Erledigt</option><option value="progress">In Bearbeitung</option><option value="cancelled">Abgesagt</option><option value="absent">Nicht angetroffen</option><option value="_none">Ohne Status</option></select></div>
   </div>
   <div class="row" style="margin-top:12px"><button type="button" id="reportReset" class="secondary">Filter zurücksetzen</button></div>
  </details>
  <div class="row reportActions"><button type="button" id="reportCsv">⬇ AK & Arbeitszeiten als CSV</button><button type="button" id="reportTableCsv" class="secondary">⬇ Berichtstabelle als CSV</button><button type="button" id="reportPrint" class="secondary">🖨 Bericht drucken / als PDF</button></div>
- <div id="reportSummary" class="objectPanel" aria-live="polite"></div>
+ <div id="reportAkQuickSearchBox" class="objectPanel hidden"><label for="reportAkQuickSearch">🔎 Arbeitskarte direkt suchen</label><input type="search" id="reportAkQuickSearch" placeholder="AK 13, Kunde oder Gebäude suchen" autocomplete="off"><label style="display:flex;align-items:center;gap:8px;margin-top:9px"><input type="checkbox" id="reportOnlyCorrectedQuick" style="width:auto"> Nur nachträglich korrigierte AK anzeigen</label><p class="hint">Die Suche berücksichtigt den gewählten Berichtszeitraum. Für ältere AK „Alle vorhandenen Daten“ wählen.</p></div><div id="reportSummary" class="objectPanel" aria-live="polite"></div>
  <div id="reportPanels"></div>
 </div>
 </section>
@@ -204,23 +204,74 @@ function openFreeWorkScreen(){
 function openPlannedWorkScreen(){
  renderPlannedWorkScreen();showScreen('plannedWorkScreen');
 }
+function akMatchesSearch(a,query){
+ const text=String(query||'').trim().toLocaleLowerCase('de');
+ if(!text)return true;
+ const numeric=/^(?:ak[\s-]*)?(\d+)$/i.exec(text);
+ if(numeric)return Number(a.akNumber)===Number(numeric[1]);
+ const c=state.customers.find(x=>x.id===a.customerId),o=state.objects.find(x=>x.id===a.objectId);
+ return [akLabel(a),c?.name,o?.name,a.service,orderTitle(a)].some(x=>String(x||'').toLocaleLowerCase('de').includes(text));
+}
+function akTimeMinutes(value){const m=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(value||''));return m?Number(m[1])*60+Number(m[2]):0}
+function akPlannedConflicts(item){
+ if(!item?.appointment?.employee)return[];
+ const from=item.date,until=item.date;
+ const others=state.appointments.filter(a=>a.id!==item.appointment.id&&a.employee===item.appointment.employee)
+  .flatMap(a=>datesFor(a,from,until)).filter(o=>o.date===item.date);
+ return others.filter(o=>item.start<o.end&&o.start<item.end).map(o=>{
+   const mins=Math.max(0,Math.min(akTimeMinutes(item.end),akTimeMinutes(o.end))-Math.max(akTimeMinutes(item.start),akTimeMinutes(o.start)));
+   const c=state.customers.find(x=>x.id===o.appointment.customerId),obj=state.objects.find(x=>x.id===o.appointment.objectId);
+   return {item:o,minutes:mins,label:akLabel(o.appointment)+' · '+o.start+'–'+o.end+' · '+(c?.name||'Kunde')+' / '+(obj?.name||'Objekt')};
+ });
+}
 function renderPlannedWorkScreen(){
- const date=$('plannedListDate'),employee=$('plannedListEmployee'),area=$('plannedListItems');
+ const date=$('plannedListDate'),employee=$('plannedListEmployee'),area=$('plannedListItems'),query=$('plannedAkSearch').value.trim();
  if(!date.value)date.value=isoDate();
  const old=employee.value||$('employee').value;
  employee.replaceChildren(...state.employees.map(n=>{const option=el('option',n);option.value=n;return option}));
  if(state.employees.includes(old))employee.value=old;
  area.replaceChildren();
- const list=(state.appointments||[]).filter(a=>a.employee===employee.value).flatMap(a=>datesFor(a,date.value,date.value)).filter(x=>x.date===date.value).sort((a,b)=>a.start.localeCompare(b.start));
- for(const item of list){
-  const c=state.customers.find(c=>c.id===item.appointment.customerId),o=state.objects.find(o=>o.id===item.appointment.objectId);
-  const row=el('div',item.start+'–'+item.end+' · '+(c?.name||'Kunde')+' · '+(o?.name||'Objekt'));
-  row.className='objectItem';const button=el('button',completedAppointmentEntry(item)?'Bearbeiten':'Auftrag dokumentieren');button.type='button';button.onclick=()=>completeAppointment(item);
+ const matching=(state.appointments||[]).filter(a=>query?akMatchesSearch(a,query):a.employee===employee.value);
+ const list=matching.flatMap(a=>{
+  const today=datesFor(a,date.value,date.value).filter(x=>x.date===date.value);
+  if(!query)return today;
+  if(today.length)return today;
+  // Die Suche nach einer AK findet auch einen Termin außerhalb des gewählten Datums.
+  const start=a.date||date.value;
+  const limit=new Date(date.value+'T12:00:00');
+  limit.setDate(limit.getDate()+90);
+  const next=datesFor(a,date.value,isoDate(limit)).filter(o=>o.date>=date.value);
+  if(next.length)return [next[0]];
+  const first=datesFor(a,start,start);
+  return first.slice(0,1);
+ }).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
+ for(const item of list.slice(0,100)){
+  const a=item.appointment,c=state.customers.find(x=>x.id===a.customerId),o=state.objects.find(x=>x.id===a.objectId);
+  const entry=completedAppointmentEntry(item),done=entry?.orderStatus==='done',corrections=Array.isArray(entry?.corrections)?entry.corrections:[];
+  const row=el('div','');row.className='objectItem';
+  row.append(el('strong',akLabel(a)+' · '+formatDate(item.date)+' · '+item.start+'–'+item.end));
+  row.append(el('div',(c?.name||'Kunde')+' · '+(o?.name||'Objekt')+' · '+(a.service||'Leistung')+' · '+(a.employee||'Nicht zugeordnet')));
+  row.append(el('div','Status: '+(done?'Erledigt':entry?'Bereits dokumentiert ('+(entry.orderStatus||'ohne Status')+')':'Noch nicht dokumentiert')+(corrections.length?' · '+corrections.length+' Korrektur(en)':'') ));
+  const conflicts=akPlannedConflicts(item);
+  if(conflicts.length){
+   const details=document.createElement('details'),heading=el('summary','⚠ Geplante Zeitüberschneidung mit '+conflicts.length+' AK');heading.style.color='#ae540c';heading.style.cursor='pointer';details.append(heading);
+   for(const conflict of conflicts){
+    const partner=el('div',conflict.label+' · '+conflict.minutes+' Minuten Überschneidung');
+    const open=el('button','AK ansehen');open.className='secondary smallbtn';open.type='button';open.onclick=()=>{$('plannedAkSearch').value=akLabel(conflict.item.appointment);$('plannedListDate').value=conflict.item.date;$('plannedListEmployee').value=conflict.item.appointment.employee;renderPlannedWorkScreen()};
+    partner.append(' ',open);details.append(partner);
+   }
+   row.append(details);
+  }
+  const button=el('button',entry?'Erfassung ansehen / korrigieren':'Auftrag dokumentieren');button.type='button';
+  button.className='secondary smallbtn';button.onclick=()=>completeAppointment(item);
   row.append(button);area.append(row);
  }
- if(!list.length)area.append(el('p','Für dieses Datum sind keine geplanten Aufträge vorhanden.'));
+ if(!list.length)area.append(el('p','Keine passenden Arbeitskarten gefunden.'));
+ if(list.length>100)area.append(el('p','Es werden die ersten 100 Ergebnisse angezeigt. Bitte genauer suchen.'));
 }
+
 document.addEventListener('change',e=>{if(['plannedListDate','plannedListEmployee'].includes(e.target?.id))renderPlannedWorkScreen()});
+$('plannedAkSearch').addEventListener('input',renderPlannedWorkScreen);
 function setWorkEntryMode(mode){
  workEntryMode=mode;
  $('plannedWorkPanel').classList.toggle('hidden',mode!=='planned');
@@ -283,12 +334,12 @@ function linkedOccurrence(){
  return original||{appointment,date:prior.date,originalDate:prior.appointmentOccurrence,start:appointment.start,end:appointment.end};
 }
 function syncMonthToWorkday(){try{const day=germanToIso($('date').value),month=day.slice(0,7);if($('month').value!==month){if(![...$('month').options].some(o=>o.value===month)){const dt=new Date(month+'-01T12:00:00'),o=el('option',dt.toLocaleDateString('de-DE',{month:'long',year:'numeric'}));o.value=month;$('month').append(o)}$('month').value=month}}catch{}}
-function refreshLinkedAppointments(){syncMonthToWorkday();let date;try{date=germanToIso($('date').value)}catch{date=''}const select=$('linkedAppointment'),old=select.value;select.replaceChildren();const empty=el('option','– Ohne geplanten Termin erfassen –');empty.value='';select.append(empty);if(!date){$('linkedAppointmentInfo').textContent='Bitte ein gültiges Datum auswählen.';return}const occurrences=state.appointments.flatMap(a=>datesFor(a,date,date)).filter(x=>!x.appointment.employee||x.appointment.employee===$('employee').value);for(const x of occurrences){const c=state.customers.find(c=>c.id===x.appointment.customerId),o=state.objects.find(o=>o.id===x.appointment.objectId),opt=el('option',x.start+'–'+x.end+' · '+(c?.name||'Kunde unbekannt')+(o?' · '+o.name:''));opt.value=appointmentKey(x.appointment,x.originalDate);select.append(opt)}const prior=editId?state.entries.find(e=>e.id===editId):null;
+function refreshLinkedAppointments(){syncMonthToWorkday();let date;try{date=germanToIso($('date').value)}catch{date=''}const select=$('linkedAppointment'),old=select.value;select.replaceChildren();const empty=el('option','– Ohne geplanten Termin erfassen –');empty.value='';select.append(empty);if(!date){$('linkedAppointmentInfo').textContent='Bitte ein gültiges Datum auswählen.';return}const occurrences=state.appointments.flatMap(a=>datesFor(a,date,date)).filter(x=>!x.appointment.employee||x.appointment.employee===$('employee').value);for(const x of occurrences){const c=state.customers.find(c=>c.id===x.appointment.customerId),o=state.objects.find(o=>o.id===x.appointment.objectId),opt=el('option',akLabel(x.appointment)+' · '+x.start+'–'+x.end+' · '+(c?.name||'Kunde unbekannt')+(o?' · '+o.name:''));opt.value=appointmentKey(x.appointment,x.originalDate);select.append(opt)}const prior=editId?state.entries.find(e=>e.id===editId):null;
  if(prior?.appointmentId){
   const key=appointmentKey({id:prior.appointmentId},prior.appointmentOccurrence);
   if(![...select.options].some(o=>o.value===key)){
    const original=state.appointments.find(a=>a.id===prior.appointmentId);
-   if(original){const option=el('option','📋 Zugeordneter Auftrag vom '+formatDate(prior.appointmentOccurrence)+' (tatsächlicher Arbeitstag kann abweichen)');option.value=key;select.append(option)}
+   if(original){const option=el('option',akLabel(original)+' · Zugeordneter Auftrag vom '+formatDate(prior.appointmentOccurrence)+' (tatsächlicher Arbeitstag kann abweichen)');option.value=key;select.append(option)}
   }
  }
  select.value=[...select.options].some(o=>o.value===old)?old:'';
@@ -299,6 +350,7 @@ function selectLinkedAppointment(){
  setWorkEntryMode('planned');syncMonthToWorkday();
  const occ=linkedOccurrence();if(!occ){renderOrderCorrection();return}
  const a=occ.appointment,entry=state.entries.find(e=>e.appointmentId===a.id&&e.appointmentOccurrence===occ.originalDate);
+ $('plannedEditorAkInfo').textContent=akLabel(a)+' · '+orderTitle(a)+' · Geplant für '+formatDate(occ.originalDate);
  if(entry&&editId&&editId!==entry.id&&!confirmDiscardChanges())return;
  if(a.employee&&state.employees.includes(a.employee))$('employee').value=a.employee;
  if([...$('service').options].some(x=>x.value===a.service))$('service').value=a.service;
@@ -351,7 +403,7 @@ function akReportData(from,to,customerId='',employee='',objectId='',service=''){
    customerId:a.customerId,customer:customer?.name||'Ohne Kunde',customerNumber:customer?.publicNumber||'',objectId:a.objectId,
    object:object?.name||'Ohne Objekt',service:a.service||'',title:orderTitle(a),employee:e?.employee||a.employee||'',
    status,label:labels[status]||status,planned,actual:e?Math.max(0,Number(e.minutes)||0):null,
-   workDone:e?.workDone||'',remarks:e?.orderRemarks||'',conflicts:[],kind:a.repeat==='once'?'Einzelauftrag':'Dauerauftrag'};
+   workDone:e?.workDone||'',remarks:e?.orderRemarks||'',correctionCount:Array.isArray(e?.corrections)?e.corrections.length:0,lastCorrection:e?.corrections?.at(-1)?.time||'',conflicts:[],kind:a.repeat==='once'?'Einzelauftrag':'Dauerauftrag'};
  }).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.ak.localeCompare(b.ak));
  // Geplante Überschneidungen: auch dann markieren, wenn ein anderer Auftrag nicht im ausgewählten Kundenfilter liegt.
  const all=(state.appointments||[]).flatMap(a=>datesFor(a,from,to)).filter(o=>o.date>=from&&o.date<=to);
@@ -858,7 +910,7 @@ async function saveEntry(ev){
   notify(v.service+' '+what+(correction?' · Korrektur dokumentiert':''));
  }catch(e){alert(e.message)}finally{workEntrySaveInProgress=false;$('saveBtn').disabled=false}
 }
-function editEntry(id){const e=state.entries.find(x=>x.id===id);if(!e)return;editId=id;for(const key of ['employee','service','object','date','endDate','start','end','breakMinutes','notes'])$(key).value=(key==='date'||key==='endDate')?formatDate(e[key]):(e[key]??'');$('month').value=e.date.slice(0,7);$('saveBtn').textContent='Änderung speichern';$('cancelEdit').classList.remove('hidden');$('customerChoice').value=e.customerId||'';updateEntryObjects();$('entryObjectChoice').value=e.objectId||'';$('orderStatus').value=e.orderStatus||'';$('workDone').value=e.workDone||'';$('orderRemarks').value=e.orderRemarks||'';if(e.appointmentId){$('plannedFormSlot').append($('form'));setWorkEntryMode('planned');showScreen('plannedEditorScreen');}else{$('entryForm').append($('form'));setWorkEntryMode('free');showScreen('entryForm');}$('endDateWrap').classList.toggle('hidden',e.endDate===e.date);$('deviationReason').value=e.deviationReason||'';$('deviationNote').value=e.deviationNote||'';refreshLinkedAppointments();if(e.appointmentId)$('linkedAppointment').value=appointmentKey({id:e.appointmentId},e.appointmentOccurrence);renderOrderCorrection();calc()}
+function editEntry(id){const e=state.entries.find(x=>x.id===id);if(!e)return;editId=id;for(const key of ['employee','service','object','date','endDate','start','end','breakMinutes','notes'])$(key).value=(key==='date'||key==='endDate')?formatDate(e[key]):(e[key]??'');$('month').value=e.date.slice(0,7);$('saveBtn').textContent='Änderung speichern';$('cancelEdit').classList.remove('hidden');$('customerChoice').value=e.customerId||'';updateEntryObjects();$('entryObjectChoice').value=e.objectId||'';$('orderStatus').value=e.orderStatus||'';$('workDone').value=e.workDone||'';$('orderRemarks').value=e.orderRemarks||'';if(e.appointmentId){$('plannedFormSlot').append($('form'));setWorkEntryMode('planned');const ak=state.appointments.find(a=>a.id===e.appointmentId);$('plannedEditorAkInfo').textContent=ak?akLabel(ak)+' · '+orderTitle(ak)+' · Geplant für '+formatDate(e.appointmentOccurrence):'Arbeitskarte nicht gefunden';showScreen('plannedEditorScreen');}else{$('entryForm').append($('form'));setWorkEntryMode('free');showScreen('entryForm');}$('endDateWrap').classList.toggle('hidden',e.endDate===e.date);$('deviationReason').value=e.deviationReason||'';$('deviationNote').value=e.deviationNote||'';refreshLinkedAppointments();if(e.appointmentId)$('linkedAppointment').value=appointmentKey({id:e.appointmentId},e.appointmentOccurrence);renderOrderCorrection();calc()}
 async function deleteEntry(id){const e=state.entries.find(x=>x.id===id);if(e?.appointmentId){alert('Ein bereits dokumentierter Auftrag darf aus Gründen der Nachvollziehbarkeit nicht gelöscht werden. Bitte den Auftrag öffnen und mit einem Korrekturgrund ändern.');editEntry(id);return}if(!confirm('Eintrag wirklich löschen? Danach wird ein neues Backup erstellt.'))return;state.entries=state.entries.filter(x=>x.id!==id);try{await saveState();notify('Eintrag gelöscht')}catch(e){alert('Speichern fehlgeschlagen: '+e.message)}}
 function resetEdit(){editId=null;$('form').reset();$('endDateWrap').classList.add('hidden');$('saveBtn').textContent='💾 Eintrag speichern';$('cancelEdit').classList.add('hidden');$('date').value=formatDate(isoDate());$('endDate').value=$('date').value;$('breakMinutes').value='';$('orderStatus').value='';$('workDone').value='';$('orderRemarks').value='';$('linkedAppointment').value='';refreshLinkedAppointments();$('deviationReason').value='';$('deviationNote').value='';$('correctionReason').value='';$('correctionNote').value='';setWorkEntryMode('free');renderOrderCorrection();calc()}
 async function addEmployee(){let n=$('newEmployee').value.trim();if(!n||n.length>80)return alert('Bitte Mitarbeiternamen eingeben.');if(state.employees.some(x=>x.toLocaleLowerCase('de')===n.toLocaleLowerCase('de')))return alert('Mitarbeiter existiert bereits.');state.employees.push(n);$('newEmployee').value='';await saveState();$('employee').value=n;notify('Mitarbeiter hinzugefügt')}
@@ -1044,7 +1096,7 @@ document.addEventListener('change',e=>{if(e.isTrusted&&editableFields.has(e.targ
 /* Reporting: read-only; based exclusively on existing application state. */
 let activeReportTab='overview';
 function reportFillSelect(id,items,all){const select=$(id),previous=select.value;select.replaceChildren();const a=el('option',all);a.value='';select.append(a);for(const item of items){const o=el('option',item.label);o.value=String(item.value);select.append(o)}if([...select.options].some(o=>o.value===previous))select.value=previous}
-function reportTable(parent,title,headers,rows){const section=el('div','');section.className='objectPanel';section.append(el('h3',title));const wrap=el('div','');wrap.className='tablewrap';const t=document.createElement('table'),head=document.createElement('thead'),hr=document.createElement('tr');for(const h of headers){const th=el('th',h);hr.append(th)}head.append(hr);t.append(head);const body=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const item of row)tr.append(el('td',item));body.append(tr)}t.append(body);wrap.append(t);section.append(wrap);if(!rows.length)section.append(el('p','Keine passenden Daten im gewählten Zeitraum.'));parent.append(section)}
+function reportTable(parent,title,headers,rows){const section=el('div','');section.className='objectPanel';section.append(el('h3',title));const wrap=el('div','');wrap.className='tablewrap';const t=document.createElement('table'),head=document.createElement('thead'),hr=document.createElement('tr');for(const h of headers){const th=el('th',h);hr.append(th)}head.append(hr);t.append(head);const body=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const item of row){if(item&&item.nodeType===1){const td=document.createElement('td');td.append(item);tr.append(td)}else tr.append(el('td',item))}body.append(tr)}t.append(body);wrap.append(t);section.append(wrap);if(!rows.length)section.append(el('p','Keine passenden Daten im gewählten Zeitraum.'));parent.append(section)}
 function reportMinutes(n){return (Number(n||0)/60).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' Std.'}
 function reportBuild(){
  const from=$('reportFrom').value,to=$('reportTo').value,cid=$('rptCustomer').value,emp=$('reportEmployee').value,oid=$('reportObject').value,svc=$('reportService').value,kind=$('reportEntryKind').value,status=$('reportOrderStatus').value;
@@ -1108,6 +1160,9 @@ function renderReporting(){
  reportFillSelect('reportEmployee',state.employees.map(x=>({value:x,label:x})),'Alle Mitarbeiter');
  reportFillSelect('reportObject',state.objects.filter(o=>!$('rptCustomer').value||o.customerId===$('rptCustomer').value).map(o=>({value:o.id,label:o.name})),'Alle Geschäftsstellen');
  reportFillSelect('reportService',SERVICES.map(x=>({value:x,label:x})),'Alle Leistungen');
+ $('reportAkQuickSearchBox').classList.toggle('hidden',activeReportTab!=='orders');
+ if(document.activeElement!==$('reportAkQuickSearch'))$('reportAkQuickSearch').value=$('reportAkSearch').value;
+ $('reportOnlyCorrectedQuick').checked=$('reportAkCorrectionFilter').value==='corrected';
  const summary=$('reportSummary'),panels=$('reportPanels');summary.replaceChildren();panels.replaceChildren();const home=$('reportHomeStats');home.replaceChildren();$('reportActiveFilters').textContent='Aktueller Bericht: '+({overview:'Übersicht',employees:'Mitarbeiterleistung',customers:'Kunden & Objekte',orders:'Aufträge & Soll-Ist',quality:'Qualität & Konflikte'}[activeReportTab])+' · '+($('rptCustomer').selectedOptions[0]?.textContent||'Alle Kunden')+' · '+($('reportEmployee').selectedOptions[0]?.textContent||'Alle Mitarbeiter');
  if($('reportFrom').value>$('reportTo').value){summary.append(el('p','Bitte einen gültigen Zeitraum auswählen.'));return}
  const d=reportBuild();for(const [name,value] of [['Geleistete Stunden',reportMinutes(d.total)],['Erfasste Arbeitszeiten',d.entries.length],['Geplante Termine',d.occ.length],['Dokumentiert',d.completed.length]]){const c=el('div','');c.className='reportMetric';c.append(el('strong',value),el('span',name));home.append(c)}const cards=[['Erfasste Stunden',reportMinutes(d.total)],['Arbeitszeiteinträge',d.entries.length],['Freie Erfassungen',d.free.length],['Geplante Termine',d.occ.length],['Dokumentierte Termine',d.completed.length],['Offene geplante Termine',d.occ.length-d.completed.length],['Geplante Zeit',reportMinutes(d.totalPlan)],['Zeitabweichungen',d.exceptions.length],['Auffällige Überschneidungen',d.overlaps.length],['Abgesagt / nicht angetroffen',d.cancelled.length]];
@@ -1126,18 +1181,51 @@ function renderReporting(){
  }
  if(activeReportTab==='orders'){
   const ak=akReportData(d.from,d.to,$('rptCustomer').value,$('reportEmployee').value,$('reportObject').value,$('reportService').value);
-  const statusFilter=$('reportOrderStatus').value;
-  const listed=ak.rows.filter(r=>!statusFilter||(statusFilter==='_none'?r.status==='open':r.status===statusFilter));
+  const statusFilter=$('reportOrderStatus').value,lookup=$('reportAkSearch').value,correctedOnly=$('reportAkCorrectionFilter').value==='corrected';
+  const listed=ak.rows.filter(r=>(!statusFilter||(statusFilter==='_none'?r.status==='open':r.status===statusFilter))
+   &&(!lookup||akMatchesSearch(state.appointments.find(a=>a.id===r.id.split('|')[0])||{},lookup))
+   &&(!correctedOnly||r.correctionCount>0));
   const percent=(ak.metrics.done+ak.metrics.open)?Math.round(100*ak.metrics.done/(ak.metrics.done+ak.metrics.open)):0;
-  const h=el('div','');h.className='objectPanel';
+  const corrected=ak.rows.filter(r=>r.correctionCount>0),h=el('div','');h.className='objectPanel';
   h.append(el('h3','Arbeitskarten · Kundenaufträge'));
   h.append(el('p','AK gesamt: '+ak.metrics.total+' · Offen / in Bearbeitung: '+ak.metrics.open+
    ' ('+reportMinutes(ak.metrics.openPlanned)+' geplant) · Fertig: '+ak.metrics.done+
-   ' ('+reportMinutes(ak.metrics.doneActual)+' geleistet) · Erfüllungsquote: '+percent+' % · Konflikte: '+ak.metrics.conflictRows));
+   ' ('+reportMinutes(ak.metrics.doneActual)+' geleistet) · Erfüllungsquote: '+percent+' % · Zeitkonflikte: '+ak.metrics.conflictRows+
+   ' · Nachträglich korrigierte Termine: '+corrected.length));
+  h.append(el('p','Gefilterte Treffer: '+listed.length+' · Eine korrigierte AK bleibt unabhängig davon im aktuellen Auftragsstatus.'));
   panels.append(h);
-  reportTable(panels,'Offene Arbeitskarten und abgeschlossene Aufträge',
-   ['AK','Datum','Kunde / Objekt','Leistung','Mitarbeiter','Termin','Soll','Ist','Status','Konflikt'],
-   listed.slice(0,500).map(r=>[r.ak,formatDate(r.date),r.customer+' · '+r.object,r.service,r.employee,r.start+'–'+r.end,reportMinutes(r.planned),r.actual===null?'–':reportMinutes(r.actual),r.label,r.conflicts.length?'⚠ '+r.conflicts.join('; '):'–']));
+  const rows=listed.slice(0,500).map(r=>{
+   const entry=state.entries.find(e=>e.appointmentId===r.id.split('|')[0]&&e.appointmentOccurrence===r.originalDate);
+   const action=el('button',entry?'Ansehen / korrigieren':'Dokumentieren');action.className='secondary smallbtn';action.type='button';
+   action.onclick=()=>{const appointment=state.appointments.find(a=>a.id===r.id.split('|')[0]);if(!appointment)return;
+    if(entry)editEntry(entry.id);else completeAppointment({appointment,date:r.date,originalDate:r.originalDate,start:r.start,end:r.end});};
+   const conflict=document.createElement('div');
+   if(!r.conflicts.length)conflict.textContent='–';
+   else{
+    const details=document.createElement('details');details.append(el('summary','⚠ '+r.conflicts.length+' geplante Überschneidung(en)'));
+    details.append(el('div','Gleicher Mitarbeiter zur gleichen Zeit geplant.'));
+    for(const label of r.conflicts){
+     const line=el('div',label),target=/^AK\s+\d+/.exec(label)?.[0];
+     if(target){const button=el('button','Diese AK suchen');button.type='button';button.className='secondary smallbtn';
+      button.onclick=()=>{$('reportAkSearch').value=target;renderReporting()};line.append(' ',button)}
+     details.append(line);
+    }
+    conflict.append(details);
+   }
+   return [r.ak,formatDate(r.date),r.customer+' · '+r.object,r.service,r.employee,r.start+'–'+r.end,reportMinutes(r.planned),
+    r.actual===null?'–':reportMinutes(r.actual),r.label,r.correctionCount?'Ja ('+r.correctionCount+')':'Nein',conflict,action];
+  });
+  reportTable(panels,'Arbeitskarten durchsuchen und direkt öffnen',
+   ['AK','Datum','Kunde / Objekt','Leistung','Mitarbeiter','Termin','Soll','Ist','Status','Korrigiert','Geplante Konflikte','Aktion'],rows);
+  if(listed.length>500)panels.append(el('p','Es werden maximal 500 Ergebnisse angezeigt. Bitte genauer filtern.'));
+  const histories=listed.filter(r=>r.correctionCount).map(r=>{
+    const e=state.entries.find(e=>e.appointmentId===r.id.split('|')[0]&&e.appointmentOccurrence===r.originalDate);
+    const last=e?.corrections?.at(-1),d=last?.time?new Date(last.time):null;
+    return [r.ak,formatDate(r.date),r.customer,r.correctionCount, d&&Number.isFinite(d.getTime())?d.toLocaleString('de-DE'):'–',
+      last?.reason||'–',last?.changes?.map(c=>c.label||c.field).join(', ')||'–'];
+  });
+  if(histories.length)reportTable(panels,'Nachträglich korrigierte Arbeitskarten (Änderungsprotokoll)',
+    ['AK','Termin','Kunde','Korrekturen','Letzte Korrektur','Grund','Geänderte Felder'],histories);
  }
 
  if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Auftragsstatus',['Status','Einträge'],[...d.statusMap].map(([k,n])=>[k,n]));
@@ -1155,9 +1243,9 @@ function akCsvBlob(rows){
  return new Blob(['\ufeff'+rows.map(row=>row.map(akCsvCell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
 }
 function akCsvRows(data,filter=''){
- const rows=[['AK','Datum','Geplant von','Geplant bis','Kundennummer','Kunde','Gebäude','Leistung','Auftragstitel','Mitarbeiter','Auftragsart','Status','Soll-Minuten','Ist-Minuten','Konflikt mit','Arbeiten','Bemerkungen']];
+ const rows=[['AK','Datum','Geplant von','Geplant bis','Kundennummer','Kunde','Gebäude','Leistung','Auftragstitel','Mitarbeiter','Auftragsart','Status','Soll-Minuten','Ist-Minuten','Konflikt mit','Arbeiten','Bemerkungen','Korrekturen','Letzte Korrektur']];
  for(const r of data.rows.filter(x=>!filter||x.status===filter)){
-  rows.push([r.ak,r.date,r.start,r.end,r.customerNumber,r.customer,r.object,r.service,r.title,r.employee,r.kind,r.label,r.planned,r.actual===null?'':r.actual,r.conflicts.join(' | '),r.workDone,r.remarks]);
+  rows.push([r.ak,r.date,r.start,r.end,r.customerNumber,r.customer,r.object,r.service,r.title,r.employee,r.kind,r.label,r.planned,r.actual===null?'':r.actual,r.conflicts.join(' | '),r.workDone,r.remarks,r.correctionCount,r.lastCorrection]);
  }
  return rows;
 }
@@ -1169,7 +1257,8 @@ async function exportOrderStatusCsv(){
 }
 async function reportExportCsv(){
  const d=reportBuild(),data=akReportData(d.from,d.to,$('rptCustomer').value,$('reportEmployee').value,$('reportObject').value,$('reportService').value);
- const status=$('reportOrderStatus').value,selected=data.rows.filter(r=>!status||(status==='_none'?r.status==='open':r.status===status));
+ const status=$('reportOrderStatus').value,lookup=$('reportAkSearch').value,correctedOnly=$('reportAkCorrectionFilter').value==='corrected';
+ const selected=data.rows.filter(r=>(!status||(status==='_none'?r.status==='open':r.status===status))&&(!lookup||akMatchesSearch(state.appointments.find(a=>a.id===r.id.split('|')[0])||{},lookup))&&(!correctedOnly||r.correctionCount>0));
  const rows=akCsvRows({...data,rows:selected});
  rows.push([],['FREIE ARBEITSZEITEN (ohne zugeordneten Auftrag)']);
  rows.push(['Datum','Mitarbeiter','Kunde','Geschäftsstelle','Leistung','Beginn','Ende','Pause Minuten','Geleistete Minuten','Status','Bemerkung']);
@@ -1181,11 +1270,14 @@ async function reportExportCsv(){
 }
 
 document.querySelectorAll('#reportFilters select,#reportFilters input[type="date"]').forEach(el=>el.addEventListener('change',()=>{if(el.id==='rptCustomer')$('reportObject').value='';renderReporting()}));
+$('reportAkSearch').addEventListener('input',renderReporting);
+$('reportAkQuickSearch').addEventListener('input',()=>{$('reportAkSearch').value=$('reportAkQuickSearch').value;renderReporting()});
+$('reportOnlyCorrectedQuick').addEventListener('change',()=>{$('reportAkCorrectionFilter').value=$('reportOnlyCorrectedQuick').checked?'corrected':'';renderReporting()});
 $('reportCustomerSearch').addEventListener('input',renderReporting);
 document.querySelectorAll('[data-open-report]').forEach(b=>b.onclick=()=>reportOpenTab(b.dataset.openReport));
 $('reportBack').onclick=reportOpenHome;
 document.querySelectorAll('[data-report-range]').forEach(b=>b.onclick=()=>reportSetRange(b.dataset.reportRange));
-$('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','rptCustomer','reportEmployee','reportObject','reportService','reportEntryKind','reportOrderStatus'])$(id).value='';renderReporting()};
+$('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','rptCustomer','reportEmployee','reportObject','reportService','reportEntryKind','reportOrderStatus','reportAkSearch','reportAkCorrectionFilter'])$(id).value='';renderReporting()};
 $('reportCsv').onclick=reportExportCsv;
 $('reportTableCsv').onclick=async()=>{
  const rows=[['Bericht',reportTitles[activeReportTab]],['Zeitraum',$('reportFrom').value+' bis '+$('reportTo').value]];
