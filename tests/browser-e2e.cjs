@@ -128,6 +128,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  const appointmentCount=await page.locator('#qAppointment option').count();
  assert(appointmentCount>=1,'AK-Auswahl vorhanden');
  if(appointmentCount>1)await page.locator('#qAppointment').selectOption({index:1});
+ await page.locator('#qScope').selectOption('combined');
  await page.locator('#qAreas [data-area="200"]').click();
  await page.locator('#qWindowPicker [data-window="standard"]').click();
  await page.locator('#qWindowPicker [data-window="large"]').click();
