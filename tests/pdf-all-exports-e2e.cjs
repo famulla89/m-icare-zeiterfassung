@@ -64,11 +64,13 @@ function verifyPdf(name,bytes,{text,expectPagesMin=1}={}){
  await fromBlob('03_AK_Status_alle_Oktober.pdf',"createOrderStatusPdf('2026-10','')");
  await fromBlob('04_AK_Status_offen.pdf',"createOrderStatusPdf('2026-10','open')");
  await fromBlob('05_AK_Status_fertig.pdf',"createOrderStatusPdf('2026-10','done')");
- await page.evaluate(()=>{document.getElementById('historyMonth').value='2028-01';document.getElementById('reportMode').value='month';document.getElementById('reportWholeMonth').checked=true;document.getElementById('reportWholeYear').checked=false;});
+ // historyMonth ist eine Select-Liste vorhandener Monate: 2028-01 lässt sich dort
+ // nicht als unzulässige Option setzen. Deshalb für einen leeren Zeitraum Tag-Modus nutzen.
+ await page.evaluate(()=>{document.getElementById('reportMode').value='day';document.getElementById('reportDay').value='2028-01-12';document.getElementById('reportWholeMonth').checked=false;document.getElementById('reportWholeYear').checked=false;});
  const emptyRange=await page.evaluate(()=>reportRange());
- assert.equal(emptyRange.from,'2028-01-01','Empty AK report must actually cover January 2028');
+ assert.equal(emptyRange.from,'2028-01-12','Empty AK report must actually cover 2028-01-12');
  await fromBlob('06_AK_Status_ohne_Termine.pdf',"createOrderStatusPdf('2028-01','')");
- await page.evaluate(()=>{document.getElementById('historyMonth').value='2026-10'});
+ await page.evaluate(()=>{document.getElementById('reportMode').value='month';document.getElementById('reportWholeMonth').checked=true;document.getElementById('historyMonth').value='2026-10'});
  // 3. Kundenübersicht und Kundendetail: auch archivierte Kunden.
  await page.evaluate(()=>{showScreen('customerOverviewScreen');document.getElementById('customerStateFilter').value='all';document.getElementById('customerSearch').value='';renderAllCustomers()});
  await downloaded('07_Kundenliste_alle.pdf',()=>page.evaluate(()=>exportAllCustomersPdf()));
