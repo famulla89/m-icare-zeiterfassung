@@ -21,6 +21,10 @@ const fixture=JSON.parse(fs.readFileSync('testdata/micare-10-kunden.json','utf8'
  await assert.rejects(cloud.decrypt(encrypted,'Some-wrong-passphrase-2026'),/Falsche Passphrase|beschädigt/);
  const corrupted={...encrypted,ciphertext:encrypted.ciphertext.slice(0,-9)+'AAAA'+encrypted.ciphertext.slice(-5)};
  await assert.rejects(cloud.decrypt(corrupted,pass),/Falsche Passphrase|beschädigt/);
+ const trashed=structuredClone(fixture);
+ const removed=trashed.appointments.shift();
+ trashed.appointmentTrash.push({appointment:removed,deletedAt:new Date().toISOString()});
+ assert.equal(cloud.validateSnapshot(trashed),trashed,'Archived AK can remain referenced by documented work');
  const duplicate=structuredClone(fixture);duplicate.customers.push({...fixture.customers[0]});
  assert.throws(()=>cloud.validateSnapshot(duplicate),/doppelte ID/);
  const orphan=structuredClone(fixture);orphan.entries[0].appointmentId='missing';
