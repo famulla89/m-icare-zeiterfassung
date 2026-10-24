@@ -27,9 +27,10 @@ function verifyPdf(name,bytes,{text,expectPagesMin=1}={}){
  }
  return {name,pages,bytes:bytes.length};
 }
+let activeBrowser=null;
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});activeBrowser=browser;
  const page=await browser.newPage({viewport:{width:1450,height:1100},acceptDownloads:true});
  page.setDefaultTimeout(15000);
  const jsErrors=[];page.on('pageerror',e=>jsErrors.push(String(e)));
@@ -145,5 +146,5 @@ function verifyPdf(name,bytes,{text,expectPagesMin=1}={}){
  assert.equal(jsErrors.length,0,'Unhandled browser JS errors: '+jsErrors.join('; '));
  fs.writeFileSync(path.join(out,'QA-ERGEBNIS.json'),JSON.stringify({createdAt:new Date().toISOString(),checks:results},null,2));
  console.log('ALL PDF TESTS PASS: '+results.length+' PDFs produced with valid A4 pages');
- await browser.close();server.close();
-})().catch(e=>{console.error('PDF REGRESSION FAILED:',e);server.close();process.exitCode=1});
+ await browser.close();activeBrowser=null;server.close();
+})().catch(async e=>{console.error('PDF REGRESSION FAILED:',e);try{await activeBrowser?.close()}catch{}server.close();process.exitCode=1});
