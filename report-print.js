@@ -29,7 +29,7 @@
       if(tr.closest('thead'))conflict.textContent='Konflikt';
       else{
        const summary=conflict.querySelector('summary')?.textContent||'';
-       const count=Number(summary.match(/\\d+/)?.[0]||0);
+       const count=Number(summary.match(/[0-9]+/)?.[0]||0);
        conflict.textContent=count>0?'Ja ('+count+')':'Nein';
       }
      }
