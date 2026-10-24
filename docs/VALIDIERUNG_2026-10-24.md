@@ -66,3 +66,22 @@ Automatisierte Nachweise:
 ## 6. Nächste Ausbaustufe
 
 Die **Kostenrechnung** (Vertragspreise, Personalnebenkosten, Wege, Material, Geräte/Verschleiß, Fensterflächen) beginnt **erst nach** den offenen manuellen Freigabetests. Kosten werden ausdrücklich nicht aus bloßen Zeitangaben oder ohne belegte Mengen und Preisstammdaten geschätzt.
+
+
+## 7. Zweite unabhängige Prüfrunde (24.10.2026)
+
+Nach der ersten erfolgreichen Funktionsprüfung wurden weitere kritische Grenzfälle untersucht und korrigiert:
+
+1. **Geplanten Auftrag auf einen anderen tatsächlichen Arbeitstag korrigieren:** Die Auftragsverknüpfung mit der ursprünglichen Terminserie bleibt bestehen. Datum/Uhrzeit-Abweichungen werden begründungspflichtig und im Korrekturprotokoll gespeichert.
+2. **Kalender nach geänderter Ist-Datierung:** Das ursprüngliche Terminereignis bleibt im Kalender; die dokumentierte Arbeitszeit erscheint zusätzlich auf ihrem tatsächlichen Arbeitstag und wird nicht am selben Tag doppelt gezählt.
+3. **Doppelte Speicheraktionen:** Während eines laufenden Speichervorgangs wird die Speichern-Schaltfläche deaktiviert. Weitere zeitgleiche Aufrufe werden ignoriert. Der Test wartet auf den tatsächlichen Abschluss vorheriger asynchroner Speichervorgänge, um reproduzierbare Ergebnisse zu liefern.
+4. **Nachtschichtüberschneidungen:** Arbeitszeiten werden anhand von Start- und Enddatum einschließlich Uhrzeit verglichen. Eine Schicht 23:00–02:00 überschneidet sich beispielsweise mit 01:00–03:00 am Folgetag; direkt angrenzende Zeiten lösen keine Fehlwarnung aus.
+5. **Ungespeicherte Formulardaten:** Telefonnummern, E-Mail, Kunden-/Objektauswahl, Auftragskorrekturbegründung und weitere neue Eingabefelder werden jetzt bei der Warnung vor nicht gespeicherten Änderungen berücksichtigt.
+6. **Regressionstests erweitert:** Die Chromium-End-to-End-Prüfung testet Datumskorrektur bei zugeordneten Aufträgen, Anzeige am tatsächlichen Kalendertag, paralleles Speichern sowie das Erkennen ungespeicherter Kontaktdaten/Korrekturbegründungen. Der Kernzeittest prüft Schichten über Mitternacht und angrenzende Intervalle.
+
+**Bestätigte GitHub-Nachweise für diesen Code-Stand:**
+
+- [Chromium-Browser-E2E: erfolgreich](https://github.com/famulla89/m-icare-zeiterfassung/actions/runs/40102447247)
+- [Reporting-, Zeiten- und Korrektur-Regressionen: erfolgreich](https://github.com/famulla89/m-icare-zeiterfassung/actions/runs/40102447292)
+
+**Weiterhin keine Vollfreigabe:** Die Tests ersetzen weder echte Android-Geräte und native Speicherberechtigungen noch eine signierte Windows-Installation, Malware-Reputationsprüfung, realen mehrseitigen A4-Papierdruck oder Belastungsprüfungen mit sämtlichen denkbaren großen/fehlerhaften JSON-Datensätzen. Insbesondere ist das Audit-Protokoll ohne Benutzeranmeldung nicht manipulationssicher und kann die tatsächlich bedienende Person nicht verifizieren. Eine erfolgreiche Browserprüfung ist keine pauschale Aussage zur Sicherheit eines EXE-Downloads.
