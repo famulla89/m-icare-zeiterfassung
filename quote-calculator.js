@@ -98,7 +98,7 @@
   return {scope,mode,area,visits,hoursPerVisit:euro(workHours),setupMinutes,windowSqm,windowItems,cleaningCost,
    windowsNet,liftRental,minimumNet:euro(minimumNet),recommendNet,net,tax,gross,vat,
    profit:euro(net-cleaningCost-liftRental),rows,roomCostIncluded:roomWork,
-   estimatedLaborWarning:windowWork&&hours===0?'Fenster-Arbeitszeit wurde nicht geschätzt: trage Stunden pro Einsatz ein, damit der Lohn in den internen Kosten berücksichtigt wird.':null};
+   estimatedLaborWarning:scope==='windows'&&hours===0?'Fenster-Arbeitszeit nicht angegeben: Der m²-Preis ist bereits ein Verkaufspreis. Ohne Stunden kannst du interne Personalkosten nur unvollständig prüfen.':hours>16?'Achtung: '+hours+' Stunden je Einsatz eingegeben. Falls du Minuten meinst: 0,5 Stunden sind 30 Minuten.':null};
  }
  function validateDocument(d){
   if(!d||typeof d!=='object'||!['quote','invoice'].includes(d.kind))throw Error('Dokumenttyp fehlt');
