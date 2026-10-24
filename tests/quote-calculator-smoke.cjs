@@ -50,6 +50,45 @@ assert(create({minimumSqm:20,area:200}).net>=4000,'Minimum net per sqm honored')
 assert.throws(()=>create({windowItems:[{label:'Fenster',qty:0,each:1,rate:3,sides:1,soil:1}]}),/Stückzahl/);
 assert.throws(()=>create({windowItems:Array(9).fill({label:'Test',qty:1,each:1,rate:3,sides:1,soil:1})}),/Maximal acht/);
 assert.throws(()=>create({mode:'invalid'}),/Betriebsmodus/);
+// Exact service modes: office area must not be billed for a window-only commission.
+const winOnly=create({scope:'windows',area:200,hours:0,sqmPerHour:0,visits:1,setupMinutes:0,km:0,material:0,windowItems:[
+ {label:'Standardfenster',qty:10,each:1.5,rate:4,sides:1,soil:1,frame:false,ladder:false,lift:false}
+]});
+assert.equal(winOnly.windowSqm,15);
+assert.equal(winOnly.windowsNet,60);
+assert.equal(winOnly.net,60,'Window-only price must not include 200 sqm of office cleaning');
+assert(winOnly.rows.every(r=>!r.title.includes('Raum- und Bodenreinigung')));
+assert.equal(winOnly.hoursPerVisit,0);
+assert(winOnly.estimatedLaborWarning,'Warn about missing estimate of window labor');
+assert.equal(create({scope:'windows',area:200,hours:0,sqmPerHour:0,visits:1,windowItems:[
+ {label:'Standardfenster',qty:10,each:1.5,rate:4,sides:1,soil:1}
+]}).windowSqm,15,'0 sqm/hour must be accepted for window-only work');
+const winWithHours=create({scope:'windows',area:200,hours:2,visits:1,windowItems:[
+ {label:'Standardfenster',qty:10,each:1.5,rate:4,sides:1,soil:1}
+]});
+assert(winWithHours.cleaningCost>winOnly.cleaningCost,'Internal work hours must count as costs');
+assert(winWithHours.net>winOnly.net,'Base work/drive costs can be charged in addition to glass price');
+const roomsOnly=create({scope:'rooms',visits:1,area:200,hours:0,sqmPerHour:100,windowItems:[{label:'Fenster',qty:5,each:1,rate:5,sides:2,soil:1}]});
+assert.equal(roomsOnly.windowsNet,0,'Office-only job must not accidentally bill windows');
+assert(roomsOnly.rows.every(r=>!r.title.includes('Fenster')));
+assert.throws(()=>create({scope:'rooms',hours:0,sqmPerHour:0}),/m² pro Stunde/);
+assert.throws(()=>create({scope:'windows',windowItems:[]}),/mindestens eine Fensterart/);
+assert.throws(()=>create({scope:'other',hours:0}),/Arbeitszeit in Stunden/);
+const other=create({scope:'other',serviceName:'Sonderreinigung',hours:3,area:200,visits:1,sqmPerHour:0});
+assert(other.rows[0].title.includes('Sonderreinigung'));
+assert.equal(other.windowSqm,0);
+assert.equal(other.hoursPerVisit,3.25,'Setup time is still part of internal costs');
+const combo=create({scope:'combined',visits:1,windowItems:[{label:'Glasdach',qty:1,each:7.5,rate:10,sides:1,soil:1}]});
+assert(combo.rows.some(r=>r.title.includes('Raum- und Bodenreinigung')));
+assert(combo.rows.some(r=>r.title.includes('Glasdach')));
+const customWindows=create({scope:'windows',manualNet:99.99,visits:1,windowItems:[
+ {label:'Standardfenster',qty:2,each:1.5,rate:3,sides:1,soil:1},
+ {label:'Wintergarten',qty:1,each:5,rate:5,sides:1,soil:1}
+]});
+assert.equal(customWindows.net,99.99);
+assert.equal(m.euro(customWindows.rows.reduce((a,r)=>a+r.total,0)),99.99);
+assert(customWindows.rows.some(r=>r.title.includes('Wintergarten')),'Manual prices must keep window descriptions in the PDF');
+
 const invoice={...m.createDocument({id:'t',kind:'invoice',number:'RG-QA',customerName:'Muster GmbH',sellerName:'Test',service:'Fenster',rows:multiple.rows,net:multiple.net,tax:multiple.tax,gross:multiple.gross,vat:multiple.vat})};
 assert.equal(m.validateDocument(invoice),invoice);
 
