@@ -97,7 +97,7 @@
   </div>
   <div class="row" style="margin-top:12px"><button type="button" id="reportReset" class="secondary">Filter zurücksetzen</button></div>
  </details>
- <div class="row reportActions"><button type="button" id="reportCsv">⬇ Einzelzeiten als CSV</button><button type="button" id="reportTableCsv" class="secondary">⬇ Berichtstabelle als CSV</button><button type="button" id="reportPrint" class="secondary">🖨 Bericht drucken / als PDF</button></div>
+ <div class="row reportActions"><button type="button" id="reportCsv">⬇ AK & Arbeitszeiten als CSV</button><button type="button" id="reportTableCsv" class="secondary">⬇ Berichtstabelle als CSV</button><button type="button" id="reportPrint" class="secondary">🖨 Bericht drucken / als PDF</button></div>
  <div id="reportSummary" class="objectPanel" aria-live="polite"></div>
  <div id="reportPanels"></div>
 </div>
@@ -404,6 +404,8 @@ function renderOrderOverview(){
    if(r.conflicts.length){const warn=el('div','⚠ Terminkonflikt mit '+r.conflicts.join(', '));warn.style.color='#ad4915';warn.style.fontWeight='700';item.append(warn)}
    if(r.workDone)item.append(el('div','Ausgeführt: '+r.workDone));
    if(r.remarks)item.append(el('div','Hinweis: '+r.remarks));
+   const entry=state.entries.find(e=>e.appointmentId===r.id.split('|')[0]&&e.appointmentOccurrence===r.originalDate);
+   if(entry){const button=el('button','Arbeitskarte bearbeiten');button.type='button';button.className='secondary smallbtn';button.onclick=()=>editEntry(entry.id);item.append(button)}
    area.append(item);
   }
  }
@@ -592,7 +594,7 @@ function createOrderStatusPdf(month,filter){
    c.font='bold 12px Arial';c.fillText(fit(r.customer+' / '+r.object,widths[2]),xs[2],y-12);
    c.font='12px Arial';c.fillText(fit(r.service,widths[2]),xs[2],y+5);
    c.fillText(fit(r.employee,widths[3]),xs[3],y-3);
-   c.fillText(fit(reportMinutes(r.planned)+' / '+(r.actual===null?'–':reportMinutes(r.actual)),widths[4]),xs[4],y-3);
+   c.fillText(fit((r.planned/60).toFixed(1)+'h / '+(r.actual===null?'–':(r.actual/60).toFixed(1)+'h'),widths[4]),xs[4],y-3);
    c.font='bold 12px Arial';c.fillStyle=r.conflicts.length?'#b45309':'#24384a';
    c.fillText(fit((r.conflicts.length?'⚠ ':'')+r.label,widths[5]),xs[5],y-3);
    if(r.conflicts.length){c.font='10px Arial';c.fillText(fit('Konflikt: '+r.conflicts.join('; '),widths[5]),xs[5],y+10)}
@@ -1122,9 +1124,21 @@ function renderReporting(){
   reportTable(panels,'Kundenstamm und Aufwand',['Kunde','Geschäftsstellen','Einsätze','Stunden'],rows);
  }
  if(activeReportTab==='orders'){
-  const compare=d.occ.map(o=>{const e=d.entries.find(e=>e.appointmentId===o.appointment.id&&e.appointmentOccurrence===o.originalDate);const part=x=>{const a=x.split(':').map(Number);return a[0]*60+a[1]};const planned=Math.max(0,part(o.end)-part(o.start));return [o.date,customerNameForReport(o.appointment.customerId),o.appointment.employee,o.start+'–'+o.end,reportMinutes(planned),e?reportMinutes(e.minutes):'Offen',e?reportMinutes(e.minutes-planned):'—',e?.deviationReason||'—']});
-  reportTable(panels,'Geplante Aufträge und Soll-Ist-Vergleich',['Datum','Kunde','Mitarbeiter','Planzeit','Soll','Ist netto','Differenz','Abweichungsgrund'],compare.slice(0,500));
+  const ak=akReportData(d.from,d.to,$('rptCustomer').value,$('reportEmployee').value,$('reportObject').value,$('reportService').value);
+  const statusFilter=$('reportOrderStatus').value;
+  const listed=ak.rows.filter(r=>!statusFilter||(statusFilter==='_none'?r.status==='open':r.status===statusFilter));
+  const percent=(ak.metrics.done+ak.metrics.open)?Math.round(100*ak.metrics.done/(ak.metrics.done+ak.metrics.open)):0;
+  const h=el('div','');h.className='objectPanel';
+  h.append(el('h3','Arbeitskarten · Kundenaufträge'));
+  h.append(el('p','AK gesamt: '+ak.metrics.total+' · Offen / in Bearbeitung: '+ak.metrics.open+
+   ' ('+reportMinutes(ak.metrics.openPlanned)+' geplant) · Fertig: '+ak.metrics.done+
+   ' ('+reportMinutes(ak.metrics.doneActual)+' geleistet) · Erfüllungsquote: '+percent+' % · Konflikte: '+ak.metrics.conflictRows));
+  panels.append(h);
+  reportTable(panels,'Offene Arbeitskarten und abgeschlossene Aufträge',
+   ['AK','Datum','Kunde / Objekt','Leistung','Mitarbeiter','Termin','Soll','Ist','Status','Konflikt'],
+   listed.slice(0,500).map(r=>[r.ak,formatDate(r.date),r.customer+' · '+r.object,r.service,r.employee,r.start+'–'+r.end,reportMinutes(r.planned),r.actual===null?'–':reportMinutes(r.actual),r.label,r.conflicts.length?'⚠ '+r.conflicts.join('; '):'–']));
  }
+
  if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Auftragsstatus',['Status','Einträge'],[...d.statusMap].map(([k,n])=>[k,n]));
  if(activeReportTab==='quality'||activeReportTab==='orders')reportTable(panels,'Gründe für Zeitabweichungen',['Grund','Einträge'],d.reasons.map(x=>[x.name,x.count]));
  if(activeReportTab==='quality')reportTable(panels,'Überschneidende Arbeitszeiten (gleicher Mitarbeiter)',['Mitarbeiter','Datum','Zeit A','Zeit B'],d.overlaps);
@@ -1172,14 +1186,14 @@ $('reportBack').onclick=reportOpenHome;
 document.querySelectorAll('[data-report-range]').forEach(b=>b.onclick=()=>reportSetRange(b.dataset.reportRange));
 $('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','rptCustomer','reportEmployee','reportObject','reportService','reportEntryKind','reportOrderStatus'])$(id).value='';renderReporting()};
 $('reportCsv').onclick=reportExportCsv;
-$('reportTableCsv').onclick=()=>{
+$('reportTableCsv').onclick=async()=>{
  const rows=[['Bericht',reportTitles[activeReportTab]],['Zeitraum',$('reportFrom').value+' bis '+$('reportTo').value]];
- for(const t of $('reportPanels').querySelectorAll('table')){
-  rows.push([],[t.closest('.objectPanel')?.querySelector('h3')?.textContent||'Tabelle']);
-  for(const tr of t.rows)rows.push([...tr.cells].map(c=>c.textContent));
+ for(const table of $('reportPanels').querySelectorAll('table')){
+  rows.push([],[table.closest('.objectPanel')?.querySelector('h3')?.textContent||'Tabelle']);
+  for(const tr of table.rows)rows.push([...tr.cells].map(cell=>cell.textContent));
  }
- const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""').replace(/^[=+@-]/,"'")+'"').join(';')).join('\r\n');
- const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='M-iCare_Bericht_'+activeReportTab+'_'+$('reportFrom').value+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)
+ await saveExport('M-iCare_Bericht_'+activeReportTab+'_'+$('reportFrom').value+'.csv',akCsvBlob(rows),'Berichte');
+ notify('Berichtstabelle als CSV gespeichert');
 };
 $('reportPrint').onclick=()=>{const style=document.createElement('style');style.id='reportPrintOnly';style.textContent="@media print {\n @page{size:A4 portrait;margin:14mm}\n html,body{width:auto!important;overflow:visible!important;background:white!important}\n body .screen,body #history{display:none!important}\n body #reportingScreen{display:block!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}\n body #reportHome,body #reportFilters,body .reportActions,body #reportBack,body header,body nav,body .backbar,body .footer,body #toast{display:none!important}\n body #reportDetail{display:block!important}\n body #reportingScreen .objectPanel{margin:9px 0!important;padding:8px 0!important;border:0!important;box-shadow:none!important;background:white!important}\n body #reportingScreen #reportSummary{break-inside:avoid}\n body #reportingScreen .reportMetrics{grid-template-columns:repeat(3,1fr)!important}\n body #reportingScreen .reportMetric{padding:8px!important}\n body #reportingScreen .tablewrap{overflow:visible!important}\n body #reportingScreen table{min-width:0!important;width:100%!important;font-size:7.7pt!important}\n body #reportingScreen th,body #reportingScreen td{padding:4px 3px!important;overflow-wrap:anywhere}\n body #reportingScreen thead{display:table-header-group}\n body #reportingScreen tr{break-inside:avoid}\n body #reportingScreen h2,body #reportingScreen h3{break-after:avoid}\n}";document.head.append(style);const cleanup=()=>{style.remove();window.removeEventListener('afterprint',cleanup)};window.addEventListener('afterprint',cleanup);window.print()};
 
