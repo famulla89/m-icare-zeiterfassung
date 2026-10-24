@@ -6,6 +6,7 @@ on:
       - feature/audited-order-corrections-20261024
     paths:
       - index.html
+      - cloud-transfer.js
       - tests/browser-e2e.cjs
       - .github/workflows/browser-e2e.yml
   pull_request:
