@@ -9,6 +9,7 @@ on:
       - 'quote-calculator.js'
       - 'tests/quote-calculator-smoke.cjs'
       - 'quote-ui.js'
+      - 'report-print.js'
       - 'sw.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
@@ -43,7 +44,7 @@ jobs:
       - name: Bundle current offline web app
         run: |
           mkdir -p android-app/app/src/main/assets
-          cp index.html cloud-transfer.js quote-calculator.js quote-ui.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+          cp index.html cloud-transfer.js quote-calculator.js quote-ui.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
@@ -61,6 +62,7 @@ jobs:
           unzip -p "$APK" assets/index.html | grep -Fq 'data-jump="quoteCalculator"'
           unzip -l "$APK" | grep -Fq 'assets/quote-calculator.js'
           unzip -l "$APK" | grep -Fq 'assets/quote-ui.js'
+          unzip -l "$APK" | grep -Fq 'assets/report-print.js'
           unzip -l "$APK" | grep -Fq 'assets/cloud-transfer.js'
           echo 'PASS: normal M-iCare package, calculator UI, offers and cloud-transfer bundled'
       - uses: actions/upload-artifact@v4
