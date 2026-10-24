@@ -128,7 +128,7 @@
   node.append(info);
   const scope=document.createElement('p');scope.className='hint';scope.textContent={rooms:'Nur Raum-/Bodenreinigung',windows:'Nur Fenster-/Glasreinigung (ohne Büroputzen)',combined:'Raum-/Bodenreinigung UND Fenster',other:'Sonstige Leistung nach Stunden'}[out.scope]+' · '+(out.windowItems.length?out.windowItems.length+' Fensterpositionen':'keine Fensterpositionen');node.append(scope);
   const info2=document.createElement('p');info2.className='hint';
-  info2.textContent='Geschätzte interne Kosten '+de(out.cleaningCost)+' · Fenster-Verkaufspreis '+de(out.windowsNet)+' · Hebebühnen-Aufwand +de(out.liftRental)+' · Kalkulierter Überschuss ca. '+de(out.profit);
+  info2.textContent='Geschätzte interne Kosten '+de(out.cleaningCost)+' · Fenster-Verkaufspreis '+de(out.windowsNet)+' · Hebebühnen-Aufwand '+de(out.liftRental)+' · Kalkulierter Überschuss ca. '+de(out.profit);
   node.append(info2);
   const info3=document.createElement('p');info3.className='hint';
   info3.textContent='Preisvorschlag '+de(out.recommendNet)+' netto'+(num('ManualNet')>0?' · Dein abweichender Festpreis wurde übernommen.':'');
