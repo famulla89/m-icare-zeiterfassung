@@ -62,7 +62,7 @@
 </form>
 <p class="hint">Du kannst Einträge aus jedem Monat bearbeiten. Bei Änderungen wird immer der gesamte Datenstand für die Sicherung verwendet.</p>
 </section>
-<section class="screen" id="plannedWorkScreen"><h2>📋 Geplante Aufträge abschließen</h2><p class="hint">Wähle zuerst den Mitarbeiter und das Datum, anschließend den geplanten Auftrag. Die tatsächliche Zeit und der Auftragsstatus werden erst danach erfasst.</p><div class="grid"><div><label for="plannedListDate">Arbeitstag</label><input id="plannedListDate" type="date"></div><div><label for="plannedListEmployee">Mitarbeiter</label><select id="plannedListEmployee"></select></div></div><div id="plannedListItems" class="objectPanel"></div></section>
+<section class="screen" id="plannedWorkScreen"><h2>📋 Geplante Aufträge abschließen</h2><p class="hint">Wähle zuerst den Mitarbeiter und das Datum, anschließend den geplanten Auftrag. Die tatsächliche Zeit und der Auftragsstatus werden erst danach erfasst.</p><div class="grid"><div><label for="plannedListDate">Arbeitstag</label><input id="plannedListDate" type="date"></div><div><label for="plannedListEmployee">Mitarbeiter</label><select id="plannedListEmployee"></select></div></div><div class="objectPanel" style="margin-top:14px"><label for="plannedAkSearch">Arbeitskarte suchen (AK-Nummer, Kunde, Gebäude oder Leistung)</label><input type="search" id="plannedAkSearch" placeholder="z. B. AK 13 oder Nordstern" autocomplete="off"><p class="hint">Bei einer AK-Suche wird auch außerhalb des gewählten Tages und Mitarbeiters gesucht. Ohne Suche siehst du wie bisher die Termine für den ausgewählten Arbeitstag.</p></div><div id="plannedListItems" class="objectPanel"></div></section>
 <section class="screen" id="plannedEditorScreen"><h2>📋 Geplanten Auftrag dokumentieren</h2><p class="hint">Geplante Daten prüfen, tatsächlich geleistete Zeiten, Status und bei Abweichungen die Begründung dokumentieren.</p><div id="plannedFormSlot"></div></section>
 <section class="screen" id="dailyWorkOverview"><h2>📅 Tagesübersicht der Arbeitszeiten</h2><p class="hint">Arbeitszeiten und geplante Aufträge eines Mitarbeiters an einem Tag. Auch mehrere Einsätze beim gleichen Kunden bleiben getrennte Einträge.</p><div class="grid"><div><label for="dailyOverviewDate">Datum</label><input type="date" id="dailyOverviewDate"></div><div><label for="dailyOverviewEmployee">Mitarbeiter</label><select id="dailyOverviewEmployee"></select></div></div><div id="dailyOverviewTotals" class="status" style="margin-top:14px"></div><h3>Erfasste Arbeitszeiten</h3><div id="dailyOverviewEntries"></div><h3>Geplante Termine</h3><div id="dailyOverviewAppointments"></div><div class="row"><button type="button" id="dailyOverviewNew" class="secondary">+ Freie Arbeitszeit hinzufügen</button></div></section>
 <section class="screen" id="reportingScreen">
@@ -204,23 +204,74 @@ function openFreeWorkScreen(){
 function openPlannedWorkScreen(){
  renderPlannedWorkScreen();showScreen('plannedWorkScreen');
 }
+function akMatchesSearch(a,query){
+ const text=String(query||'').trim().toLocaleLowerCase('de');
+ if(!text)return true;
+ const numeric=/^(?:ak[\s-]*)?(\d+)$/i.exec(text);
+ if(numeric)return Number(a.akNumber)===Number(numeric[1]);
+ const c=state.customers.find(x=>x.id===a.customerId),o=state.objects.find(x=>x.id===a.objectId);
+ return [akLabel(a),c?.name,o?.name,a.service,orderTitle(a)].some(x=>String(x||'').toLocaleLowerCase('de').includes(text));
+}
+function akTimeMinutes(value){const m=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(value||''));return m?Number(m[1])*60+Number(m[2]):0}
+function akPlannedConflicts(item){
+ if(!item?.appointment?.employee)return[];
+ const from=item.date,until=item.date;
+ const others=state.appointments.filter(a=>a.id!==item.appointment.id&&a.employee===item.appointment.employee)
+  .flatMap(a=>datesFor(a,from,until)).filter(o=>o.date===item.date);
+ return others.filter(o=>item.start<o.end&&o.start<item.end).map(o=>{
+   const mins=Math.max(0,Math.min(akTimeMinutes(item.end),akTimeMinutes(o.end))-Math.max(akTimeMinutes(item.start),akTimeMinutes(o.start)));
+   const c=state.customers.find(x=>x.id===o.appointment.customerId),obj=state.objects.find(x=>x.id===o.appointment.objectId);
+   return {item:o,minutes:mins,label:akLabel(o.appointment)+' · '+o.start+'–'+o.end+' · '+(c?.name||'Kunde')+' / '+(obj?.name||'Objekt')};
+ });
+}
 function renderPlannedWorkScreen(){
- const date=$('plannedListDate'),employee=$('plannedListEmployee'),area=$('plannedListItems');
+ const date=$('plannedListDate'),employee=$('plannedListEmployee'),area=$('plannedListItems'),query=$('plannedAkSearch').value.trim();
  if(!date.value)date.value=isoDate();
  const old=employee.value||$('employee').value;
  employee.replaceChildren(...state.employees.map(n=>{const option=el('option',n);option.value=n;return option}));
  if(state.employees.includes(old))employee.value=old;
  area.replaceChildren();
- const list=(state.appointments||[]).filter(a=>a.employee===employee.value).flatMap(a=>datesFor(a,date.value,date.value)).filter(x=>x.date===date.value).sort((a,b)=>a.start.localeCompare(b.start));
- for(const item of list){
-  const c=state.customers.find(c=>c.id===item.appointment.customerId),o=state.objects.find(o=>o.id===item.appointment.objectId);
-  const row=el('div',item.start+'–'+item.end+' · '+(c?.name||'Kunde')+' · '+(o?.name||'Objekt'));
-  row.className='objectItem';const button=el('button',completedAppointmentEntry(item)?'Bearbeiten':'Auftrag dokumentieren');button.type='button';button.onclick=()=>completeAppointment(item);
+ const matching=(state.appointments||[]).filter(a=>query?akMatchesSearch(a,query):a.employee===employee.value);
+ const list=matching.flatMap(a=>{
+  const today=datesFor(a,date.value,date.value).filter(x=>x.date===date.value);
+  if(!query)return today;
+  if(today.length)return today;
+  // Die Suche nach einer AK findet auch einen Termin außerhalb des gewählten Datums.
+  const start=a.date||date.value;
+  const limit=new Date(date.value+'T12:00:00');
+  limit.setDate(limit.getDate()+90);
+  const next=datesFor(a,date.value,isoDate(limit)).filter(o=>o.date>=date.value);
+  if(next.length)return [next[0]];
+  const first=datesFor(a,start,start);
+  return first.slice(0,1);
+ }).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
+ for(const item of list.slice(0,100)){
+  const a=item.appointment,c=state.customers.find(x=>x.id===a.customerId),o=state.objects.find(x=>x.id===a.objectId);
+  const entry=completedAppointmentEntry(item),done=entry?.orderStatus==='done',corrections=Array.isArray(entry?.corrections)?entry.corrections:[];
+  const row=el('div','');row.className='objectItem';
+  row.append(el('strong',akLabel(a)+' · '+formatDate(item.date)+' · '+item.start+'–'+item.end));
+  row.append(el('div',(c?.name||'Kunde')+' · '+(o?.name||'Objekt')+' · '+(a.service||'Leistung')+' · '+(a.employee||'Nicht zugeordnet')));
+  row.append(el('div','Status: '+(done?'Erledigt':entry?'Bereits dokumentiert ('+(entry.orderStatus||'ohne Status')+')':'Noch nicht dokumentiert')+(corrections.length?' · '+corrections.length+' Korrektur(en)':'') ));
+  const conflicts=akPlannedConflicts(item);
+  if(conflicts.length){
+   const details=document.createElement('details'),heading=el('summary','⚠ Geplante Zeitüberschneidung mit '+conflicts.length+' AK');heading.style.color='#ae540c';heading.style.cursor='pointer';details.append(heading);
+   for(const conflict of conflicts){
+    const partner=el('div',conflict.label+' · '+conflict.minutes+' Minuten Überschneidung');
+    const open=el('button','AK ansehen');open.className='secondary smallbtn';open.type='button';open.onclick=()=>{$('plannedAkSearch').value=akLabel(conflict.item.appointment);$('plannedListDate').value=conflict.item.date;$('plannedListEmployee').value=conflict.item.appointment.employee;renderPlannedWorkScreen()};
+    partner.append(' ',open);details.append(partner);
+   }
+   row.append(details);
+  }
+  const button=el('button',entry?'Erfassung ansehen / korrigieren':'Auftrag dokumentieren');button.type='button';
+  button.className='secondary smallbtn';button.onclick=()=>completeAppointment(item);
   row.append(button);area.append(row);
  }
- if(!list.length)area.append(el('p','Für dieses Datum sind keine geplanten Aufträge vorhanden.'));
+ if(!list.length)area.append(el('p','Keine passenden Arbeitskarten gefunden.'));
+ if(list.length>100)area.append(el('p','Es werden die ersten 100 Ergebnisse angezeigt. Bitte genauer suchen.'));
 }
+
 document.addEventListener('change',e=>{if(['plannedListDate','plannedListEmployee'].includes(e.target?.id))renderPlannedWorkScreen()});
+$('plannedAkSearch').addEventListener('input',renderPlannedWorkScreen);
 function setWorkEntryMode(mode){
  workEntryMode=mode;
  $('plannedWorkPanel').classList.toggle('hidden',mode!=='planned');
@@ -283,12 +334,12 @@ function linkedOccurrence(){
  return original||{appointment,date:prior.date,originalDate:prior.appointmentOccurrence,start:appointment.start,end:appointment.end};
 }
 function syncMonthToWorkday(){try{const day=germanToIso($('date').value),month=day.slice(0,7);if($('month').value!==month){if(![...$('month').options].some(o=>o.value===month)){const dt=new Date(month+'-01T12:00:00'),o=el('option',dt.toLocaleDateString('de-DE',{month:'long',year:'numeric'}));o.value=month;$('month').append(o)}$('month').value=month}}catch{}}
-function refreshLinkedAppointments(){syncMonthToWorkday();let date;try{date=germanToIso($('date').value)}catch{date=''}const select=$('linkedAppointment'),old=select.value;select.replaceChildren();const empty=el('option','– Ohne geplanten Termin erfassen –');empty.value='';select.append(empty);if(!date){$('linkedAppointmentInfo').textContent='Bitte ein gültiges Datum auswählen.';return}const occurrences=state.appointments.flatMap(a=>datesFor(a,date,date)).filter(x=>!x.appointment.employee||x.appointment.employee===$('employee').value);for(const x of occurrences){const c=state.customers.find(c=>c.id===x.appointment.customerId),o=state.objects.find(o=>o.id===x.appointment.objectId),opt=el('option',x.start+'–'+x.end+' · '+(c?.name||'Kunde unbekannt')+(o?' · '+o.name:''));opt.value=appointmentKey(x.appointment,x.originalDate);select.append(opt)}const prior=editId?state.entries.find(e=>e.id===editId):null;
+function refreshLinkedAppointments(){syncMonthToWorkday();let date;try{date=germanToIso($('date').value)}catch{date=''}const select=$('linkedAppointment'),old=select.value;select.replaceChildren();const empty=el('option','– Ohne geplanten Termin erfassen –');empty.value='';select.append(empty);if(!date){$('linkedAppointmentInfo').textContent='Bitte ein gültiges Datum auswählen.';return}const occurrences=state.appointments.flatMap(a=>datesFor(a,date,date)).filter(x=>!x.appointment.employee||x.appointment.employee===$('employee').value);for(const x of occurrences){const c=state.customers.find(c=>c.id===x.appointment.customerId),o=state.objects.find(o=>o.id===x.appointment.objectId),opt=el('option',akLabel(x.appointment)+' · '+x.start+'–'+x.end+' · '+(c?.name||'Kunde unbekannt')+(o?' · '+o.name:''));opt.value=appointmentKey(x.appointment,x.originalDate);select.append(opt)}const prior=editId?state.entries.find(e=>e.id===editId):null;
  if(prior?.appointmentId){
   const key=appointmentKey({id:prior.appointmentId},prior.appointmentOccurrence);
   if(![...select.options].some(o=>o.value===key)){
    const original=state.appointments.find(a=>a.id===prior.appointmentId);
-   if(original){const option=el('option','📋 Zugeordneter Auftrag vom '+formatDate(prior.appointmentOccurrence)+' (tatsächlicher Arbeitstag kann abweichen)');option.value=key;select.append(option)}
+   if(original){const option=el('option',akLabel(original)+' · Zugeordneter Auftrag vom '+formatDate(prior.appointmentOccurrence)+' (tatsächlicher Arbeitstag kann abweichen)');option.value=key;select.append(option)}
   }
  }
  select.value=[...select.options].some(o=>o.value===old)?old:'';
