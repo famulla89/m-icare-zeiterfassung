@@ -1,0 +1,45 @@
+'use strict';
+const fs=require('node:fs');
+const vm=require('node:vm');
+const assert=require('node:assert/strict');
+const html=fs.readFileSync('index.html','utf8');
+const script=html.slice(html.lastIndexOf('<script>')+8,html.lastIndexOf('</script>'));
+function sourceFunction(name,next){
+ const begin=script.indexOf('function '+name+'('),end=script.indexOf(next,begin);
+ assert(begin>=0&&end>begin,'Missing app function '+name);return script.slice(begin,end)
+}
+const dateCode=sourceFunction('germanToIso','\nfunction duration(');
+const durationCode=sourceFunction('duration','\nfunction hours(');
+const isoCode=sourceFunction('isoDate','\nfunction stamp(');
+const recurring=sourceFunction('datesFor','\nfunction customerStats(');
+const sandbox={Date,Number,Math,String,RegExp};
+vm.runInNewContext([isoCode,dateCode,durationCode,recurring].join('\n'),sandbox,{timeout:4000});
+const iso=v=>sandbox.germanToIso(v),duration=v=>sandbox.duration(v);
+assert.equal(iso('29.02.2028'),'2028-02-29');
+assert.throws(()=>iso('29.02.2027'),/Ungültig/);
+assert.throws(()=>iso('31.04.2026'),/Ungültig/);
+const row=(date,endDate,start,end,breakMinutes=0)=>({date,endDate,start,end,breakMinutes});
+assert.equal(duration(row('2026-10-20','2026-10-20','09:00','11:00')),120);
+assert.equal(duration(row('2026-10-20','2026-10-20','09:00','11:00',15)),105);
+assert.equal(duration(row('2026-10-20','2026-10-21','23:00','02:30',30)),180);
+assert.throws(()=>duration(row('2026-10-20','2026-10-20','11:00','09:00')),/Arbeitszeit/);
+assert.throws(()=>duration(row('2026-10-20','2026-10-20','11:00','11:00')),/Arbeitszeit/);
+assert.throws(()=>duration(row('2026-10-20','2026-10-20','11:00','13:00',120)),/Pause/);
+assert.throws(()=>duration(row('2026-10-20','2026-10-20','99:00','13:00')),/Uhrzeit/);
+assert.throws(()=>duration(row('2026-10-20','2026-10-22','10:00','11:00')),/Arbeitszeit/);
+const get=(a,from,to)=>Array.from(sandbox.datesFor(a,from,to),x=>x.date);
+const base={date:'2026-10-05',start:'09:00',end:'10:00',repeat:'once',interval:1,until:'',weekdays:[],exceptions:{}};
+assert.deepEqual(get(base,'2026-10-05','2026-10-31'),['2026-10-05']);
+assert.deepEqual(get({...base,repeat:'weekly'},'2026-10-05','2026-10-20'),['2026-10-05','2026-10-12','2026-10-19']);
+assert.deepEqual(get({...base,repeat:'days',interval:2},'2026-10-05','2026-10-11'),['2026-10-05','2026-10-07','2026-10-09','2026-10-11']);
+assert.deepEqual(get({...base,repeat:'weekdays',weekdays:[1,3,5]},'2026-10-05','2026-10-11'),['2026-10-05','2026-10-07','2026-10-09']);
+assert.deepEqual(get({...base,repeat:'workdays',interval:1},'2026-10-05','2026-10-11'),['2026-10-05','2026-10-06','2026-10-07','2026-10-08','2026-10-09','2026-10-10']);
+assert.deepEqual(get({...base,repeat:'monthly'},'2026-10-01','2026-12-31'),['2026-10-05','2026-11-05','2026-12-05']);
+assert.deepEqual(get({...base,repeat:'weekly',until:'2026-10-12'},'2026-10-05','2026-10-31'),['2026-10-05','2026-10-12']);
+const moved={...base,exceptions:{'2026-10-05':{date:'2026-10-06',start:'12:00',end:'14:00'}}};
+const movedResults=sandbox.datesFor(moved,'2026-10-01','2026-10-31');
+assert.equal(movedResults[0].date,'2026-10-06');
+assert.equal(movedResults[0].originalDate,'2026-10-05');
+assert.equal(movedResults[0].start,'12:00');
+assert.deepEqual(get({...base,exceptions:{'2026-10-05':{cancelled:true}}},'2026-10-01','2026-10-31'),[]);
+console.log('App core smoke tests: PASS – ISO dates, 9 duration checks, night shifts, pauses, recurring/overridden appointments');

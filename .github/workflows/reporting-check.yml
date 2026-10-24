@@ -1,0 +1,31 @@
+name: M-iCare Reporting Regression
+
+on:
+  push:
+    branches:
+      - feature/reporting-dashboard-20261024
+    paths:
+      - index.html
+      - tests/reporting-smoke.cjs
+      - tests/app-core-smoke.cjs
+      - .github/workflows/reporting-check.yml
+  pull_request:
+    paths:
+      - index.html
+      - tests/reporting-smoke.cjs
+      - tests/app-core-smoke.cjs
+      - .github/workflows/reporting-check.yml
+
+jobs:
+  reporting-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate reporting without changing app data
+        run: |
+          node tests/reporting-smoke.cjs
+          node tests/app-core-smoke.cjs
