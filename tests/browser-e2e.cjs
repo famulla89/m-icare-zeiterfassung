@@ -275,6 +275,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  });
  const threshold=await page.evaluate(()=>{const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),p=orderProgress(o);return {done:p.done,total:p.total,percent:p.percent,due:orderFollowupDue(o,p)}});
  assert.equal(threshold.done,37);assert(threshold.percent>=70&&threshold.percent<72);assert.equal(threshold.due,true);
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('ordersScreen')});
  await page.locator('#orderList .orderCard .orderFollowup select').first().selectOption('offer');
  await page.locator('#orderList .orderCard .orderFollowup textarea').first().fill('Kunde möchte ein Angebot für Treppenhausreinigung');
  await page.locator('#orderList .orderCard .orderFollowup button').first().click();
