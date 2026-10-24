@@ -1210,7 +1210,7 @@ async function cloudChooseEncryptedFile(event){
   if(owner&&payload.ownerEmail!==owner)throw Error('Die Datei gehört zu einer anderen hinterlegten E-Mail. Bitte den Kontohinweis prüfen. Nichts wurde importiert.');
   // Prüfen, bevor bestehende lokale Daten geändert oder aktuelle Sicherungen überschrieben werden.
   const differences=MiCareCloudTransfer.compare(state,payload.state);
-  cloudPending={...payload,fileName:file.name,differences};
+  cloudPending={...payload,fileName:file.name,differences,comparedLocalState:JSON.stringify(state)};
   const lc=MiCareCloudTransfer.counts(state),rc=MiCareCloudTransfer.counts(payload.state);
   $('cloudImportSource').textContent='Datei: '+file.name+' · Sicherung: '+new Date(payload.exportedAt).toLocaleString('de-DE')+' · Konto: '+(payload.ownerEmail||'Nicht hinterlegt');
   const labels={customers:'Kunden',objects:'Geschäftsstellen',appointments:'Aufträge',entries:'Arbeitszeiten'};
@@ -1227,6 +1227,7 @@ async function cloudChooseEncryptedFile(event){
 }
 async function cloudApplyEncrypted(){
  if(!cloudPending)return cloudMessage('Bitte zuerst eine verschlüsselte Sicherung auswählen.',true);
+ if(JSON.stringify(state)!==cloudPending.comparedLocalState){cloudClearPreview();return cloudMessage('Der lokale Datenstand hat sich seit der Vorschau geändert. Bitte Sicherung erneut auswählen und neu vergleichen.',true)}
  if(!$('cloudOverwriteConsent').checked)return cloudMessage('Bitte zuerst die Unterschiede prüfen und die Übernahme bestätigen.',true);
  if(!confirm('ACHTUNG: Wirklich ALLE derzeitigen Kunden, Aufträge, Mitarbeiter und Arbeitszeiten dieses Geräts durch die geprüfte Datei ersetzen? Andere Änderungen werden NICHT zusammengeführt.'))return;
  const button=$('cloudApplyImport');button.disabled=true;
