@@ -1,0 +1,80 @@
+name: M-iCare binary security validation (unsigned test)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/windows-binary-security-check.yml'
+jobs:
+  scan-existing-installer:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download exact previous Windows installer artifact
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 40109183974 --repo famulla89/m-icare-zeiterfassung --name M-iCare-Windows-Setup-UNSIGNED-TEST --dir security-check
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot download original artifact' }
+      - name: Validate SHA256 and Authenticode; scan with Defender if available
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path security-report | Out-Null
+          $report = 'security-report/RESULT.txt'
+          $file = (Resolve-Path 'security-check/M-iCare-Setup-1.0.1.exe').Path
+          "File: M-iCare-Setup-1.0.1.exe" | Set-Content $report
+          $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
+          "SHA256: $hash" | Add-Content $report
+          if ($hash -ne '0de496ebcd5d1ea36259d23ecc4940bd70a3c5259e022968bdab8a183abe3a42') {
+            "FAIL: Unexpected file hash" | Add-Content $report
+            throw 'Unexpected binary: SHA256 mismatch'
+          }
+          "PASS: SHA256 matches original build" | Add-Content $report
+          $signature = Get-AuthenticodeSignature $file
+          "Authenticode: $($signature.Status)" | Add-Content $report
+          if ($signature.Status -ne 'NotSigned') {
+            "NOTICE: Unexpected signature status, inspect manually" | Add-Content $report
+          }
+          try {
+            $status = Get-MpComputerStatus -ErrorAction Stop
+            "Defender AMRunningMode: $($status.AMRunningMode)" | Add-Content $report
+            "Defender AntivirusEnabled: $($status.AntivirusEnabled)" | Add-Content $report
+            "Defender AMServiceEnabled: $($status.AMServiceEnabled)" | Add-Content $report
+            "Defender AntivirusSignatureLastUpdated: $($status.AntivirusSignatureLastUpdated)" | Add-Content $report
+            if (!$status.AntivirusEnabled -or !$status.AMServiceEnabled) {
+              "NOT TESTED: Microsoft Defender is not active on this runner" | Add-Content $report
+              throw 'Microsoft Defender is inactive. No malware clearance.'
+            }
+          } catch {
+            "DEFENDER UNAVAILABLE: $($_.Exception.Message)" | Add-Content $report
+            throw
+          }
+          try {
+            Update-MpSignature -ErrorAction Stop
+            "Defender signature update: succeeded" | Add-Content $report
+          } catch {
+            "Defender signature update: failed: $($_.Exception.Message)" | Add-Content $report
+            throw 'Unable to update Defender signatures before test'
+          }
+          $before = @(Get-MpThreatDetection -ErrorAction SilentlyContinue)
+          Start-MpScan -ScanType CustomScan -ScanPath $file -ErrorAction Stop
+          $after = @(Get-MpThreatDetection -ErrorAction SilentlyContinue)
+          $detected = @($after | Where-Object { ($_.Resources -join ' ') -match [regex]::Escape('M-iCare-Setup-1.0.1.exe') })
+          if ($detected.Count -gt 0 -or !(Test-Path $file)) {
+            "FAIL: Defender detected or removed the installer" | Add-Content $report
+            throw 'Potential malicious binary: Defender detection'
+          }
+          "PASS: Defender completed custom scan and reported no detection linked to this installer" | Add-Content $report
+          "NOTE: A negative antivirus result is not a general malware or Chrome Safe Browsing clearance." | Add-Content $report
+      - name: Upload verification report even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Binary-Validation-Report
+          path: security-report/
+          if-no-files-found: warn
+          retention-days: 30

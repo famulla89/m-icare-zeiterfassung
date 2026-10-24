@@ -225,8 +225,135 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('E2E step 9: contact and correction unsaved-data warnings passed');
 
 
+
+ // Create an annual order via real UI, document 70% completed, and record customer follow-up.
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('ordersScreen')});
+ assert(await page.locator('#ordersScreen').isVisible());
+ await page.locator('#newOrderToggle').click();
+ await page.locator('#orderCustomer').selectOption('test-customer-1');
+ await page.locator('#orderObject').selectOption('test-object-1-1');
+ await page.locator('#orderTitle').fill('Jahresauftrag Fensterreinigung');
+ await page.locator('#orderService').selectOption('Glas- & Fensterreinigung');
+ await page.locator('#orderEmployee').selectOption('Inhaber');
+ await page.locator('#orderType').selectOption('recurring');
+ await page.locator('#orderStartDate').fill('2026-10-27');
+ await page.locator('#orderUntil').fill('2027-10-19');
+ await page.locator('#orderRepeat').selectOption('weekly');
+ await page.locator('#orderStartTime').fill('09:00');
+ await page.locator('#orderEndTime').fill('11:00');
+ await page.locator('#orderScope').fill('25 Fenster von innen und außen, Rahmen inklusive');
+ await page.locator('#orderCreateSave').click();
+ await page.waitForFunction(()=>state.orders.some(o=>o.title==='Jahresauftrag Fensterreinigung'));
+ const originalProgress=await page.evaluate(()=>{const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung');return {id:o.id,appointments:state.appointments.filter(a=>a.orderId===o.id).length,...orderProgress(o)}});
+ assert.equal(originalProgress.total,52,'Contract should create 52 Tuesdays');
+ assert.equal(originalProgress.done,0);
+ assert.equal(originalProgress.appointments,1,'Contract is one recurring series, not 52 duplicated appointment records');
+ console.log('E2E step 10: annual contract and 52 occurrences created');
+ // Independent extra work hours can be linked to the contract without falsely completing a visit.
+ await page.evaluate(()=>{resetEdit();openFreeWorkScreen()});
+ await page.locator('#date').fill('28.11.2026');
+ await page.locator('#start').fill('14:00');
+ await page.locator('#end').fill('15:00');
+ await page.locator('#customerChoice').selectOption('test-customer-1');
+ await page.locator('#entryObjectChoice').selectOption('test-object-1-1');
+ const assignedOrder=await page.evaluate(()=>state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung').id);
+ await page.locator('#entryOrderChoice').selectOption(assignedOrder);
+ await page.locator('#saveBtn').click();
+ await page.waitForFunction(id=>state.entries.some(e=>e.orderId===id&&e.date==='2026-11-28'&&e.start==='14:00'),assignedOrder);
+ const extra=await page.evaluate(id=>{const o=state.orders.find(o=>o.id===id),p=orderProgress(o),e=state.entries.find(e=>e.orderId===id&&e.date==='2026-11-28');return {done:p.done,hours:p.minutes,hasVisitLink:!!e.appointmentId}},assignedOrder);
+ assert.equal(extra.done,0,'Extra work must not count as a completed contractual visit');
+ assert.equal(extra.hours,60,'Extra one-hour work should count toward actual contract hours');
+ assert.equal(extra.hasVisitLink,false,'Extra time should be linked to the order, not to a planned appointment');
+ console.log('E2E step 10b: extra free time linked without fake visit completion');
+
+ await page.evaluate(async()=>{
+  const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),stats=orderProgress(o),a=state.appointments.find(a=>a.orderId===o.id);
+  for(const item of stats.visits.slice(0,37)){
+   state.entries.push({id:crypto.randomUUID(),customerId:o.customerId,objectId:o.objectId,employee:'Inhaber',service:o.service,object:'',notes:'',date:item.occ.date,endDate:item.occ.date,start:'09:00',end:'11:00',breakMinutes:0,minutes:120,appointmentId:a.id,appointmentOccurrence:item.occ.originalDate,orderId:o.id,orderStatus:'done',workDone:'Glas gereinigt',orderRemarks:''});
+  }
+  await saveState();renderOrders()
+ });
+ const threshold=await page.evaluate(()=>{const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),p=orderProgress(o);return {done:p.done,total:p.total,percent:p.percent,due:orderFollowupDue(o,p)}});
+ assert.equal(threshold.done,37);assert(threshold.percent>=70&&threshold.percent<72);assert.equal(threshold.due,true);
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('ordersScreen')});
+ await page.locator('#orderList .orderCard .orderFollowup select').first().selectOption('offer');
+ await page.locator('#orderList .orderCard .orderFollowup textarea').first().fill('Kunde möchte ein Angebot für Treppenhausreinigung');
+ await page.locator('#orderList .orderCard .orderFollowup button').first().click();
+ await page.waitForFunction(()=>state.orders.some(o=>o.title==='Jahresauftrag Fensterreinigung'&&o.followUpStatus==='offer'));
+ assert.equal(await page.evaluate(()=>{const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung');return orderFollowupDue(o,orderProgress(o))}),false);
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('reportingScreen');reportOpenTab('contracts')});
+ assert((await page.locator('#reportPanels').innerText()).includes('Jahresauftrag Fensterreinigung'),'Progress report should include contract');
+ assert((await page.locator('#reportPanels').innerText()).includes('Angebot gewünscht'),'Follow-up response should appear in report');
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('backupSection')});
+ const orderBackupPromise=page.waitForEvent('download');
+ await page.locator('#exportJson').click();
+ const orderBackup=await orderBackupPromise;
+ const orderBackupData=JSON.parse(fs.readFileSync(await orderBackup.path(),'utf8'));
+ assert(orderBackupData.orders?.some(o=>o.title==='Jahresauftrag Fensterreinigung'&&o.followUpStatus==='offer'),'Order and follow-up should persist in JSON full backup');
+ assert(orderBackupData.appointments.some(a=>a.orderId===orderBackupData.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung').id),'Appointment linked to contract');
+ console.log('E2E step 11: 70% progress, follow-up and backup passed');
+ // Full backup restore must bring orders, occurrences, additional hours and follow-up back.
+ const preRestore=page.waitForEvent('download');
+ await page.locator('#importJson').setInputFiles(await orderBackup.path());
+ await preRestore;
+ await page.waitForFunction(()=>state.orders?.some(o=>o.title==='Jahresauftrag Fensterreinigung'&&o.followUpStatus==='offer'));
+ const restoredOrder=await page.evaluate(()=>{
+  const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),p=orderProgress(o);
+  return {total:p.total,done:p.done,minutes:p.minutes,followUp:o.followUpStatus,events:o.events?.length||0}
+ });
+ assert.equal(restoredOrder.total,52);
+ assert.equal(restoredOrder.done,37);
+ assert.equal(restoredOrder.minutes,37*120+60);
+ assert.equal(restoredOrder.followUp,'offer');
+ assert(restoredOrder.events>=2);
+ console.log('E2E step 12: full order backup and restore passed');
+
+ // Sequential numbering and terminal cancellation/closure must work through the UI.
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('ordersScreen')});
+ for(const [title,date] of [['Probeauftrag Küche','2027-01-09'],['Probeauftrag Glas','2027-01-10']]){
+  await page.locator('#newOrderToggle').click();
+  await page.locator('#orderCustomer').selectOption('test-customer-1');
+  await page.locator('#orderObject').selectOption('test-object-1-1');
+  await page.locator('#orderTitle').fill(title);
+  await page.locator('#orderService').selectOption('Gebäudereinigung');
+  await page.locator('#orderEmployee').selectOption('Inhaber');
+  await page.locator('#orderType').selectOption('once');
+  await page.locator('#orderStartDate').fill(date);
+  await page.locator('#orderStartTime').fill('15:00');
+  await page.locator('#orderEndTime').fill('16:00');
+  await page.locator('#orderCreateSave').click();
+  await page.waitForFunction(name=>state.orders.some(o=>o.title===name),title);
+ }
+ const ids=await page.evaluate(()=>state.orders.map(o=>({number:o.number,title:o.title,status:o.status,kind:o.type})));
+ assert.deepEqual(ids.map(o=>o.number),['1','2','3'],'New order numbers must be sequential');
+ let testCard=page.locator('#orderList .orderCard').filter({hasText:'Probeauftrag Küche'});
+ await testCard.locator('.orderActions details summary').click();
+ await testCard.locator('.orderActions details select').selectOption('cancelled');
+ await testCard.locator('.orderActions details textarea').fill('Kunde hat den Auftrag abgesagt');
+ await testCard.locator('.orderActions details button').click();
+ await page.waitForFunction(()=>state.orders.find(o=>o.number==='2')?.status==='cancelled');
+ testCard=page.locator('#orderList .orderCard').filter({hasText:'Probeauftrag Glas'});
+ await testCard.locator('.orderActions details summary').click();
+ await testCard.locator('.orderActions details select').selectOption('completed');
+ await testCard.locator('.orderActions details textarea').fill('Auftrag administrativ geschlossen');
+ await testCard.locator('.orderActions details button').click();
+ await page.waitForFunction(()=>state.orders.find(o=>o.number==='3')?.status==='completed');
+ const closed=await page.evaluate(()=>({all:state.orders.length,closed:state.orders.filter(orderIsClosed).length,cancelled:state.orders.filter(o=>o.status==='cancelled').length,events:state.orders.filter(orderIsClosed).map(o=>o.events.at(-1)?.reason),percent:state.orders.find(o=>o.number==='2')&&orderProgress(state.orders.find(o=>o.number==='2')).percent,next:orderNextNumber()}));
+ assert.equal(closed.all,3);assert.equal(closed.closed,2);assert.equal(closed.cancelled,1);
+ assert.equal(closed.percent,0,'Cancellation must not count as completed work');
+ assert.equal(closed.next,4,'Sequence must advance after cancellation');
+ assert(closed.events.includes('Kunde hat den Auftrag abgesagt'));
+ await page.locator('#orderStateFilter').selectOption('closed');
+ assert.equal(await page.locator('#orderList .orderCard').count(),2,'Closed filter includes completed and cancelled');
+ await page.evaluate(()=>{captureCurrentScreen();showScreen('reportingScreen');reportOpenTab('contracts')});
+ const report=await page.locator('#reportPanels').innerText();
+ assert(report.includes('Abgeschlossen – abgebrochen')&&report.includes('Abgeschlossen – erledigt'),'Controlling reports must distinguish closure reason');
+ console.log('E2E step 13: orders 1/2/3, cancelled and completed count as closed, reason and report verified');
+
+
+
  assert.equal(errors.length,0,'Unhandled browser errors: '+errors.join(' | '));
- console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, double-save/date changes, unsaved edits, calendar, JSON export/import');
+ console.log('Browser E2E PASS: customers CRUD, appointments, navigation, reporting, CSV/PDF, corrections, double-save/date changes, unsaved edits, calendar, JSON export/import and annual orders/follow-ups');
  await browser.close();
  server.close();
 })().catch(e=>{console.error('E2E FAILED:',e);server.close();process.exit(1)});
