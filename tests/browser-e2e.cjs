@@ -289,6 +289,23 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  const qaPanel=await page.locator('#reportPanels').innerText();
  assert(qaPanel.includes('Geplante AK-Überschneidungen')&&qaPanel.includes('Tatsächlich erfasste Arbeitszeitüberschneidungen'),'Planned and actual overlaps are separately explained');
  console.log('E2E step 5d: closing with reason, no-op correction block, planned-vs-actual overlap reporting passed');
+ const shiftedConflict=await page.evaluate(()=>{
+  const a=state.appointments.find(x=>x.id==='test-appointment-1');
+  const modified={...a,id:'qa-moved',akNumber:911,exceptions:{'2026-10-05':{date:'2026-10-06',start:'10:00',end:'12:00'}}};
+  const partner={...a,id:'qa-on-target',akNumber:912,date:'2026-10-06',start:'11:00',end:'13:00',employee:a.employee,exceptions:{}};
+  state.appointments.push(modified,partner);
+  try{
+   updatePlannedEditorConflict(modified,'2026-10-05');
+   const movedText=document.getElementById('plannedEditorConflictInfo').textContent;
+   modified.exceptions['2026-10-05']={cancelled:true};
+   updatePlannedEditorConflict(modified,'2026-10-05');
+   return {movedText,hidden:document.getElementById('plannedEditorConflictInfo').classList.contains('hidden')};
+  }finally{state.appointments=state.appointments.filter(x=>!['qa-moved','qa-on-target'].includes(x.id))}
+ });
+ assert(shiftedConflict.movedText.includes('AK 912')&&shiftedConflict.movedText.includes('60 Minuten'),'Moved order must check conflicts on actual planned date');
+ assert(shiftedConflict.hidden,'Cancelled appointment must not show a conflict');
+ console.log('E2E step 5e: rescheduled vs cancelled planned conflicts passed');
+
 
 
 
