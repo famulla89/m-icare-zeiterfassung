@@ -22,6 +22,7 @@ const fixture=JSON.parse(fs.readFileSync('testdata/micare-10-kunden.json','utf8'
  const corrupted={...encrypted,ciphertext:encrypted.ciphertext.slice(0,-9)+'AAAA'+encrypted.ciphertext.slice(-5)};
  await assert.rejects(cloud.decrypt(corrupted,pass),/Falsche Passphrase|beschädigt/);
  const trashed=structuredClone(fixture);
+ trashed.appointmentTrash??=[];
  const removed=trashed.appointments.shift();
  trashed.appointmentTrash.push({appointment:removed,deletedAt:new Date().toISOString()});
  assert.equal(cloud.validateSnapshot(trashed),trashed,'Archived AK can remain referenced by documented work');

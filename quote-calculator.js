@@ -1,0 +1,190 @@
+'use strict';
+/* M-iCare Kalkulationsmodul – unabhängig von Dateispeicher und Benutzeroberfläche. */
+(function(root,factory){
+ const m=factory();
+ if(typeof module==='object'&&module.exports)module.exports=m;
+ if(root)root.MiCareQuote=m;
+})(typeof globalThis!=='undefined'?globalThis:null,function(){
+ const euro=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+ const amount=(n,max=100000000)=>{const v=Number(n);if(!Number.isFinite(v)||v<0||v>max)throw Error('Ungültiger Geldbetrag oder Zahlenwert');return v};
+ function compute(v){
+  const area=amount(v.area,1e7),visits=amount(v.visits,10000),hours=amount(v.hours,1e5),
+   hourly=amount(v.hourly,100000),nonwage=amount(v.nonwage,500),overhead=amount(v.overhead,500),
+   productivity=amount(v.productivity,100),material=amount(v.material,1000000),
+   km=amount(v.km,50000),perKm=amount(v.perKm,1000),margin=amount(v.margin,1000),
+   minNet=amount(v.minNet,1e8),vat=amount(v.vat,100),manualNet=amount(v.manualNet,1e8);
+  const sqmPerHour=amount(v.sqmPerHour||100,1000000);
+  const setupMinutes=amount(v.setupMinutes??0,1000000);
+  const minimumSqm=amount(v.minimumSqm??0,1000000);
+  const liftRental=amount(v.liftRental??0,1000000);
+  const fixedProfit=amount(v.fixedProfit??0,1000000);
+  const mode=v.mode||'business';
+  if(!['business','solo'].includes(mode))throw Error('Betriebsmodus ungültig');
+  if(visits<1||!Number.isInteger(visits))throw Error('Einsätze müssen eine positive ganze Zahl sein');
+  if(productivity<=0)throw Error('Produktivität muss größer als 0 sein');
+  if(sqmPerHour<=0)throw Error('Flächenleistung muss größer als 0 sein');
+  const workHours=(hours>0?hours:area/sqmPerHour)+setupMinutes/60;
+  const effectiveNonwage=mode==='solo'?0:nonwage;
+  const laborPer=workHours*hourly*(1+effectiveNonwage/100)/(productivity/100);
+  const basePer=(laborPer+material+2*km*perKm)*(1+overhead/100);
+  const cleaningCost=euro(basePer*visits);
+  let windowItems=[];
+  if(Array.isArray(v.windowItems)){
+   if(v.windowItems.length>8)throw Error('Maximal acht Fensterpositionen pro Kalkulation');
+   windowItems=v.windowItems.map((item,i)=>{
+    const label=String(item.label||'Fenster').trim();
+    if(!label||label.length>100)throw Error('Ungültige Fensterart');
+    const qty=amount(item.qty,100000),each=amount(item.each,1e6),
+      rate=amount(item.rate,1e5),sides=amount(item.sides,2),
+      soil=amount(item.soil,5),frame=!!item.frame,ladder=!!item.ladder,lift=!!item.lift;
+    if(!Number.isInteger(qty)||qty<1||each<=0)throw Error('Fenster: Stückzahl und Fläche müssen positiv sein');
+    if(sides!==1&&sides!==2)throw Error('Fenster: ein- oder beidseitig auswählen');
+    if(soil<=0)throw Error('Fenster: Verschmutzungsfaktor ungültig');
+    const extra=euro((frame?1.2:1)*(ladder?1.3:1)*(lift?1.7:1));
+    const sqm=euro(qty*each),total=euro(sqm*rate*sides*soil*extra);
+    return {id:item.id||'w'+i,label,qty,each,rate,sides,soil,frame,ladder,lift,extra,sqm,total};
+   });
+  }else{
+   const sqm=amount(v.windowSqm||0,1e7);
+   if(sqm>0){
+    const rate=amount(v.windowRate,100000),sides=amount(v.sides,2),soil=amount(v.soil,5),extra=amount(v.extras,5);
+    if(sides!==1&&sides!==2)throw Error('Fensterseiten müssen 1 oder 2 sein');
+    windowItems=[{id:'legacy',label:'Fensterreinigung',qty:1,each:sqm,rate,sides,soil,extra,sqm,total:euro(sqm*rate*sides*soil*extra)}];
+   }
+  }
+  const windowSqm=euro(windowItems.reduce((sum,w)=>sum+w.sqm,0));
+  const windowsNet=euro(windowItems.reduce((sum,w)=>sum+w.total,0));
+  const minimumNet=Math.max(minNet,area*minimumSqm);
+  const profitMarkup=fixedProfit>0?fixedProfit:cleaningCost*margin/100;
+  const recommendNet=euro(Math.max(minimumNet,cleaningCost+profitMarkup+windowsNet+liftRental));
+  const net=euro(manualNet>0?manualNet:recommendNet);
+  const tax=euro(net*vat/100),gross=euro(net+tax);
+  const rows=(manualNet>0)
+    ?[{title:'Reinigungsleistung nach individueller Kalkulation – Pauschale',quantity:1,unit:'Pauschale',price:net,total:net}]
+    :[
+      {title:'Reinigungsleistung ('+visits+' Einsätze)',quantity:1,unit:'Pauschale',price:0,total:euro(net-windowsNet-liftRental)},
+      ...windowItems.map(w=>({title:w.label+' · '+w.qty+' × '+w.each+' m² · '+(w.sides===2?'beidseitig':'einseitig')+(w.frame?' · Rahmen/Falz':'')+(w.ladder?' · Leiter':'')+(w.lift?' · Hebebühne':''),quantity:1,unit:'Pauschale',price:w.total,total:w.total})),
+      ...(liftRental>0?[{title:'Hebebühne – separate Miete / Aufwand',quantity:1,unit:'Pauschale',price:liftRental,total:liftRental}]:[])
+    ];
+  // In jeder Rundung exakt konsistente Dokumentpositionen sichern.
+  let remainder=euro(net-rows.reduce((a,r)=>a+r.total,0));
+  rows[0].total=euro(rows[0].total+remainder);
+  if(rows[0].total<0)throw Error('Mindestpreis kleiner als Fenster- und Hebebühnenkosten');
+  for(const r of rows){r.price=euro(r.total/r.quantity);r.total=euro(r.total)}
+  return {mode,area,visits,hoursPerVisit:euro(workHours),setupMinutes,windowSqm,windowItems,cleaningCost,
+    windowsNet,liftRental,minimumNet:euro(minimumNet),recommendNet,net,tax,gross,vat,profit:euro(net-cleaningCost-windowsNet-liftRental),rows};
+ }
+ function validateDocument(d){
+  if(!d||typeof d!=='object'||!['quote','invoice'].includes(d.kind))throw Error('Dokumenttyp fehlt');
+  if(typeof d.id!=='string'||d.id.length>100||typeof d.number!=='string'||d.number.length>80)throw Error('Ungültige Dokumentkennung');
+  if(typeof d.customerName!=='string'||!d.customerName.trim()||d.customerName.length>200)throw Error('Kundenname fehlt oder ist zu lang');
+  if(typeof d.sellerName!=='string'||d.sellerName.length>200)throw Error('Absendername ungültig');
+  if(typeof d.service!=='string'||d.service.length>300)throw Error('Leistungsbeschreibung ungültig');
+  if(!Array.isArray(d.rows)||d.rows.length<1||d.rows.length>25)throw Error('Ungültige Rechnungspositionen');
+  const sum=euro(d.rows.reduce((a,r)=>a+amount(r.total),0));
+  if(Math.abs(sum-euro(d.net))>0.02)throw Error('Positionen stimmen nicht mit Nettobetrag überein');
+  if(Math.abs(euro(d.net+d.tax)-euro(d.gross))>0.02)throw Error('Gesamtbetrag inkonsistent');
+  return d;
+ }
+ function createDocument(d){validateDocument(d);return structuredClone(d)}
+ async function pdf(d){
+  validateDocument(d);
+  if(typeof document==='undefined')throw Error('PDF benötigt Browsergrafik');
+  const W=1240,H=1754,blue='#124e8a',dark='#152b42',muted='#516478',jpgs=[];
+  const euros=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+  function render(pageIndex,rows,pageCount){
+   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+   const c=canvas.getContext('2d');if(!c)throw Error('Canvas nicht verfügbar');
+   c.fillStyle='#fff';c.fillRect(0,0,W,H);
+   c.fillStyle=blue;c.fillRect(0,0,W,12);
+   c.fillStyle=blue;c.font='bold 38px Arial';c.fillText('M-iCare  |  '+(d.kind==='quote'?'KOSTENVORANSCHLAG':'RECHNUNGSENTWURF'),70,91);
+   c.fillStyle=muted;c.font='20px Arial';c.fillText('Entwurf zur Prüfung  ·  Seite '+(pageIndex+1)+' von '+pageCount,70,130);
+   let y=180;
+   function write(text,left,top,width,font='22px Arial',color=dark){
+    c.font=font;c.fillStyle=color;
+    const words=String(text||'—').split(/\s+/);let line='',lines=[];
+    for(const word of words){
+     const candidate=line?line+' '+word:word;
+     if(c.measureText(candidate).width>width&&line){lines.push(line);line=word}else line=candidate;
+    }
+    lines.push(line);
+    for(const l of lines.slice(0,5)){c.fillText(l,left,top);top+=29}
+    return Math.min(5,lines.length)*29;
+   }
+   if(pageIndex===0){
+    write('Absender',70,y,490,'bold 25px Arial',blue);write('Empfänger',670,y,490,'bold 25px Arial',blue);y+=43;
+    y+=Math.max(write(d.sellerName||'Absender ergänzen',70,y,500,'bold 25px Arial'),write(d.customerName,670,y,500,'bold 25px Arial'));
+    const left=[d.sellerAddress,d.sellerTaxId?'Steuernummer / USt-ID: '+d.sellerTaxId:'Steuernummer noch ergänzen',d.sellerEmail],
+    right=[d.customerAddress,d.objectName,d.objectAddress];
+    for(let i=0;i<3;i++)y+=Math.max(write(left[i]||'',70,y,490),write(right[i]||'',670,y,490),29);
+    y=Math.max(y+35,420);
+    write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+d.date,700,y,470,'23px Arial');y+=45;
+    write('Leistungszeitraum: '+(d.serviceDate||'bitte ergänzen'),70,y,1050);y+=42;
+    write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;
+    y+=write(d.service,70,y,1080,'bold 25px Arial');
+   }else{
+    write('Nr.: '+d.number+'  ·  '+d.customerName,70,y,1080,'bold 25px Arial');
+    y+=62;
+   }
+   y+=20;
+   c.fillStyle='#e9f2fc';c.fillRect(70,y-10,1100,52);
+   write('Leistung',85,y+23,600,'bold 21px Arial',blue);
+   write('Menge',780,y+23,100,'bold 21px Arial',blue);
+   write('Gesamt',1010,y+23,170,'bold 21px Arial',blue);y+=65;
+   for(const row of rows){
+    c.fillStyle='#f4f7fc';c.fillRect(70,y-6,1100,82);
+    write(row.title,84,y+22,670,'21px Arial');
+    write(row.quantity+' '+row.unit,777,y+22,170,'20px Arial');
+    write(euros(row.total),1005,y+22,170,'bold 20px Arial');y+=88;
+   }
+   if(pageIndex===pageCount-1){
+    y+=25;c.strokeStyle='#bdcde0';c.beginPath();c.moveTo(70,y);c.lineTo(1170,y);c.stroke();y+=50;
+    write('Netto',710,y,230);write(euros(d.net),1000,y,180,'bold 24px Arial');y+=49;
+    write('USt. '+d.vat+' %',710,y,240);write(euros(d.tax),1000,y,180,'bold 24px Arial');y+=62;
+    c.fillStyle=blue;c.fillRect(700,y-40,470,70);write('Gesamt',720,y+5,250,'bold 29px Arial','#fff');write(euros(d.gross),970,y+5,185,'bold 29px Arial','#fff');y+=100;
+    if(d.kind==='quote')y+=write('Angebot gültig bis: '+(d.validUntil||'bitte ergänzen'),70,y,1030);
+    else{
+     y+=write('Zahlbar bis: '+(d.dueDate||'bitte ergänzen'),70,y,1030);
+     y+=write('IBAN: '+(d.iban||'bitte ergänzen'),70,y,1030);
+    }
+    y+=write(d.notes||'Leistungsumfang und Konditionen vor Versand überprüfen.',70,y+12,1075,'20px Arial');
+   }
+   c.fillStyle=muted;c.font='19px Arial';c.fillText('Entwurf – nicht automatisch versendet · '+new Date().toLocaleDateString('de-DE'),70,H-65);
+   if(d.kind==='invoice'){
+    c.save();c.translate(285,1480);c.rotate(-Math.PI/11);
+    c.fillStyle='rgba(170,25,25,.16)';c.font='bold 115px Arial';c.fillText('ENTWURF',0,0);c.restore();
+   }
+   const raw=atob(canvas.toDataURL('image/jpeg',0.85).split(',')[1]);
+   const jpg=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)jpg[i]=raw.charCodeAt(i);
+   return jpg;
+  }
+  // Maximal 6 Positionen pro Seite; zweite und weitere Seiten haben einen kompakten Kopf.
+  const allPages=[];
+  for(let start=0;start<d.rows.length;start+=6)allPages.push(d.rows.slice(start,start+6));
+  if(!allPages.length)allPages.push([]);
+  // Wenn 6 Zeilen auf der letzten Seite zu wenig Platz für Summen lassen: eigene Summenseite.
+  if(allPages[allPages.length-1].length>4)allPages.push([]);
+  allPages.forEach((rows,index)=>jpgs.push(render(index,rows,allPages.length)));
+  const enc=new TextEncoder(),parts=[],offsets=[0];let pos=0;
+  function add(v){const b=typeof v==='string'?enc.encode(v):v;parts.push(b);pos+=b.length}
+  function obj(id,value){offsets[id]=pos;add(id+' 0 obj\n'+value+'\nendobj\n')}
+  add('%PDF-1.4\n');
+  const ids=jpgs.map((_,i)=>3+i*3);
+  obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2,'<< /Type /Pages /Kids ['+ids.map(id=>id+' 0 R').join(' ')+'] /Count '+jpgs.length+' >>');
+  jpgs.forEach((jpg,i)=>{
+   const p=ids[i],img=p+1,cmd=p+2;
+   obj(p,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /I '+img+' 0 R >> >> /Contents '+cmd+' 0 R >>');
+   offsets[img]=pos;add(img+' 0 obj\n<< /Type /XObject /Subtype /Image /Width '+W+' /Height '+H+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpg.length+' >>\nstream\n');
+   add(jpg);add('\nendstream\nendobj\n');
+   const commands='q\n595 0 0 842 0 0 cm\n/I Do\nQ\n';
+   obj(cmd,'<< /Length '+enc.encode(commands).length+' >>\nstream\n'+commands+'endstream');
+  });
+  const max=2+jpgs.length*3,xref=pos;
+  add('xref\n0 '+(max+1)+'\n0000000000 65535 f \n');
+  for(let i=1;i<=max;i++)add(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
+  add('trailer\n<< /Size '+(max+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
+  return new Blob(parts,{type:'application/pdf'});
+ }
+ return {compute,validateDocument,createDocument,pdf,euro};
+});
