@@ -154,6 +154,12 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(await page.evaluate(()=>state.quotes[0].formValues.WindowItems.length),2,'Fensterliste wird im Entwurf dauerhaft gespeichert');
  await page.evaluate(()=>{
   window.__quotePdfLines=[];
+  window.__quotePdfLogos=[];
+  const imageOriginal=CanvasRenderingContext2D.prototype.drawImage;
+  CanvasRenderingContext2D.prototype.drawImage=function(img,...args){
+   if(img instanceof HTMLImageElement&&img.currentSrc.endsWith('/logo.svg'))window.__quotePdfLogos.push({src:img.currentSrc,width:args[2],height:args[3],naturalWidth:img.naturalWidth});
+   return imageOriginal.call(this,img,...args);
+  };
   const original=CanvasRenderingContext2D.prototype.fillText;
   CanvasRenderingContext2D.prototype.fillText=function(text,...args){
    window.__quotePdfLines.push(String(text));
@@ -168,6 +174,9 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  const quotePdfDates=await page.evaluate(()=>window.__quotePdfLines);
  assert(quotePdfDates.some(t=>t.includes('Angebot gültig bis: 23.11.2026')),'PDF must show 23.11.2026');
  assert(!quotePdfDates.some(t=>t.includes('2026-11-23')),'ISO date must not be printed');
+ const logos=await page.evaluate(()=>window.__quotePdfLogos);
+ assert(logos.length>=1,'PDF must render the original M-iCare logo');
+ assert(logos.every(l=>l.width===350&&l.height===154&&l.naturalWidth>0),'PDF logo must remain proportionate in header');
  const invoicePdfDates=await page.evaluate(async()=>{
   window.__quotePdfLines=[];
   const doc=structuredClone(state.quotes[0]);
