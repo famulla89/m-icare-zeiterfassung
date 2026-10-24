@@ -12,29 +12,67 @@
    hourly=amount(v.hourly,100000),nonwage=amount(v.nonwage,500),overhead=amount(v.overhead,500),
    productivity=amount(v.productivity,100),material=amount(v.material,1000000),
    km=amount(v.km,50000),perKm=amount(v.perKm,1000),margin=amount(v.margin,1000),
-   minNet=amount(v.minNet,1e8),vat=amount(v.vat,100),manualNet=amount(v.manualNet,1e8),
-   windowSqm=amount(v.windowSqm,1e7),windowRate=amount(v.windowRate,100000),sides=amount(v.sides,2),
-   soil=amount(v.soil,5),extras=amount(v.extras,5);
+   minNet=amount(v.minNet,1e8),vat=amount(v.vat,100),manualNet=amount(v.manualNet,1e8);
+  const sqmPerHour=amount(v.sqmPerHour||100,1000000);
+  const setupMinutes=amount(v.setupMinutes??0,1000000);
+  const minimumSqm=amount(v.minimumSqm??0,1000000);
+  const liftRental=amount(v.liftRental??0,1000000);
+  const fixedProfit=amount(v.fixedProfit??0,1000000);
+  const mode=v.mode||'business';
+  if(!['business','solo'].includes(mode))throw Error('Betriebsmodus ungültig');
   if(visits<1||!Number.isInteger(visits))throw Error('Einsätze müssen eine positive ganze Zahl sein');
   if(productivity<=0)throw Error('Produktivität muss größer als 0 sein');
-  if(sides!==1&&sides!==2)throw Error('Fensterseiten müssen 1 oder 2 sein');
-  const workHours=hours>0?hours:area/Math.max(1,Number(v.sqmPerHour)||100);
-  const laborPer=workHours*hourly*(1+nonwage/100)/productivity;
+  if(sqmPerHour<=0)throw Error('Flächenleistung muss größer als 0 sein');
+  const workHours=(hours>0?hours:area/sqmPerHour)+setupMinutes/60;
+  const effectiveNonwage=mode==='solo'?0:nonwage;
+  const laborPer=workHours*hourly*(1+effectiveNonwage/100)/(productivity/100);
   const basePer=(laborPer+material+2*km*perKm)*(1+overhead/100);
-  const cleaningCost=basePer*visits;
-  const windowsNet=euro(windowSqm*windowRate*sides*soil*extras);
-  const recommendNet=euro(Math.max(minNet,cleaningCost*(1+margin/100)+windowsNet));
+  const cleaningCost=euro(basePer*visits);
+  let windowItems=[];
+  if(Array.isArray(v.windowItems)){
+   if(v.windowItems.length>8)throw Error('Maximal acht Fensterpositionen pro Kalkulation');
+   windowItems=v.windowItems.map((item,i)=>{
+    const label=String(item.label||'Fenster').trim();
+    if(!label||label.length>100)throw Error('Ungültige Fensterart');
+    const qty=amount(item.qty,100000),each=amount(item.each,1e6),
+      rate=amount(item.rate,1e5),sides=amount(item.sides,2),
+      soil=amount(item.soil,5),frame=!!item.frame,ladder=!!item.ladder,lift=!!item.lift;
+    if(!Number.isInteger(qty)||qty<1||each<=0)throw Error('Fenster: Stückzahl und Fläche müssen positiv sein');
+    if(sides!==1&&sides!==2)throw Error('Fenster: ein- oder beidseitig auswählen');
+    if(soil<=0)throw Error('Fenster: Verschmutzungsfaktor ungültig');
+    const extra=euro((frame?1.2:1)*(ladder?1.3:1)*(lift?1.7:1));
+    const sqm=euro(qty*each),total=euro(sqm*rate*sides*soil*extra);
+    return {id:item.id||'w'+i,label,qty,each,rate,sides,soil,frame,ladder,lift,extra,sqm,total};
+   });
+  }else{
+   const sqm=amount(v.windowSqm||0,1e7);
+   if(sqm>0){
+    const rate=amount(v.windowRate,100000),sides=amount(v.sides,2),soil=amount(v.soil,5),extra=amount(v.extras,5);
+    if(sides!==1&&sides!==2)throw Error('Fensterseiten müssen 1 oder 2 sein');
+    windowItems=[{id:'legacy',label:'Fensterreinigung',qty:1,each:sqm,rate,sides,soil,extra,sqm,total:euro(sqm*rate*sides*soil*extra)}];
+   }
+  }
+  const windowSqm=euro(windowItems.reduce((sum,w)=>sum+w.sqm,0));
+  const windowsNet=euro(windowItems.reduce((sum,w)=>sum+w.total,0));
+  const minimumNet=Math.max(minNet,area*minimumSqm);
+  const profitMarkup=fixedProfit>0?fixedProfit:cleaningCost*margin/100;
+  const recommendNet=euro(Math.max(minimumNet,cleaningCost+profitMarkup+windowsNet+liftRental));
   const net=euro(manualNet>0?manualNet:recommendNet);
   const tax=euro(net*vat/100),gross=euro(net+tax);
   const rows=(manualNet>0)
-    ?[{title:'Individuell kalkulierte Reinigungsleistung (Pauschale)',quantity:1,unit:'Pauschale',price:net,total:net}]
+    ?[{title:'Reinigungsleistung nach individueller Kalkulation – Pauschale',quantity:1,unit:'Pauschale',price:net,total:net}]
     :[
-      {title:'Reinigungsleistung',quantity:visits,unit:'Einsatz',price:0,total:euro(net-windowsNet)},
-      ...(windowSqm>0?[{title:'Fensterreinigung ('+windowSqm+' m² × '+sides+' Seite(n), Faktor '+soil+' × '+extras+')',quantity:1,unit:'Pauschale',price:windowsNet,total:windowsNet}]:[])
+      {title:'Reinigungsleistung ('+visits+' Einsätze)',quantity:1,unit:'Pauschale',price:0,total:euro(net-windowsNet-liftRental)},
+      ...windowItems.map(w=>({title:w.label+' · '+w.qty+' × '+w.each+' m² · '+(w.sides===2?'beidseitig':'einseitig')+(w.frame?' · Rahmen/Falz':'')+(w.ladder?' · Leiter':'')+(w.lift?' · Hebebühne':''),quantity:1,unit:'Pauschale',price:w.total,total:w.total})),
+      ...(liftRental>0?[{title:'Hebebühne – separate Miete / Aufwand',quantity:1,unit:'Pauschale',price:liftRental,total:liftRental}]:[])
     ];
+  // In jeder Rundung exakt konsistente Dokumentpositionen sichern.
+  let remainder=euro(net-rows.reduce((a,r)=>a+r.total,0));
+  rows[0].total=euro(rows[0].total+remainder);
+  if(rows[0].total<0)throw Error('Mindestpreis kleiner als Fenster- und Hebebühnenkosten');
   for(const r of rows){r.price=euro(r.total/r.quantity);r.total=euro(r.total)}
-  return {area,visits,hoursPerVisit:euro(workHours),windowSqm,cleaningCost:euro(cleaningCost),
-    windowsNet,minimumNet:minNet,recommendNet,net,tax,gross,vat,profit:euro(net-cleaningCost-windowsNet),rows};
+  return {mode,area,visits,hoursPerVisit:euro(workHours),setupMinutes,windowSqm,windowItems,cleaningCost,
+    windowsNet,liftRental,minimumNet:euro(minimumNet),recommendNet,net,tax,gross,vat,profit:euro(net-cleaningCost-windowsNet-liftRental),rows};
  }
  function validateDocument(d){
   if(!d||typeof d!=='object'||!['quote','invoice'].includes(d.kind))throw Error('Dokumenttyp fehlt');
