@@ -249,6 +249,23 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(originalProgress.done,0);
  assert.equal(originalProgress.appointments,1,'Contract is one recurring series, not 52 duplicated appointment records');
  console.log('E2E step 10: annual contract and 52 occurrences created');
+ // Independent extra work hours can be linked to the contract without falsely completing a visit.
+ await page.evaluate(()=>{resetEdit();openFreeWorkScreen()});
+ await page.locator('#date').fill('28.11.2026');
+ await page.locator('#start').fill('14:00');
+ await page.locator('#end').fill('15:00');
+ await page.locator('#customerChoice').selectOption('test-customer-1');
+ await page.locator('#entryObjectChoice').selectOption('test-object-1-1');
+ const assignedOrder=await page.evaluate(()=>state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung').id);
+ await page.locator('#entryOrderChoice').selectOption(assignedOrder);
+ await page.locator('#saveBtn').click();
+ await page.waitForFunction(id=>state.entries.some(e=>e.orderId===id&&e.date==='2026-11-28'&&e.start==='14:00'),assignedOrder);
+ const extra=await page.evaluate(id=>{const o=state.orders.find(o=>o.id===id),p=orderProgress(o),e=state.entries.find(e=>e.orderId===id&&e.date==='2026-11-28');return {done:p.done,hours:p.minutes,hasVisitLink:!!e.appointmentId}},assignedOrder);
+ assert.equal(extra.done,0,'Extra work must not count as a completed contractual visit');
+ assert.equal(extra.hours,60,'Extra one-hour work should count toward actual contract hours');
+ assert.equal(extra.hasVisitLink,false,'Extra time should be linked to the order, not to a planned appointment');
+ console.log('E2E step 10b: extra free time linked without fake visit completion');
+
  await page.evaluate(async()=>{
   const o=state.orders.find(o=>o.title==='Jahresauftrag Fensterreinigung'),stats=orderProgress(o),a=state.appointments.find(a=>a.orderId===o.id);
   for(const item of stats.visits.slice(0,37)){
