@@ -99,6 +99,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
   finally{state.appointments.pop()}
  });
  assert(collision.some(x=>x.includes('AK 996')),'Cross-customer overlap must appear despite customer filter');
+ const sampleDir=path.join(root,'test-output');fs.mkdirSync(sampleDir,{recursive:true});
  const akCsvDownload=page.waitForEvent('download');
  await page.locator('#orderStatusCsv').click();
  const akCsv=await akCsvDownload;
@@ -107,6 +108,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(akCsvText.startsWith('\ufeff'),'Customer CSV must have UTF-8 BOM');
  assert(akCsvText.includes('Soll-Minuten')&&akCsvText.includes('Ist-Minuten'),'AK CSV contains planned and actual time');
  assert(akCsvText.includes('"Offen"')&&akCsvText.includes('"Erledigt"'),'AK CSV includes open and completed orders');
+ fs.writeFileSync(path.join(sampleDir,'M-iCare_AK_Kundenreport_Test.csv'),akCsvText,'utf8');
  const akPdfDownload=page.waitForEvent('download');
  await page.locator('#orderStatusPdf').click();
  const akPdf=await akPdfDownload;
@@ -115,6 +117,9 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(akPdfBytes.subarray(0,8).toString().startsWith('%PDF-1.'),'Valid PDF signature');
  assert(akPdfBytes.length>6000,'AK report PDF should contain image and page content');
  assert(akPdfBytes.toString('latin1').includes('%%EOF'),'PDF must have a complete cross-reference trailer');
+ fs.writeFileSync(path.join(sampleDir,'M-iCare_AK_Kundenreport_Test.pdf'),akPdfBytes);
+ await page.locator('#orderPrintPreviewBody').evaluate(el=>{el.closest('details').open=true});
+ await page.locator('#orderPrintPreviewBody').screenshot({path:path.join(sampleDir,'M-iCare_AK_Druckvorschau_Test.png')});
  console.log('E2E step 4b: AK open/done, customer filter, conflicts, CSV and PDF passed');
 
  // Planned order correction: no reason => blocked, reason => same entry updated and audited
