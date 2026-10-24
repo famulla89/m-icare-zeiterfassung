@@ -84,7 +84,7 @@
    <div><label for="reportCustomer">Kunde auswählen</label><select id="reportCustomer"></select></div>
    <div><label for="reportEmployee">Mitarbeiter</label><select id="reportEmployee"></select></div>
    <div><label for="reportObject">Geschäftsstelle / Objekt</label><select id="reportObject"></select></div>
-   <div><label for="reportService">Reinigungsleistung</label><select id="reportService"></select></div>
+   <div><label for="reportService">Reinigungsleistung</label><select id="reportService"></select></div><div><label for="reportEntryKind">Erfassungsart</label><select id="reportEntryKind"><option value="">Alle Arten</option><option value="free">Freie Arbeitszeiterfassung</option><option value="planned">Geplanter Auftrag dokumentiert</option></select></div><div><label for="reportOrderStatus">Status erfasster Arbeiten</label><select id="reportOrderStatus"><option value="">Alle Status</option><option value="done">Erledigt</option><option value="progress">In Bearbeitung</option><option value="cancelled">Abgesagt</option><option value="absent">Nicht angetroffen</option><option value="_none">Ohne Status</option></select></div>
   </div>
   <div class="row" style="margin-top:12px"><button type="button" id="reportReset" class="secondary">Filter zurücksetzen</button></div>
  </details>
@@ -720,9 +720,9 @@ function reportFillSelect(id,items,all){const select=$(id),previous=select.value
 function reportTable(parent,title,headers,rows){const section=el('div','');section.className='objectPanel';section.append(el('h3',title));const wrap=el('div','');wrap.className='tablewrap';const t=document.createElement('table'),head=document.createElement('thead'),hr=document.createElement('tr');for(const h of headers){const th=el('th',h);hr.append(th)}head.append(hr);t.append(head);const body=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const item of row)tr.append(el('td',item));body.append(tr)}t.append(body);wrap.append(t);section.append(wrap);if(!rows.length)section.append(el('p','Keine passenden Daten im gewählten Zeitraum.'));parent.append(section)}
 function reportMinutes(n){return (Number(n||0)/60).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' Std.'}
 function reportBuild(){
- const from=$('reportFrom').value,to=$('reportTo').value,cid=$('reportCustomer').value,emp=$('reportEmployee').value,oid=$('reportObject').value,svc=$('reportService').value;
+ const from=$('reportFrom').value,to=$('reportTo').value,cid=$('reportCustomer').value,emp=$('reportEmployee').value,oid=$('reportObject').value,svc=$('reportService').value,kind=$('reportEntryKind').value,status=$('reportOrderStatus').value;
  const matches=(x)=> (!cid||x.customerId===cid)&&(!emp||x.employee===emp)&&(!oid||x.objectId===oid)&&(!svc||x.service===svc);
- const entries=state.entries.filter(e=>e.date>=from&&e.date<=to&&matches(e));
+ const entries=state.entries.filter(e=>e.date>=from&&e.date<=to&&matches(e)&&(!kind||(kind==='free'?!e.appointmentId:!!e.appointmentId))&&(!status||(status==='_none'?!e.orderStatus:e.orderStatus===status)));
  const occ=(state.appointments||[]).filter(a=>matches(a)).flatMap(a=>datesFor(a,from,to));
  const linked=new Set(entries.filter(e=>e.appointmentId).map(e=>e.appointmentId+'|'+e.appointmentOccurrence));
  const completed=occ.filter(x=>linked.has(appointmentKey(x.appointment,x.originalDate)));
@@ -764,7 +764,7 @@ function reportSetRange(mode){
  if(mode==='month'){$('reportFrom').value=month+'-01';$('reportTo').value=today}
  if(mode==='previous'){const d=new Date(today+'T12:00:00');d.setDate(1);d.setMonth(d.getMonth()-1);const ym=isoDate(d).slice(0,7);$('reportFrom').value=ym+'-01';$('reportTo').value=ym+'-'+String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}
  if(mode==='year'){$('reportFrom').value=today.slice(0,4)+'-01-01';$('reportTo').value=today}
- if(mode==='all'){const list=[...state.entries.map(e=>e.date),...state.appointments.map(a=>a.date)].filter(x=>typeof x==='string'&&x.length===10).sort();$('reportFrom').value=list[0]||month+'-01';$('reportTo').value=list.length&&list[list.length-1]>today?list[list.length-1]:today}
+ if(mode==='all'){const list=[...state.entries.map(e=>e.date),...state.appointments.map(a=>a.date),...state.appointments.map(a=>a.until).filter(Boolean)].filter(x=>typeof x==='string'&&x.length===10).sort();$('reportFrom').value=list[0]||month+'-01';$('reportTo').value=list.length&&list[list.length-1]>today?list[list.length-1]:today}
  renderReporting()
 }
 function reportBars(parent,title,items){
@@ -819,7 +819,7 @@ $('reportCustomerSearch').addEventListener('input',renderReporting);
 document.querySelectorAll('[data-open-report]').forEach(b=>b.onclick=()=>reportOpenTab(b.dataset.openReport));
 $('reportBack').onclick=reportOpenHome;
 document.querySelectorAll('[data-report-range]').forEach(b=>b.onclick=()=>reportSetRange(b.dataset.reportRange));
-$('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','reportCustomer','reportEmployee','reportObject','reportService'])$(id).value='';renderReporting()};
+$('reportReset').onclick=()=>{for(const id of ['reportFrom','reportTo','reportCustomerSearch','reportCustomer','reportEmployee','reportObject','reportService','reportEntryKind','reportOrderStatus'])$(id).value='';renderReporting()};
 $('reportCsv').onclick=reportExportCsv;
 $('reportTableCsv').onclick=()=>{
  const rows=[['Bericht',reportTitles[activeReportTab]],['Zeitraum',$('reportFrom').value+' bis '+$('reportTo').value]];
