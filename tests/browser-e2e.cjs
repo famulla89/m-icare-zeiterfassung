@@ -218,6 +218,8 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  });
  await page.locator('#reportAkSearch').fill(testAk);
  await page.locator('#reportAkCorrectionFilter').selectOption('corrected');
+ assert.equal(await page.locator('#reportAkQuickSearch').inputValue(),testAk,'Quick search mirrors advanced AK filter');
+ assert(await page.locator('#reportOnlyCorrectedQuick').isChecked(),'Quick correction checkbox mirrors selected filter');
  const correctedReport=await page.locator('#reportPanels').innerText();
  assert(correctedReport.includes(testAk)&&correctedReport.includes('Nachträglich korrigierte Arbeitskarten'),'Corrected AK should appear in filtered reporting');
  const correctedAkLinkCount=await page.evaluate(()=>state.entries.filter(e=>e.appointmentId==='test-appointment-1'&&e.appointmentOccurrence==='2026-10-05').length);
