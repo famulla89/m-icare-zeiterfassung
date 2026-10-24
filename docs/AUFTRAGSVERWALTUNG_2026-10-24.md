@@ -78,3 +78,21 @@ Automatisierte Tests decken wöchentliche Jahresverträge (52 Termine), monatlic
 - Der reguläre Windows-Electron-Installer bleibt mangels digitaler Signatur bzw. aufgrund bisheriger Chrome-Malwarewarnung ohne Freigabe für reguläre Installation. Ein erfolgreicher GitHub-Build ist keine Malware-Freigabe.
 
 **Vor Installation:** Bestehenden lokalen Datenbestand immer erst als JSON sichern. Diesen PR erst nach erfolgreichen Funktionstests und Abnahme in `main` zusammenführen.
+
+
+## Fortlaufende Nummerierung und Auftragsabschluss
+
+Neue Aufträge erhalten eine **dauerhaft fortlaufende Nummer** als einfache Zahl: **1, 2, 3, ...**. Die App merkt sich die nächste Nummer in `nextOrderNumber`, auch in JSON-Backups. Eine abgebrochene, abgeschlossene oder später nicht mehr vorhandene Auftragsnummer wird nicht für einen neuen Auftrag erneut vergeben. Bereits vorhandene ältere Kennungen wie `A-2026-0001` bleiben unverändert, die neue Nummerierung berücksichtigt ihren höchsten numerischen Suffix.
+
+Der **Gesamtauftragsstatus** ist getrennt vom Fortschritt der einzelnen Einsätze:
+
+- **Aktiv:** Auftrag läuft.
+- **Pausiert:** vorübergehend gestoppt; nicht abgeschlossen.
+- **Abgeschlossen – erledigt:** Gesamtauftrag abgeschlossen, als ausgeführt gekennzeichnet; bei noch offenen Einsätzen erscheint eine Warnung. Historischer Erfüllungsgrad bleibt wie er war.
+- **Abgeschlossen – abgebrochen:** Gesamtauftrag beendet, weil er storniert oder vorzeitig abgebrochen wurde. **Zählt als abgeschlossen, aber nicht als vollständig erbracht**. Bereits geleistete Stunden und ursprüngliche Termine bleiben erhalten.
+
+Ein Gesamtauftrag wird über **Status ändern / Auftrag abschließen** bearbeitet: neuen Status wählen, **Pflichtgrund** eingeben, speichern. Die App erfasst Zeitstempel, Vorher-/Nachher-Status, Begründung und Datum des Abschlusses. Spätere Wiederaufnahme benötigt ebenfalls einen Grund.
+
+Die Auftragsübersicht zeigt **Abgeschlossen gesamt** und **Davon abgebrochen** getrennt. Der Filter „Alle abgeschlossenen“ und das Controlling berücksichtigen beide Endzustände. Einzelne Einsatzstornierungen verändern weiterhin nicht automatisch die Gesamtstatus-Kennzeichnung oder die erledigten Prozente.
+
+Automatisierte Tests decken die Vergabe 1/2/3, abgebrochene Aufträge, frühere Jahresnummern, nicht wiederzuverwendende Nummern, Pflichtgründe und das Reporting ab.
