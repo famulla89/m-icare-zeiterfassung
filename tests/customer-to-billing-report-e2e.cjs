@@ -448,20 +448,16 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert(doneText.includes('Erledigt')&&doneText.includes('Rechnung erstellen'));
   await page.screenshot({path:path.join(out,'10_Kalender_Erledigt_Rechnung.png'),fullPage:true});
   await page.locator('#selectedDayList button').filter({hasText:'Rechnung erstellen'}).click();
-  assert.equal(await page.locator('#qAppointment').inputValue(),scheduled[0].id);
-  assert.equal(await page.locator('#qKind').inputValue(),'invoice');
-  assert.equal(await page.locator('#qManualNet').inputValue(),'100.00','Only one fifth of total quote must be invoiced');
-  assert.equal(await page.locator('#qVisits').inputValue(),'1');
-  const partialLabel=await page.locator('#qPartInvoiceInfo').innerText();
-  assert(partialLabel.includes('Teilrechnung 1 von 5')&&/100,00\s*€/.test(partialLabel),'UI must show partial invoice and agreed 1/5 amount. Actual: '+JSON.stringify(partialLabel));
-  const rawPart=await page.evaluate(()=>MiCareQuoteUI.collect());
+  assert(await page.locator('#billingScreen').isVisible(),'Rechnung öffnet eigene Maske');
+  assert(await page.locator('#billEditor').isVisible(),'Erledigte AK öffnet Rechnungsprüfung');
+  const rawPart=await page.evaluate(args=>MiCareBillingCore.prepare(state,state.quotes.find(q=>q.id===args.quote),args.ak,{dueDate:'2026-11-30'}),{quote:contract.id,ak:scheduled[0].id});
   assert.equal(rawPart.sourceVisitNumber,1);
   assert.equal(rawPart.sourceVisitCount,5);
   assert.equal(rawPart.net,100);
   assert.equal(rawPart.sourceQuoteNumber,contract.number);
-  const part=await page.evaluate(()=>MiCareQuoteUI.calculate());
-  assert.equal(part.net,100);assert.equal(part.tax,0);
-  ok('Erledigte AK öffnet Rechnungsrechner mit korrekt anteiligem Preis 100 EUR');
+  ok('Erledigte AK öffnet eigene Rechnungsmaske mit anteiligem Preis 100 EUR');
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="quoteCalculator"]').click();
   // Exact business scenario: 10 scheduled services, 1,000 EUR agreed net, one 100 EUR partial invoice.
   await page.locator('#qNew').click();
   await page.locator('#qCustomer').selectOption(created.customer.id);
@@ -504,14 +500,14 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#acceptedOrdersSearch').fill(tenQuote.number);
   await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
   await page.locator('#acceptedOrdersList button').filter({hasText:'Teilrechnung 1/10'}).click();
-  assert.equal(await page.locator('#qManualNet').inputValue(),'100.00');
-  assert((await page.locator('#qPartInvoiceInfo').innerText()).includes('Teilrechnung 1 von 10'));
-  const tenDoc=await page.evaluate(()=>MiCareQuoteUI.collect());
+  assert(await page.locator('#billingScreen').isVisible(),'Separate invoice page for 1/10');
+  assert((await page.locator('#billEditorTitle').innerText()).includes('Teilrechnung 1 von 10'));
+  const tenDoc=await page.evaluate(args=>MiCareBillingCore.prepare(state,state.quotes.find(q=>q.id===args.quote),args.ak,{dueDate:'2027-03-01'}),{quote:tenQuote.id,ak:firstTen[0].id});
   assert.equal(tenDoc.net,100);
   assert.equal(tenDoc.sourceVisitNumber,1);
   assert.equal(tenDoc.sourceVisitCount,10);
   assert.equal(tenDoc.sourceQuoteNumber,tenQuote.number);
-  ok('10 Besuche 1.000 EUR: Rechnung 1/10 beträgt 100 EUR statt 1.000 EUR');
+  ok('10 Besuche 1.000 EUR: Teilrechnung 1/10 beträgt 100 EUR statt 1.000 EUR');
   // PDF must really render the partial-invoice heading and retain a readable PDF header.
   const invoiceHeading=await page.evaluate(async doc=>{
    let heading='';
@@ -529,7 +525,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(invoiceHeading.heading,'TEILRECHNUNG');
   assert.equal(invoiceHeading.pdfHeader,'%PDF-');
   const tenDownload=page.waitForEvent('download');
-  await page.locator('#qFinalize').click();
+  await page.locator('#billFinalize').click();
   const finalTenPdf=await tenDownload;
   const partPdfBytes=fs.readFileSync(await finalTenPdf.path());
   assert.equal(partPdfBytes.subarray(0,5).toString(),'%PDF-');
@@ -551,6 +547,39 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const billedRow=await tenOrderDetails.locator('.appt').first().innerText();
   assert(billedRow.includes('Rechnung erstellt'),'Already billed AK must clearly show its invoice status');
   ok('Abgerechnete Arbeitskarte bietet keine zweite Teilrechnung an');
+  // Auftrag komplett erledigt: Schlussrechnung nur über neun noch nicht berechnete AK.
+  await page.evaluate(async ids=>{
+    for(const id of ids){
+      const a=state.appointments.find(a=>a.id===id);
+      state.entries.push({id:crypto.randomUUID(),appointmentId:id,appointmentOccurrence:a.date,date:a.date,
+        customerId:a.customerId,objectId:a.objectId,employee:a.employee,service:a.service,start:a.start,
+        end:a.end,endDate:a.date,breakMinutes:0,minutes:120,orderStatus:'done',workDone:'Leistung erledigt'});
+    }
+    await saveState();
+  },firstTen.slice(1).map(a=>a.id));
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="billingScreen"]').click();
+  const tenBilling=page.locator('#billOrders details[data-order="'+tenQuote.id+'"]');
+  await tenBilling.locator(':scope > summary').click();
+  assert((await tenBilling.innerText()).includes('10/10 AK erledigt'));
+  assert((await tenBilling.innerText()).includes('900,00'));
+  await tenBilling.locator('button').filter({hasText:'Schlussrechnung'}).click();
+  assert((await page.locator('#billEditorTitle').innerText()).includes('Schlussrechnung'));
+  const finalDoc=await page.evaluate(qId=>{
+    const q=state.quotes.find(x=>x.id===qId);
+    return MiCareBillingCore.prepare(state,q,q.appointmentIds[1],{dueDate:'2027-04-01'});
+  },tenQuote.id);
+  assert.equal(finalDoc.net,900);
+  assert.equal(finalDoc.invoiceType,'final');
+  assert.equal(finalDoc.alreadyInvoicedNet,100);
+  await page.locator('#billFinalize').click();
+  await page.waitForFunction(qId=>state.quotes.some(d=>d.finalizedAt&&d.invoiceType==='final'&&d.sourceQuoteId===qId),tenQuote.id);
+  const ledger=await page.evaluate(qId=>{
+    const st=MiCareBillingCore.status(state,state.quotes.find(d=>d.id===qId));
+    return {billed:st.billed,total:st.total,paid:st.paidNetCents,remaining:st.unbilled.length};
+  },tenQuote.id);
+  assert.deepEqual(ledger,{billed:10,total:10,paid:100000,remaining:0});
+  ok('10/10 AK: Schlussrechnung 900 EUR plus 100 EUR Teilrechnung, keine Überberechnung');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
   const requiredMasks={
    home:['micareContractReminders'],
@@ -558,6 +587,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
    customerOverviewScreen:['customerSearch'],
    appointmentsPanel:['acceptedOrdersPanel','acceptedOrdersSearch','acceptedOrdersFilter','appointmentCalendarPanel','appointmentForm','appointmentsList'],
    quoteCalculator:['qCustomer','qObject','qAppointment','qPlanDate','qPlanEmployee','qPlanStart','qPlanEnd','qAcceptDialog','qAcceptPlanRows','qAcceptWorkInstructions','qSavedList'],
+   billingScreen:['billSearch','billOrders','billEditor','billSaved','billFinalize','billPreview'],
    plannedWorkScreen:['plannedListItems'],
    dailyWorkOverview:['dailyOverviewDate','dailyOverviewAppointments'],
    entryForm:['date','start','end','orderStatus','workDone'],
