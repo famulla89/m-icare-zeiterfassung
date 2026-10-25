@@ -110,7 +110,7 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
  </div></div>
 <div class="wrap">
 <header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.7.0 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
-<section id="home" class="screen active"><h2>Was möchtest du machen?</h2><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📅 Termine planen<small>Einmalig oder wiederkehrend</small></button><button class="tile" data-jump="quoteCalculator">🧮 Angebot & Rechnung<small>Reinigung kalkulieren · Kunde und AK übernehmen · PDF erstellen</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
+<section id="home" class="screen active"><h2>Was möchtest du machen?</h2><div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:10px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerung beim Öffnen der App wird hier angezeigt.</p></div><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📅 Termine planen<small>Einmalig oder wiederkehrend</small></button><button class="tile" data-jump="quoteCalculator">🧮 Angebot & Rechnung<small>Reinigung kalkulieren · Kunde und AK übernehmen · PDF erstellen</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
 
 <section class="screen" id="quoteCalculator">
  <h2>🧮 Angebots- & Rechnungsrechner</h2>
@@ -202,9 +202,24 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
    <div><label for="qPlanEmployee">Mitarbeiter</label><select id="qPlanEmployee"><option value="">– Mitarbeiter auswählen –</option></select></div>
    <div><label for="qPlanStart">Geplanter Beginn</label><input id="qPlanStart" type="time" value="09:00"></div>
    <div><label for="qPlanEnd">Geplantes Ende</label><input id="qPlanEnd" type="time" value="11:00"></div>
-   <div><label for="qPlanRhythm">Bei mehreren Einsätzen</label><select id="qPlanRhythm"><option value="7">Wöchentlich</option><option value="14">Alle 2 Wochen</option><option value="1">Täglich</option></select></div>
+   <div><label for="qPlanMode">Wie wird der Auftrag geplant?</label><select id="qPlanMode"><option value="count">Feste Anzahl Einsätze (oben festlegen)</option><option value="range">Zeitraum mit festen Wochentagen</option></select></div>
+   <div id="qPlanCountPanel"><label for="qPlanRhythm">Abstand bei fester Anzahl</label><select id="qPlanRhythm"><option value="7">Wöchentlich</option><option value="14">Alle 2 Wochen</option><option value="1">Täglich</option></select></div>
+   <div id="qPlanRangePanel" class="hidden" style="grid-column:1/-1">
+    <div class="grid">
+     <div><label for="qPlanEndDate">Vertragsende (einschließlich)</label><input id="qPlanEndDate" type="date"></div>
+     <div><label for="qPlanEveryWeeks">Wiederholung</label><select id="qPlanEveryWeeks"><option value="1">Jede Woche</option><option value="2">Alle 2 Wochen</option><option value="3">Alle 3 Wochen</option><option value="4">Alle 4 Wochen</option></select></div>
+    </div>
+    <label style="margin:10px 0">An welchen Wochentagen?</label>
+    <div class="row" id="qPlanWeekdays" style="gap:10px;flex-wrap:wrap">
+     <label><input type="checkbox" value="1"> Mo</label><label><input type="checkbox" value="2"> Di</label><label><input type="checkbox" value="3"> Mi</label><label><input type="checkbox" value="4"> Do</label><label><input type="checkbox" value="5"> Fr</label><label><input type="checkbox" value="6"> Sa</label><label><input type="checkbox" value="0"> So</label>
+    </div>
+   </div>
+   <div><label for="qPlanReminderDays">Kunden-Erinnerung vor Vertragsende</label><select id="qPlanReminderDays"><option value="30">30 Tage vorher</option><option value="60">60 Tage vorher</option><option value="14">14 Tage vorher</option><option value="7">7 Tage vorher</option><option value="0">Am letzten Einsatztag</option><option value="-1">Keine Erinnerung</option></select></div>
   </div>
-  <p class="hint">Die oben festgelegte Zahl der Reinigungseinsätze wird erst nach der Kundenannahme in entsprechend viele AK umgewandelt.</p>
+  <div class="row actions" style="margin-top:10px"><button type="button" class="secondary" id="qPlanPreviewButton">📅 Termine und Überschneidungen prüfen</button><button type="button" class="secondary" id="qPlanOpenCalendar">Kalenderübersicht öffnen</button></div>
+  <p class="hint" id="qPlanStatus">Noch kein Terminplan berechnet. Die Planung bleibt bis zur Kundenannahme unverbindlich.</p>
+  <div id="qPlanPreview" role="status" aria-live="polite" class="status" style="max-height:270px;overflow:auto">Bitte zuerst einen ersten Termin und einen Mitarbeiter auswählen.</div>
+  <p class="hint">Der Entwurf wird im Kalender ausdrücklich als <strong>unverbindliche Planung</strong> markiert. Erst nach der Kundenannahme entstehen offene Arbeitskarten.</p>
  </div>
  <div><label for="qManualNet">Dein eigener Gesamtpreis netto € (0 = Preisvorschlag)</label><input id="qManualNet" type="number" min="0" step="0.01" value="0"></div>
    <div><label for="qTaxMode">Steuerregelung</label><select id="qTaxMode"><option value="small">Kleinunternehmer (§ 19 UStG) – ohne Umsatzsteuer</option><option value="regular">Regelbesteuerung (falls zutreffend)</option></select></div><div><label for="qVat">Umsatzsteuer bei Regelbesteuerung</label><select id="qVat"><option value="19">19 %</option><option value="7">7 % (nur falls rechtlich zutreffend)</option><option value="0">0 % (nur bei zutreffender Steuerregel)</option></select></div>
@@ -249,8 +264,9 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
    <div><label for="qAcceptEmployee">Zuständiger Mitarbeiter</label><select id="qAcceptEmployee" required></select></div>
    <div><label for="qAcceptStart">Beginn</label><input id="qAcceptStart" type="time" value="09:00" required></div>
    <div><label for="qAcceptEnd">Ende</label><input id="qAcceptEnd" type="time" value="11:00" required></div>
-   <div><label for="qAcceptRhythm">Terminabstand</label><select id="qAcceptRhythm"><option value="7">Wöchentlich</option><option value="1">Täglich</option><option value="14">Alle 2 Wochen</option></select></div>
+   <div><label for="qAcceptRhythm">Terminabstand (bei fester Anzahl)</label><select id="qAcceptRhythm"><option value="7">Wöchentlich</option><option value="1">Täglich</option><option value="14">Alle 2 Wochen</option></select></div>
   </div>
+  <p class="hint" id="qAcceptScheduleSummary">Die Annahme erzeugt erst nach deiner Bestätigung offene AK.</p>
   <p class="hint">Der Angebotsbetrag umfasst alle im Angebot kalkulierten Einsätze. Die Abrechnung kann nach Erledigung jeder einzelnen AK anteilig erfolgen.</p>
   <div class="row actions"><button type="button" id="qAcceptConfirm">Arbeitskarten verbindlich anlegen</button><button type="button" class="secondary" id="qAcceptCancel">Abbrechen</button></div>
  </dialog>
@@ -377,7 +393,8 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 <section class="screen" id="management"><h2>Mitarbeiter verwalten</h2><div class="row"><div class="microw"><input id="newEmployee" style="max-width:320px" maxlength="80" placeholder="Neuen Mitarbeiternamen"><button type="button" class="secondary mic" data-voice="newEmployee" aria-label="Mitarbeitername diktieren">🎤</button></div><button id="addEmployee">+ Mitarbeiter hinzufügen</button></div><p id="employeeList" class="hint"></p></section>
 <div class="footer">M-iCare Gebäudereinigung · Version 1.5.0 · Keine Cloudanbindung · Auf diesem Gerät gespeicherte Daten</div>
 </div><div id="toast" class="hidden" role="status"></div>
-<dialog id="linkedCustomerDialog" aria-labelledby="linkedCustomerTitle" style="border:1px solid #cbd9e8;border-radius:14px;padding:24px;max-width:460px;width:calc(100% - 32px);box-shadow:0 10px 45px #0004"><h3 id="linkedCustomerTitle">Kunde hat bereits Einträge</h3><p id="linkedCustomerMessage"></p><p>Endgültiges Löschen ist gesperrt. Möchtest du den Kunden stattdessen archivieren?</p><div class="row" style="justify-content:flex-end;margin-top:20px"><button type="button" class="secondary" id="linkedCustomerNo">Nein, abbrechen</button><button type="button" id="linkedCustomerArchive">Ja, archivieren</button></div></dialog><script src="./cloud-transfer.js"></script><script src="./report-print.js"></script><script src="./quote-calculator.js"></script><script src="./quote-ui.js" defer></script><script>
+<dialog id="linkedCustomerDialog" aria-labelledby="linkedCustomerTitle" style="border:1px solid #cbd9e8;border-radius:14px;padding:24px;max-width:460px;width:calc(100% - 32px);box-shadow:0 10px 45px #0004"><h3 id="linkedCustomerTitle">Kunde hat bereits Einträge</h3><p id="linkedCustomerMessage"></p><p>Endgültiges Löschen ist gesperrt. Möchtest du den Kunden stattdessen archivieren?</p><div class="row" style="justify-content:flex-end;margin-top:20px"><button type="button" class="secondary" id="linkedCustomerNo">Nein, abbrechen</button><button type="button" id="linkedCustomerArchive">Ja, archivieren</button></div></dialog><script src="./cloud-transfer.js"></script><script src="./report-print.js"></script><script src="./schedule-planner.js"></script>
+<script src="./quote-calculator.js"></script><script src="./quote-ui.js" defer></script><script>
 'use strict';
 const $=id=>document.getElementById(id);
 const SERVICES=['Gebäudereinigung','Unterhaltsreinigung','Büroreinigung','Glas- & Fensterreinigung','Grundreinigung','Bauendreinigung','Haus- & Wohnungsreinigung','Treppenhaus- & Aufgangsreinigung','Praxis- & Ladenreinigung','Kita- & Schulreinigung','Hausmeisterservice','Sonderreinigungen'];
