@@ -2,12 +2,15 @@
 /* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
 (function(){
  const byId=id=>document.getElementById(id);
- const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','Iban','Notes'];
+ const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','RecipientEmail','Iban','Notes'];
  // Einträge in öffentlich zugänglichen Firmenverzeichnissen; mögliche Adressänderungen bitte prüfen.
  const companyPublic={SellerName:'M-iCare Gebäudereinigung',SellerAddress:'Lippestraße 9, 58097 Hagen',SellerEmail:'info@m-icare-gebaeudereinigung.de',SellerPhone:'0162 8564663'};
  const typeAreas={standard:{label:'Standardfenster',sqm:1.5},large:{label:'Große Glasflächen',sqm:4},sliding:{label:'Schiebeelemente',sqm:2.5},mullion:{label:'Sprossenfenster',sqm:1.2},winter:{label:'Wintergarten',sqm:1},roof:{label:'Glasüberdachung',sqm:1}};
  let windowItems=[];
  const de=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+ const validEmail=s=>/^[^\s@<>\r\n]+@[^\s@<>\r\n]+\.[^\s@<>\r\n]+$/.test(String(s||''))&&String(s).length<=254;
+ const isoDay=s=>{try{return germanToIso(s)}catch{return ''}};
+ let invoiceFinalizing=false;
  let activeId=null;
  function value(key){return byId('q'+key)?.value||''}
  function num(key){const node=byId('q'+key);if(!node)throw Error('Fehlende Eingabe '+key);const n=Number(node.value);if(!node.value.trim()||!Number.isFinite(n)||n<0)throw Error('Ungültiger Wert in '+(node.labels?.[0]?.textContent||key));return n}
@@ -177,7 +180,7 @@
    appointmentId:a?.id||'',orderNumber:a?'AK '+(a.akNumber||'–')+' / '+orderCode(a):'',
    service:value('Service').trim()||'Reinigungsleistung',serviceDate:value('ServiceDate').trim(),
    validUntil:value('Kind')==='quote'?value('ValidUntil'):'',dueDate:value('Kind')==='invoice'?value('ValidUntil'):'',
-   sellerName:value('SellerName').trim(),sellerAddress:value('SellerAddress').trim(),sellerTaxId:value('SellerTax').trim(),sellerEmail:value('SellerEmail').trim(),sellerPhone:value('SellerPhone').trim(),iban:value('Iban').trim(),
+   sellerName:value('SellerName').trim(),sellerAddress:value('SellerAddress').trim(),sellerTaxId:value('SellerTax').trim(),sellerEmail:value('SellerEmail').trim(),sellerPhone:value('SellerPhone').trim(),recipientEmail:value('RecipientEmail').trim(),iban:value('Iban').trim(),
    notes:value('Notes').trim(),taxMode:value('TaxMode'),vat:out.vat,net:out.net,tax:out.tax,gross:out.gross,rows:out.rows,calculation:out,formValues:readValues()
   };
   return MiCareQuote.createDocument(doc);
@@ -187,6 +190,7 @@
   state.quoteSettings=Object.fromEntries(keep.map(k=>[k,value(k)]));
  }
  async function persist(){
+  if((state.quotes||[]).some(x=>x.id===activeId&&x.finalizedAt))throw Error('Endgültige Rechnung ist gesperrt und darf nicht verändert werden');
   const doc=collect();state.quotes??=[];saveSettings();
   const i=state.quotes.findIndex(x=>x.id===doc.id);
   if(i>=0)state.quotes[i]=doc;else state.quotes.push(doc);
@@ -208,6 +212,7 @@
  }
  function loadQuote(id){
   const doc=(state.quotes||[]).find(q=>q.id===id);if(!doc)return;
+  if(doc.finalizedAt){alert('Endgültige Rechnung ist gesperrt. Für PDF und E-Mail bitte die Dokumentenübersicht verwenden.');return}
   activeId=id;const values=doc.formValues||{};
   for(const [k,v] of Object.entries(values)){
    if(k==='WindowItems'){windowItems=Array.isArray(v)?structuredClone(v).slice(0,8):[];continue}
@@ -233,6 +238,98 @@
    await saveExport(name,pdf,item.kind==='quote'?'Kostenvoranschlaege':'Rechnungsentwuerfe');
    notify(type+' '+item.number+' als PDF ausgegeben');
   }catch(e){alert('PDF konnte nicht erstellt werden: '+e.message)}
+  finally{button.disabled=false}
+ }
+
+ function nextInvoiceNumber(){
+  const year=new Date().getFullYear(),prefix='RG-'+year+'-';
+  const numbers=new Set((state.quotes||[]).filter(x=>x.finalizedAt).map(x=>x.number));
+  let n=1;while(numbers.has(prefix+String(n).padStart(4,'0')))n++;
+  return prefix+String(n).padStart(4,'0');
+ }
+ function assertFinalInvoiceReady(doc){
+  if(doc.kind!=='invoice')throw Error('Bitte zuerst Rechnungsentwurf als Dokumenttyp auswählen');
+  if(!doc.appointmentId)throw Error('Endgültige Rechnung benötigt eine erledigte Arbeitskarte');
+  const occurrence=isoDay(doc.serviceDate);
+  if(!occurrence)throw Error('Leistungsdatum muss ein konkretes gültiges Datum sein (TT.MM.JJJJ)');
+  const ak=(state.appointments||[]).find(a=>a.id===doc.appointmentId&&a.customerId===doc.customerId);
+  if(!ak)throw Error('Arbeitskarte passt nicht zum Rechnungsempfänger');
+  const completed=(state.entries||[]).some(e=>e.appointmentId===ak.id&&(e.appointmentOccurrence||e.date)===occurrence&&e.orderStatus==='done');
+  if(!completed)throw Error('Arbeitskarte ist für das angegebene Leistungsdatum noch nicht als erledigt dokumentiert');
+  if((doc.calculation?.visits||0)!==1)throw Error('Diese Version rechnet je endgültiger Rechnung genau einen erledigten Einsatz ab');
+  if((state.quotes||[]).some(x=>x.finalizedAt&&x.appointmentId===ak.id&&isoDay(x.serviceDate)===occurrence))
+   throw Error('Für diese Arbeitskarte und dieses Leistungsdatum existiert bereits eine endgültige Rechnung');
+  if(!doc.sellerName||!doc.sellerAddress||!doc.sellerTaxId||!doc.customerAddress||!doc.iban||!doc.dueDate)
+   throw Error('Für die endgültige Rechnung fehlen Firmenname, vollständige Adressen, Steuernummer/USt-ID, IBAN oder Zahlungsziel');
+  if(!/^DE[0-9]{20}$/.test(doc.iban.replace(/\s/g,'')))
+   throw Error('Bitte die vollständige deutsche IBAN mit 22 Zeichen eintragen');
+  if(!validEmail(doc.recipientEmail))throw Error('Bitte eine gültige Kunden-E-Mail angeben');
+  if(doc.taxMode==='small'&&(Number(doc.tax)!==0||Number(doc.vat)!==0))
+   throw Error('Kleinunternehmerrechnung darf keine Umsatzsteuer ausweisen');
+  return occurrence;
+ }
+ async function finalizeInvoice(){
+  if(invoiceFinalizing)return;
+  invoiceFinalizing=true;
+  const button=byId('qFinalize');button.disabled=true;
+  try{
+   if(activeId&&(state.quotes||[]).some(x=>x.id===activeId&&x.finalizedAt))throw Error('Endgültige Rechnung ist bereits vorhanden');
+   const doc=collect();
+   const occurrence=assertFinalInvoiceReady(doc);
+   doc.number=nextInvoiceNumber();
+   doc.finalizedAt=new Date().toISOString();doc.invoiceOccurrence=occurrence;
+   doc.paymentStatus='open';doc.emailStatus='not-confirmed';
+   doc.formValues.Number=doc.number;
+   if(!confirm('Rechnung '+doc.number+' über '+de(doc.gross)+' endgültig erstellen? Sie wird danach gegen Bearbeiten und Löschen gesperrt. Die E-Mail wird NICHT automatisch gesendet.'))return;
+   // Render before persisting so a broken logo cannot finalize a PDF.
+   const pdf=await MiCareQuote.pdf(doc);
+   state.quotes??=[];saveSettings();
+   const existing=state.quotes.findIndex(x=>x.id===doc.id);
+   if(existing>=0)state.quotes[existing]=doc;else state.quotes.push(doc);
+   activeId=null;
+   await saveState();showSaved();updateNumber();
+   await saveExport('M-iCare_Rechnung_'+doc.number+'.pdf',pdf,'Rechnungen');
+   notify('Endgültige Rechnung '+doc.number+' gespeichert. E-Mail kann in der Übersicht vorbereitet werden.');
+  }catch(e){alert('Rechnung konnte nicht erstellt werden: '+e.message)}
+  finally{invoiceFinalizing=false;button.disabled=false}
+ }
+ async function pdfBase64(blob){
+  return new Promise((resolve,reject)=>{
+   const reader=new FileReader();reader.onerror=()=>reject(Error('PDF kann nicht gelesen werden'));
+   reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+   reader.readAsDataURL(blob);
+  });
+ }
+ function mailDetails(doc){
+  if(!validEmail(doc.recipientEmail))throw Error('Kunden-E-Mail ist ungültig. Bitte Kundendaten überprüfen.');
+  const subject='Rechnung '+doc.number+' – '+doc.sellerName;
+  const body='Guten Tag,\n\nanbei erhalten Sie Ihre Rechnung '+doc.number+' über '+de(doc.gross)+' als PDF.\n\nBitte beachten Sie das Zahlungsziel.\n\nMit freundlichen Grüßen\n'+doc.sellerName;
+  const name='M-iCare_Rechnung_'+doc.number.replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf';
+  return {recipient:doc.recipientEmail,subject,body,name};
+ }
+ async function emailFinalInvoice(doc,button){
+  if(!doc.finalizedAt||doc.kind!=='invoice')throw Error('E-Mail nur für endgültige Rechnungen');
+  if(button.disabled)return;button.disabled=true;
+  try{
+   const pdf=await MiCareQuote.pdf(doc),m=mailDetails(doc),base64=await pdfBase64(pdf);
+   if(window.MiCareNative?.shareInvoicePdf){
+    window.MiCareNative.shareInvoicePdf(m.name,base64,m.recipient,m.subject,m.body);
+    notify('E-Mail-App wird geöffnet. Bitte PDF und Empfänger prüfen, dann selbst senden.');
+   }else if(window.MiCareDesktopFiles?.composeEmail){
+    const res=await window.MiCareDesktopFiles.composeEmail({...m,base64});
+    alert('E-Mail-Entwurf mit PDF erstellt: '+res.path+'\n'+(res.opened?'E-Mail-App wurde geöffnet.':'Bitte die EML-Datei im E-Mail-Programm öffnen.')+'\nVersand wurde NICHT bestätigt.');
+   }else{
+    // Local portable .eml with a real MIME PDF attachment; no SMTP credentials or silent sending.
+    const b64bytes=new TextEncoder().encode(m.body);
+    let binary='';for(const b of b64bytes)binary+=String.fromCharCode(b);
+    const encodedBody=btoa(binary),chunks=base64.match(/.{1,76}/g)||[];
+    const header=(x)=>'=?UTF-8?B?'+btoa(unescape(encodeURIComponent(x)))+'?=';
+    const boundary='MiCareInvoice'+Date.now();
+    const eml='To: '+m.recipient+'\r\nSubject: '+header(m.subject)+'\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="'+boundary+'"\r\n\r\n--'+boundary+'\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+encodedBody+'\r\n--'+boundary+'\r\nContent-Type: application/pdf; name="'+m.name+'"\r\nContent-Disposition: attachment; filename="'+m.name+'"\r\nContent-Transfer-Encoding: base64\r\n\r\n'+chunks.join('\r\n')+'\r\n--'+boundary+'--\r\n';
+    download('M-iCare_Email_'+doc.number+'.eml',new Blob([eml],{type:'message/rfc822'}));
+    alert('E-Mail-Entwurf mit angehängter PDF heruntergeladen. Öffne die .eml-Datei in deinem E-Mail-Programm, kontrolliere Empfänger und Anhang und klicke dort auf Senden. M-iCare kann den Versand nicht bestätigen.');
+   }
+  }catch(e){alert('E-Mail konnte nicht vorbereitet werden: '+e.message)}
   finally{button.disabled=false}
  }
  function showSaved(){
@@ -272,7 +369,7 @@
  function clear(){
   activeId=null;windowItems=[];renderWindowItems();
   const radio=document.querySelector('input[name="qMode"][value="business"]');if(radio)radio.checked=true;
-  for(const k of ['Customer','Object','Appointment'])byId('q'+k).value='';
+  for(const k of ['Customer','Object','Appointment','RecipientEmail'])byId('q'+k).value='';
   byId('qScope').value='rooms';
   byId('qService').value='Unterhaltsreinigung';updateScope();
   byId('qKind').value='quote';byId('qManualNet').value='0';byId('qTaxMode').value=state.quoteSettings?.TaxMode||'small';
@@ -295,7 +392,7 @@
    el.addEventListener('change',()=>calculate());
   }
   byId('qScope').addEventListener('change',updateScope);
-  byId('qCustomer').addEventListener('change',()=>{byId('qObject').value='';updateObjects();calculate()});
+  byId('qCustomer').addEventListener('change',()=>{byId('qObject').value='';byId('qRecipientEmail').value=(state.customers||[]).find(x=>x.id===value('Customer'))?.email||'';updateObjects();calculate()});
   byId('qObject').addEventListener('change',()=>{updateAppointments();calculate()});
   byId('qAppointment').addEventListener('change',selectAppointment);
   byId('qKind').addEventListener('change',updateNumber);
@@ -313,6 +410,7 @@
   byId('qAreas').addEventListener('click',e=>{const target=e.target.closest('button[data-area]');if(!target)return;byId('qArea').value=target.dataset.area;calculate()});
   byId('qSave').onclick=()=>persist().catch(e=>alert('Kalkulation nicht gespeichert: '+e.message));
   byId('qPdf').onclick=makePdf;
+  byId('qFinalize').onclick=finalizeInvoice;
   byId('qNew').onclick=clear;
   byId('qSavedSearch').addEventListener('input',showSaved);
   byId('qSavedType').addEventListener('change',showSaved);
