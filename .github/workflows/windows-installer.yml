@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/windows-installer.yml'
       - 'index.html'
+      - 'login-gate.js'
       - 'quote-calculator.js'
       - 'quote-ui.js'
       - 'report-print.js'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'windows-app/**'
       - 'index.html'
+      - 'login-gate.js'
       - 'cloud-transfer.js'
       - 'quote-calculator.js'
       - 'quote-ui.js'
@@ -48,6 +50,7 @@ jobs:
           node tests/reporting-smoke.cjs
           node tests/cloud-transfer-smoke.cjs
           node tests/quote-calculator-smoke.cjs
+          node --check login-gate.js
           node tests/logic-fuzz-smoke.cjs
           node --check tests/browser-e2e.cjs
       - name: Install dependencies
