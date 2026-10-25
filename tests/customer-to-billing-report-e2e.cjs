@@ -355,8 +355,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.screenshot({path:path.join(out,'09_Angenommenes_Angebot.png'),fullPage:true});
   await page.locator('#goHome').click();
   await page.locator('#home [data-jump="appointmentsPanel"]').click();
-  await page.evaluate(()=>{calendarMonth='2026-11';chosenDay='2026-11-10';renderAppointments()});
-  await page.locator('#appointmentCalendarPanel summary').click();
+  await page.evaluate(()=>{calendarMonth='2026-11';chosenDay='2026-11-10';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   const cal=await page.locator('#selectedDayList').innerText();
   assert(cal.includes('AK '+scheduled[0].akNumber),'Calendar must display real AK number');
   assert(cal.includes('Offen'),'New accepted AK must not show completed');
