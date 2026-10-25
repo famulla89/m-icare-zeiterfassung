@@ -2,7 +2,7 @@
 /* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
 (function(){
  const byId=id=>document.getElementById(id);
- const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
+ const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
  const typeAreas={standard:{label:'Standardfenster',sqm:1.5},large:{label:'Große Glasflächen',sqm:4},sliding:{label:'Schiebeelemente',sqm:2.5},mullion:{label:'Sprossenfenster',sqm:1.2},winter:{label:'Wintergarten',sqm:1},roof:{label:'Glasüberdachung',sqm:1}};
  let windowItems=[];
  const de=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
@@ -116,15 +116,15 @@
    productivity:num('Productivity'),material:num('Material'),km:num('Km'),perKm:num('KmPrice'),
    margin:num('Margin'),minNet:num('MinNet'),manualNet:num('ManualNet'),
    minimumSqm:num('MinimumSqm'),setupMinutes:num('SetupMinutes'),liftRental:num('LiftRental'),fixedProfit:num('FixedProfit'),
-   vat:Number(value('Vat')),windowItems:windowEntries()
+   vat:value('TaxMode')==='small'?0:Number(value('Vat')),windowItems:windowEntries()
   };
  }
  function renderSummary(out){
   const node=byId('qSummary');node.replaceChildren();
   const title=document.createElement('div');title.textContent='Dein berechneter Gesamtpreis';node.append(title);
-  const total=document.createElement('strong');total.textContent=de(out.gross)+' brutto';node.append(total);
+  const total=document.createElement('strong');total.textContent=de(out.gross)+(value('TaxMode')==='small'?' Gesamtbetrag':' brutto');node.append(total);
   const info=document.createElement('p');info.className='hint';
-  info.textContent='Netto '+de(out.net)+' · Umsatzsteuer '+de(out.tax)+' ('+out.vat+' %) · '+out.visits+' Einsätze à ca. '+out.hoursPerVisit+' Std.';
+  info.textContent=(value('TaxMode')==='small'?'Kleinunternehmer (§ 19 UStG), keine Umsatzsteuer · ':'Netto '+de(out.net)+' · Umsatzsteuer '+de(out.tax)+' ('+out.vat+' %) · ')+out.visits+' Einsätze à ca. '+out.hoursPerVisit+' Std.';
   node.append(info);
   const scope=document.createElement('p');scope.className='hint';scope.textContent={rooms:'Nur Raum-/Bodenreinigung',windows:'Nur Fenster-/Glasreinigung (ohne Büroputzen)',combined:'Raum-/Bodenreinigung UND Fenster',other:'Sonstige Leistung nach Stunden'}[out.scope]+' · '+(out.windowItems.length?out.windowItems.length+' Fensterpositionen':'keine Fensterpositionen');node.append(scope);
   const info2=document.createElement('p');info2.className='hint';
@@ -173,12 +173,12 @@
    service:value('Service').trim()||'Reinigungsleistung',serviceDate:value('ServiceDate').trim(),
    validUntil:value('Kind')==='quote'?value('ValidUntil'):'',dueDate:value('Kind')==='invoice'?value('ValidUntil'):'',
    sellerName:value('SellerName').trim(),sellerAddress:value('SellerAddress').trim(),sellerTaxId:value('SellerTax').trim(),sellerEmail:value('SellerEmail').trim(),iban:value('Iban').trim(),
-   notes:value('Notes').trim(),vat:out.vat,net:out.net,tax:out.tax,gross:out.gross,rows:out.rows,calculation:out,formValues:readValues()
+   notes:value('Notes').trim(),taxMode:value('TaxMode'),vat:out.vat,net:out.net,tax:out.tax,gross:out.gross,rows:out.rows,calculation:out,formValues:readValues()
   };
   return MiCareQuote.createDocument(doc);
  }
  function saveSettings(){
-  const keep=['SellerName','SellerAddress','SellerTax','SellerEmail','Iban'];
+  const keep=['SellerName','SellerAddress','SellerTax','SellerEmail','Iban','TaxMode'];
   state.quoteSettings=Object.fromEntries(keep.map(k=>[k,value(k)]));
  }
  async function persist(){
@@ -210,6 +210,7 @@
    const node=byId('q'+k);if(!node)continue;if(node.type==='checkbox')node.checked=!!v;
    else if(!['Customer','Object','Appointment'].includes(k))node.value=v;
   }
+  if(!values.TaxMode)byId('qTaxMode').value=doc.taxMode||'regular';
   if(!values.Scope){byId('qScope').value=(values.WindowItems?.length?'combined':'rooms')}
   updateScope();
   byId('qCustomer').value=doc.customerId;updateObjects();
@@ -236,7 +237,7 @@
   for(const k of ['Customer','Object','Appointment'])byId('q'+k).value='';
   byId('qScope').value='rooms';
   byId('qService').value='Unterhaltsreinigung';updateScope();
-  byId('qKind').value='quote';byId('qManualNet').value='0';
+  byId('qKind').value='quote';byId('qManualNet').value='0';byId('qTaxMode').value=state.quoteSettings?.TaxMode||'small';
   byId('qNotes').value='';byId('qServiceDate').value='';
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
   for(const k of ['Wc','Kitchen','Heavy'])byId('q'+k).checked=false;
@@ -244,7 +245,7 @@
  }
  function refresh(){
   const settings=state.quoteSettings||{};
-  for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&!node.value)node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
+  for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&(k==='TaxMode'||!node.value))node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
   refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
  }
  function init(){
@@ -258,6 +259,8 @@
   byId('qObject').addEventListener('change',()=>{updateAppointments();calculate()});
   byId('qAppointment').addEventListener('change',selectAppointment);
   byId('qKind').addEventListener('change',updateNumber);
+  byId('qTaxMode').addEventListener('change',()=>{byId('qVat').disabled=value('TaxMode')==='small';calculate()});
+  byId('qVat').disabled=value('TaxMode')==='small';
   byId('qWindowPicker').addEventListener('click',e=>{
    const btn=e.target.closest('button[data-window]');if(btn)addWindow(btn.dataset.window)
   });
