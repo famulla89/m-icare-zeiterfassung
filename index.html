@@ -1549,8 +1549,10 @@ async function saveEntry(ev){
   if(v.appointmentId&&v.orderStatus==='done'&&prior?.orderStatus!=='done'&&!prior?.wasCompleted){
    const ak=state.appointments.find(a=>a.id===v.appointmentId);
    const partial=Number(ak?.quoteVisitCount)>1;
+   const quote=(state.quotes||[]).find(q=>q.id===ak?.quoteId&&q.acceptedAt);
+   const allDone=quote&&window.MiCareBillingCore?.status(state,quote).allDone;
    const billed=Boolean(finalInvoiceForAk(v.appointmentId));
-   if(!billed&&confirm((partial?'Teilrechnung '+ak.quoteVisit+' von '+ak.quoteVisitCount:'Rechnung')+' für '+akLabel(ak)+' jetzt vorbereiten?\\nDie Arbeitszeit ist gespeichert. Die endgültige Rechnung muss separat geprüft und bestätigt werden.')){
+   if(!billed&&confirm((allDone?'Schlussrechnung':partial?'Teilrechnung '+ak.quoteVisit+' von '+ak.quoteVisitCount:'Rechnung')+' für '+akLabel(ak)+' jetzt vorbereiten?\\nDie Arbeitszeit ist gespeichert. Die endgültige Rechnung muss separat geprüft und bestätigt werden.')){
     window.MiCareBilling?.openForAppointment(v.appointmentId,v.appointmentOccurrence);
    }
   }
