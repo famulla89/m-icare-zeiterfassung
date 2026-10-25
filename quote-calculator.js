@@ -123,6 +123,12 @@
   if(Math.abs(sum-euro(d.net))>0.02)throw Error('Positionen stimmen nicht mit Nettobetrag überein');
   if(Math.abs(euro(d.net+d.tax)-euro(d.gross))>0.02)throw Error('Gesamtbetrag inkonsistent');
   if(d.taxMode==='small'&&(Number(d.vat)!==0||Number(d.tax)!==0))throw Error('Kleinunternehmer-Dokument darf keine Umsatzsteuer ausweisen');
+  if(d.invoiceType==='final'&&Array.isArray(d.performedWork)){
+   if(d.performedWork.length>1000)throw Error('Zu viele Arbeitskarten für den PDF-Leistungsnachweis');
+   for(const item of d.performedWork){
+    if(!item||typeof item.akNumber!=='string'||String(item.workDone||'').length>3000||String(item.service||'').length>300)throw Error('Ungültiger Leistungsnachweis in der Schlussrechnung');
+   }
+  }
   return d;
  }
  function createDocument(d){validateDocument(d);return structuredClone(d)}
@@ -148,7 +154,44 @@
    return picture;
   }
   const brandLogo=await loadBrandLogo();
-  function render(pageIndex,rows,pageCount){
+  function encodeCanvas(canvas){
+   const raw=atob(canvas.toDataURL('image/jpeg',0.85).split(',')[1]);
+   const jpg=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)jpg[i]=raw.charCodeAt(i);
+   return jpg;
+  }
+  const measureCanvas=document.createElement('canvas'),measure=measureCanvas.getContext('2d');
+  function wrapDetail(value,width,font='20px Arial'){
+   measure.font=font;
+   const words=String(value||'–').replace(/\s+/g,' ').trim().split(' ');
+   const lines=[];let line='';
+   for(const word of words){
+    const parts=[];
+    if(measure.measureText(word).width>width){
+     let piece='';for(const ch of word){if(piece&&measure.measureText(piece+ch).width>width){parts.push(piece);piece=''}piece+=ch}if(piece)parts.push(piece)
+    }else parts.push(word);
+    for(const w of parts){const candidate=line?line+' '+w:w;
+     if(line&&measure.measureText(candidate).width>width){lines.push(line);line=w}else line=candidate;
+    }
+   }
+   if(line)lines.push(line);
+   return lines.length?lines:['–'];
+  }
+  const appendix=Array.isArray(d.performedWork)&&d.invoiceType==='final'?d.performedWork:[];
+  const detailItems=appendix.map(w=>{
+   const title=wrapDetail('AK '+w.akNumber+' · '+formatPdfDate(w.date)+' · '+String(w.service||''),1065,'bold 22px Arial');
+   const detail=wrapDetail(String(w.workDone||'Leistung gemäß Arbeitskarte ausgeführt'),1060,'20px Arial');
+   const status=wrapDetail('Vereinbart: '+euros(w.net)+' netto · '+(w.priorInvoice?'Bereits abgerechnet: '+w.priorInvoice:'Mit dieser Schlussrechnung abgerechnet')+(w.employee?' · '+w.employee:''),1060,'19px Arial');
+   const height=35*title.length+31*detail.length+30*status.length+30;
+   return {work:w,title,detail,status,height};
+  });
+  const detailPages=[];let page=[],used=0;
+  for(const item of detailItems){
+   if(item.height>1170)throw Error('Arbeitskartenbeschreibung zu lang für eine einzelne PDF-Seite. Bitte in der AK aufteilen.');
+   if(page.length&&used+item.height>1190){detailPages.push(page);page=[];used=0}
+   page.push(item);used+=item.height;
+  }
+  if(page.length)detailPages.push(page);
+  function render(pageIndex,rows,pageCount,workItems=null){
    const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
    const c=canvas.getContext('2d');if(!c)throw Error('Canvas nicht verfügbar');
    c.fillStyle='#fff';c.fillRect(0,0,W,H);
@@ -168,9 +211,30 @@
    if(recognizableLogoPixels<200)
     throw Error('Das M-iCare-Logo wurde nicht sichtbar ins PDF übernommen. Export abgebrochen.');
    c.fillStyle=blue;c.font='bold 37px Arial';
-   c.fillText(d.kind==='quote'?'KOSTENVORANSCHLAG':d.invoiceType==='final'?(d.finalizedAt?'SCHLUSSRECHNUNG':'SCHLUSSRECHNUNGSENTWURF'):Number(d.sourceVisitCount)>1?(d.finalizedAt?'TEILRECHNUNG':'TEILRECHNUNGSENTWURF'):(d.finalizedAt?'RECHNUNG':'RECHNUNGSENTWURF'),455,91);
+   c.fillText(workItems?'LEISTUNGSNACHWEIS':d.kind==='quote'?'KOSTENVORANSCHLAG':d.invoiceType==='final'?(d.finalizedAt?'SCHLUSSRECHNUNG':'SCHLUSSRECHNUNGSENTWURF'):Number(d.sourceVisitCount)>1?(d.finalizedAt?'TEILRECHNUNG':'TEILRECHNUNGSENTWURF'):(d.finalizedAt?'RECHNUNG':'RECHNUNGSENTWURF'),455,91);
    c.fillStyle=muted;c.font='20px Arial';c.fillText((d.finalizedAt?'Seite ':'Entwurf zur Prüfung  ·  Seite ')+(pageIndex+1)+' von '+pageCount,458,133);
    c.strokeStyle='#c7d8e9';c.lineWidth=2;c.beginPath();c.moveTo(70,199);c.lineTo(1170,199);c.stroke();
+   if(workItems){
+    let y=245;
+    c.font='bold 26px Arial';c.fillStyle=blue;c.fillText('Ausgeführte Arbeiten – Anlage zur Schlussrechnung '+d.number,70,y);y+=46;
+    c.font='20px Arial';c.fillStyle=muted;c.fillText('Angenommenes Angebot: '+(d.sourceQuoteNumber||'–')+' · '+appendix.length+' Arbeitskarten',70,y);y+=49;
+    for(const item of workItems){
+     c.fillStyle='#eef5fd';c.fillRect(66,y-24,1110,item.height-2);
+     c.fillStyle=dark;c.font='bold 22px Arial';
+     for(const line of item.title){c.fillText(line,82,y);y+=35}
+     c.font='20px Arial';for(const line of item.detail){c.fillText(line,82,y);y+=31}
+     c.fillStyle=item.work.priorInvoice?'#52677b':'#135389';c.font='19px Arial';
+     for(const line of item.status){c.fillText(line,82,y);y+=30}
+     y+=30;
+    }
+    c.strokeStyle='#b8d1e6';c.beginPath();c.moveTo(70,1548);c.lineTo(1170,1548);c.stroke();
+    c.fillStyle=blue;c.font='bold 20px Arial';
+    c.fillText('Auftrag: '+euros(d.orderNetTotal||d.net)+' netto',72,1584);
+    c.fillText('Bereits berechnet: '+euros(d.alreadyInvoicedNet||0)+' netto',72,1616);
+    c.fillText('Diese Schlussrechnung: '+euros(d.net)+' netto',72,1648);
+    c.font='18px Arial';c.fillStyle=muted;c.fillText('Ausgestellte Teilrechnungen werden nicht erneut berechnet.',610,1648);
+    return encodeCanvas(canvas);
+   }
    let y=244;
    function write(text,left,top,width,font='22px Arial',color=dark){
     c.font=font;c.fillStyle=color;
@@ -221,7 +285,7 @@
     write(row.quantity+' '+row.unit,777,y+22,170,'20px Arial');
     write(euros(row.total),1005,y+22,170,'bold 20px Arial');y+=88;
    }
-   if(pageIndex===pageCount-1){
+   if(pageIndex===standardPageCount-1){
     y+=25;c.strokeStyle='#bdcde0';c.beginPath();c.moveTo(70,y);c.lineTo(1170,y);c.stroke();y+=50;
     write('Netto',710,y,230);write(euros(d.net),1000,y,180,'bold 24px Arial');y+=49;
     if(d.taxMode==='small'){
@@ -242,9 +306,7 @@
     c.save();c.translate(285,1480);c.rotate(-Math.PI/11);
     c.fillStyle='rgba(170,25,25,.16)';c.font='bold 115px Arial';c.fillText('ENTWURF',0,0);c.restore();
    }
-   const raw=atob(canvas.toDataURL('image/jpeg',0.85).split(',')[1]);
-   const jpg=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)jpg[i]=raw.charCodeAt(i);
-   return jpg;
+   return encodeCanvas(canvas);
   }
   // Maximal 6 Positionen pro Seite; zweite und weitere Seiten haben einen kompakten Kopf.
   const allPages=[];
@@ -252,7 +314,9 @@
   if(!allPages.length)allPages.push([]);
   // Wenn 6 Zeilen auf der letzten Seite zu wenig Platz für Summen lassen: eigene Summenseite.
   if(allPages[allPages.length-1].length>4)allPages.push([]);
-  allPages.forEach((rows,index)=>jpgs.push(render(index,rows,allPages.length)));
+  const standardPageCount=allPages.length,pageCount=standardPageCount+detailPages.length;
+  allPages.forEach((rows,index)=>jpgs.push(render(index,rows,pageCount)));
+  detailPages.forEach((items,i)=>jpgs.push(render(standardPageCount+i,[],pageCount,items)));
   const enc=new TextEncoder(),parts=[],offsets=[0];let pos=0;
   function add(v){const b=typeof v==='string'?enc.encode(v):v;parts.push(b);pos+=b.length}
   function obj(id,value){offsets[id]=pos;add(id+' 0 obj\n'+value+'\nendobj\n')}
