@@ -1,5 +1,17 @@
 # M-iCare Zeiterfassung – Testversion 1.9.1
 
+## PDF-Layout direkt in der App (Version 1.9.4)
+
+Im **Kostenvoranschlagsrechner** gibt es oben **„So sieht das fertige PDF aus“** und unter dem berechneten Gesamtbetrag die aufklappbare **„Dokumentvorschau im Original-PDF-Layout“**.
+
+- Kundendaten und Leistungen eingeben: Die Vorschau aktualisiert sich nach kurzer Eingabepause automatisch.
+- Die Vorschau benutzt **denselben Zeichen-/Canvas-Code** wie die eigentliche PDF-Datei. Logo, Schrift, Absender, Empfänger, Positionen und Summen entsprechen der ersten Seite des Downloads; dies wurde im Browser-Praxistest mit byte-identischen JPG-Seitendaten überprüft.
+- Auf Smartphone und PC wird die Vorschau als Bild dargestellt (funktioniert also auch dort, wo kein integrierter PDF-Reader vorhanden ist).
+- Bei mehrseitigen Dokumenten wird die erste Seite gezeigt: alle PDF-Seiten bitte über **„PDF-Entwurf erstellen“** kontrollieren.
+- Die Vorschau speichert und versendet **keine** Rechnung.
+- Nach Änderung eines Kundendatensatzes wird das alte Vorschaubild sofort entfernt, damit nicht versehentlich die falsche Kundenanschrift sichtbar bleibt.
+
+
 ## Fehlerkorrekturen und Teilrechnung – Testversion 1.9.1
 
 - **AK bearbeiten funktioniert in der installierten Windows-App:** Der alte `prompt()`-Dialog wurde durch eine eigene Eingabemaske ersetzt. Geplantes Datum, Beginn/Ende, zuständiger Mitarbeiter und Arbeitsanweisung können dort geändert werden. Eine bestehende Arbeitszeiterfassung sperrt nachträgliche Terminänderungen; Ist-Zeit-Korrekturen laufen weiterhin über den nachvollziehbaren Korrekturgrund.
