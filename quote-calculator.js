@@ -132,7 +132,7 @@
   return d;
  }
  function createDocument(d){validateDocument(d);return structuredClone(d)}
- async function pdf(d){
+ async function pdf(d,options={}){
   validateDocument(d);
   if(typeof document==='undefined')throw Error('PDF benötigt Browsergrafik');
   const W=1240,H=1754,blue='#124e8a',dark='#152b42',muted='#516478',jpgs=[];
@@ -323,6 +323,8 @@
   // Wenn 6 Zeilen auf der letzten Seite zu wenig Platz für Summen lassen: eigene Summenseite.
   if(allPages[allPages.length-1].length>4)allPages.push([]);
   const standardPageCount=allPages.length,pageCount=standardPageCount+detailPages.length;
+  // The UI preview uses the exact same canvas page renderer as the exported PDF.
+  if(options.firstPageImage===true)return new Blob([render(0,allPages[0],pageCount)],{type:'image/jpeg'});
   allPages.forEach((rows,index)=>jpgs.push(render(index,rows,pageCount)));
   detailPages.forEach((items,i)=>jpgs.push(render(standardPageCount+i,[],pageCount,items)));
   const enc=new TextEncoder(),parts=[],offsets=[0];let pos=0;
@@ -346,5 +348,5 @@
   add('trailer\n<< /Size '+(max+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
   return new Blob(parts,{type:'application/pdf'});
  }
- return {compute,validateDocument,createDocument,pdf,euro,formatPdfDate};
+ return {compute,validateDocument,createDocument,pdf,previewImage:d=>pdf(d,{firstPageImage:true}),euro,formatPdfDate};
 });
