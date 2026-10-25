@@ -166,6 +166,7 @@
    <div><label for="qNumber">Dokumentnummer</label><input id="qNumber" maxlength="80" placeholder="z. B. KV-2026-001"></div>
    <div><label for="qServiceDate">Leistungsdatum / Zeitraum</label><input id="qServiceDate" maxlength="100" placeholder="z. B. Oktober 2026"></div>
    <div><label for="qValidUntil">Gültig bis / Zahlungsziel</label><input id="qValidUntil" type="date"></div>
+   <div><label for="qRecipientEmail">Kunden-E-Mail für Rechnung/Angebot</label><input id="qRecipientEmail" type="email" maxlength="254" placeholder="kunde@beispiel.de"></div>
    <div><label for="qSellerName">Name deiner Reinigungsfirma</label><input id="qSellerName" maxlength="200" placeholder="Firma / Inhaber"></div>
    <div><label for="qSellerAddress">Firmenanschrift</label><input id="qSellerAddress" maxlength="300" placeholder="Straße, PLZ Ort"></div>
    <div><label for="qSellerTax">Steuernummer / USt-IdNr.</label><input id="qSellerTax" maxlength="80" placeholder="Für Rechnung erforderlich"></div>
@@ -178,14 +179,14 @@
   <label for="qNotes">Konditionen / Hinweise</label><textarea id="qNotes" maxlength="1200" rows="3" placeholder="Leistungsumfang, Zahlungsbedingungen, Ausnahmen…"></textarea>
   <div id="qCalculationMessage" class="hint" aria-live="polite"></div>
   <div class="quoteSummary" id="qSummary" role="status" aria-live="polite">Werte eingeben – die Kalkulation wird automatisch aktualisiert.</div>
-  <div class="row actions"><button type="button" id="qSave">💾 Entwurf speichern</button><button type="button" id="qPdf" class="secondary">📄 PDF-Entwurf erstellen</button><button type="button" id="qNew" class="secondary">+ Neue Kalkulation</button></div>
-  <p class="hint">Rechnung: Der PDF-Export ist ausdrücklich nur ein <strong>Rechnungsentwurf</strong>. Vor echter Rechnungsstellung müssen u. a. Steuernummer, Rechnungsnummer, Leistungsdatum, vollständige Adressen und gegebenenfalls E-Rechnungspflichten geprüft werden. Kein XRechnung/ZUGFeRD-Export.</p>
+  <div class="row actions"><button type="button" id="qSave">💾 Entwurf speichern</button><button type="button" id="qPdf" class="secondary">📄 PDF-Entwurf erstellen</button><button type="button" id="qFinalize" class="secondary">✅ Endgültige Rechnung erstellen</button><button type="button" id="qNew" class="secondary">+ Neue Kalkulation</button></div>
+  <p class="hint">Rechnung: Du kannst zuerst einen <strong>Rechnungsentwurf</strong> prüfen. Eine <strong>endgültige Rechnung</strong> lässt sich danach ausschließlich für eine erledigte, eindeutig zugeordnete Arbeitskarte ausstellen. Die Nummer wird fest vergeben und der Inhalt gegen nachträgliche Bearbeitung geschützt. E-Mail-Versand erfolgt erst nach deiner Bestätigung in der E-Mail-App. Keine automatische Sendebestätigung und kein XRechnung/ZUGFeRD-Export.</p>
  </div>
- <div class="quoteBox" id="qDocumentOverview"><h3>📚 Alle Kostenvoranschläge & Rechnungsentwürfe</h3>
- <p class="hint">Hier findest du alle gespeicherten Dokumente inklusive Kunde, Datum, Arbeitskarte, Betrag und PDF. Dokumente bleiben auch nach dem Neustart erhalten. Rechnungen sind bis zur Einführung einer vollständigen Rechnungsverwaltung ausdrücklich nur Entwürfe.</p>
+ <div class="quoteBox" id="qDocumentOverview"><h3>📚 Alle Kostenvoranschläge & Rechnungen</h3>
+ <p class="hint">Hier findest du alle gespeicherten Dokumente inklusive Kunde, Datum, Arbeitskarte, Betrag und PDF. Dokumente bleiben auch nach dem Neustart erhalten. Endgültige Rechnungen sind gesperrt und können als PDF erneut ausgegeben bzw. per E-Mail vorbereitet werden.</p>
  <div class="grid">
   <div><label for="qSavedSearch">Suche nach Kunde, Dokumentnummer, Leistung oder AK</label><input id="qSavedSearch" type="search" placeholder="z. B. AK 13, Müller, KV-2026" maxlength="160"></div>
-  <div><label for="qSavedType">Dokumentart</label><select id="qSavedType"><option value="all">Alle Dokumente</option><option value="quote">Nur Kostenvoranschläge</option><option value="invoice">Nur Rechnungsentwürfe</option></select></div>
+  <div><label for="qSavedType">Dokumentart</label><select id="qSavedType"><option value="all">Alle Dokumente</option><option value="quote">Nur Kostenvoranschläge</option><option value="invoice">Alle Rechnungen (endgültig + Entwürfe)</option></select></div>
  </div>
  <div id="qSavedTotals" class="status" role="status" aria-live="polite">Noch keine Dokumente gespeichert.</div>
  <div class="row actions">
