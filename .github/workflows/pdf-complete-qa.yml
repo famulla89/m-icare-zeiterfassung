@@ -33,6 +33,8 @@ jobs:
           node --check cloud-transfer.js
           node --check quote-calculator.js
           node --check quote-ui.js
+          node --check billing-ui.js
+          node tests/billing-core-smoke.cjs
           node --check report-print.js
           node --check tests/pdf-all-exports-e2e.cjs
           node --check tests/logic-fuzz-smoke.cjs
