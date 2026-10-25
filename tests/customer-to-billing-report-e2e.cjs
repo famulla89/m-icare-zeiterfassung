@@ -432,9 +432,11 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
   await page.locator('#correctionEditor').selectOption('Testkraft');
   acceptInvoicePrompt=true;
+  const offeredPartInvoice=page.waitForEvent('dialog',{timeout:15000});
   await page.locator('#saveBtn').click();
+  const offerDialog=await offeredPartInvoice;
+  assert(offerDialog.message().includes('Teilrechnung 1 von 5')&&offerDialog.message().includes('jetzt vorbereiten?'),'After first completion app should offer 1/5 partial invoice');
   await page.waitForFunction(id=>state.entries.some(e=>e.appointmentId===id&&e.orderStatus==='done'),scheduled[0].id);
-  assert(dialogs.some(x=>x.includes('Teilrechnung 1 von 5')&&x.includes('jetzt vorbereiten?')),'After first completion app should offer 1/5 partial invoice');
   acceptInvoicePrompt=false;
   await page.locator('#goHome').click();
   await page.locator('#home [data-jump="appointmentsPanel"]').click();
