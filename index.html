@@ -988,6 +988,29 @@ function createOrderStatusPdf(month,filter){
 }
 function exportCustomerPdf(){const data=customerReportData($('selectedCustomer').value);if(!data)return alert('Bitte zuerst Kunden auswählen');const rows=[['ZUSAMMENFASSUNG'],['Bereits durchgeführt: '+data.work.length+' Einsätze'],['Noch geplant (nächste 12 Monate): '+data.planned.length+' Termine'],['Geleistete Stunden: '+hours(data.minutes)+' Std.'],['GELEISTETE ARBEITSZEITEN'],...data.work.map(e=>[formatDate(e.date),e.start+'–'+e.end,e.service,hours(e.minutes)+' Std.']),['GESAMT: '+hours(data.minutes)+' Stunden'],['GEPLANTE TERMINE (NÄCHSTE 12 MONATE)'],...data.planned.map(t=>[formatDate(t.date),t.start+'–'+t.end,t.appointment.service])];const c=document.createElement('canvas');c.width=1123;c.height=794;const pages=[];let p=0;while(p<rows.length||pages.length===0){const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,1123,794);drawPdfBrandLogo(ctx,35,12,140,70);ctx.fillStyle='#165b8e';ctx.font='bold 30px Arial';ctx.fillText('M-iCare · '+customerDisplay(data.customer).slice(0,35),190,52);ctx.font='17px Arial';ctx.fillText('Kundenübersicht · Stand '+new Date().toLocaleDateString('de-DE'),190,82);let y=120;for(let n=0;n<22&&p<rows.length;n++,p++){let line=rows[p];ctx.fillStyle='#25374a';ctx.font=line.length===1?'bold 18px Arial':'15px Arial';let text=line.join('   |   ');while(ctx.measureText(text).width>1030&&text.length>5)text=text.slice(0,-2)+'…';ctx.fillText(text,35,y);y+=29}const str=c.toDataURL('image/jpeg',.72).split(',')[1],bin=atob(str),arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);pages.push(arr)}const enc=new TextEncoder(),parts=[],offsets=[0];let pos=0;function add(v){const b=typeof v==='string'?enc.encode(v):v;parts.push(b);pos+=b.length}function obj(i,x){offsets[i]=pos;add(i+' 0 obj\n'+x+'\nendobj\n')}add('%PDF-1.4\n');obj(1,'<< /Type /Catalog /Pages 2 0 R >>');const ids=pages.map((_,i)=>3+i*3);obj(2,'<< /Type /Pages /Kids ['+ids.map(i=>i+' 0 R').join(' ')+'] /Count '+pages.length+' >>');pages.forEach((im,k)=>{const id=ids[k];obj(id,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /XObject << /Im0 '+(id+1)+' 0 R >> >> /Contents '+(id+2)+' 0 R >>');offsets[id+1]=pos;add((id+1)+' 0 obj\n<< /Type /XObject /Subtype /Image /Width 1123 /Height 794 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+im.length+' >>\nstream\n');add(im);add('\nendstream\nendobj\n');const cmd='q\n842 0 0 595 0 0 cm\n/Im0 Do\nQ\n';obj(id+2,'<< /Length '+enc.encode(cmd).length+' >>\nstream\n'+cmd+'endstream')});let count=2+pages.length*3,xref=pos;add('xref\n0 '+(count+1)+'\n0000000000 65535 f \n');for(let i=1;i<=count;i++)add(String(offsets[i]).padStart(10,'0')+' 00000 n \n');add('trailer\n<< /Size '+(count+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');download('M-iCare_Kunde_'+data.customer.name.replace(/[^a-z0-9äöüß_-]+/gi,'_')+'.pdf',new Blob(parts,{type:'application/pdf'}));notify('Kunden-PDF heruntergeladen')}
 let calendarMonth=isoDate().slice(0,7),chosenDay=isoDate();
+async function editAppointmentFromCalendar(x){
+ const a=x.appointment;
+ if(completedAppointmentEntry(x)?.orderStatus==='done')return alert('Der erledigte Einsatz kann nicht mehr umgeplant werden. Bitte dokumentierte Arbeit korrigieren.');
+ const dateText=prompt('Datum für '+akLabel(a)+' (TT.MM.JJJJ):',formatDate(x.date));if(dateText===null)return;
+ let date;try{date=germanToIso(dateText)}catch(e){return alert(e.message)}
+ const start=prompt('Beginn HH:MM:',x.start);if(start===null)return;
+ const end=prompt('Ende HH:MM:',x.end);if(end===null)return;
+ if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)||start>=end)return alert('Beginn und Ende prüfen.');
+ const employees=state.employees.join(', ');
+ const employee=prompt('Zuständigen Mitarbeiter wählen ('+employees+'):',a.employee);
+ if(employee===null)return;
+ if(!state.employees.includes(employee))return alert('Mitarbeiter nicht gefunden');
+ if(a.repeat==='once'){
+   const proposed={...a,date,start,end,employee};
+   const conflicts=employeeConflicts(proposed,a.id);
+   if(conflicts.length&&!confirm('Der neue Termin überschneidet sich mit '+conflicts.length+' anderem Termin. Trotzdem ändern?'))return;
+   a.date=date;a.start=start;a.end=end;a.employee=employee;
+ }else{
+   if(employee!==a.employee)return alert('Bei Terminserien die Mitarbeiterzuordnung über die Serienplanung ändern.');
+   a.exceptions??={};a.exceptions[x.originalDate]={date,start,end};
+ }
+ await saveState();calendarMonth=date.slice(0,7);chosenDay=date;renderAppointments();notify(akLabel(a)+' aktualisiert');
+}
 function renderCalendar(){
  const [yr,mo]=calendarMonth.split('-').map(Number),first=new Date(yr,mo-1,1),days=new Date(yr,mo,0).getDate(),grid=$('calendarGrid');
  $('calendarTitle').textContent=first.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
@@ -1003,7 +1026,7 @@ function renderCalendar(){
  if(!chosenDay.startsWith(calendarMonth))chosenDay=firstDate;
  for(let day=1;day<=days;day++){
   const value=calendarMonth+'-'+String(day).padStart(2,'0'),events=planned.filter(a=>a.date===value),free=freeWork.filter(e=>e.date===value);
-  const count=events.length+free.length,doneCount=events.filter(a=>Boolean(completedAppointmentEntry(a))).length+free.length;
+  const count=events.length+free.length,doneCount=events.filter(isAppointmentDone).length+free.length;
   const b=el('button',String(day)+(count?' · '+count:''));
   b.type='button';b.className=(count?(doneCount===0?'hasEvent ':doneCount===count?'allDone ':'mixedStatus '):'')+(chosenDay===value?'chosen':'');
   b.title=count?(events.length+' geplante Termine, '+free.length+' weitere tatsächliche Arbeitszeiteinträge'):'Keine Termine oder Arbeitszeiten';
@@ -1015,8 +1038,18 @@ function renderCalendar(){
  const events=planned.filter(a=>a.date===chosenDay),extra=freeWork.filter(e=>e.date===chosenDay);
  for(const x of events){
   const c=state.customers.find(z=>z.id===x.appointment.customerId),entry=completedAppointmentEntry(x);
-  const line=el('div','📅 '+x.start+'–'+x.end+' · '+customerDisplay(c)+' · '+x.appointment.service+(entry?' · ✓ Erfasst ('+entry.start+'–'+entry.end+')':' · Offen'));
-  line.className='appt';area.append(line);
+  const done=entry?.orderStatus==='done';
+  const line=el('div','📅 '+akLabel(x.appointment)+' · '+x.start+'–'+x.end+' · '+customerDisplay(c)+' · '+(state.objects.find(o=>o.id===x.appointment.objectId)?.name||'')+' · '+x.appointment.service+' · '+(done?'✓ Erledigt':entry?'In Bearbeitung':'Offen'));
+  line.className='appt';
+  const actions=el('div','');actions.className='row';actions.style.marginTop='6px';
+  const edit=el('button','✏️ AK bearbeiten');edit.type='button';edit.className='secondary smallbtn';edit.onclick=()=>editAppointmentFromCalendar(x);actions.append(edit);
+  const work=el('button',entry?'📝 Arbeitszeit bearbeiten':'📝 Arbeit dokumentieren');work.type='button';work.className='secondary smallbtn';work.onclick=()=>completeAppointment(x);actions.append(work);
+  if(done){
+   const invoice=el('button','🧾 Rechnung erstellen');invoice.type='button';invoice.className='secondary smallbtn';
+   invoice.onclick=()=>{showScreen('quoteCalculator');window.MiCareQuoteUI?.openForAppointment(x.appointment.id,x.originalDate)};
+   actions.append(invoice);
+  }
+  line.append(actions);area.append(line);
  }
  for(const e of extra){
   const c=state.customers.find(z=>z.id===e.customerId);
@@ -1034,6 +1067,7 @@ function employeeConflicts(candidate,excludeId){if(!candidate.employee)return[];
 function conflictingKeys(items){const set=new Set();for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){const a=items[i],b=items[j];if(!a.done&&!b.done&&a.appointment?.employee&&a.appointment.employee===b.appointment?.employee&&a.date===b.date&&a.start<b.end&&b.start<a.end){set.add(a.appointment.id+'|'+a.originalDate);set.add(b.appointment.id+'|'+b.originalDate)}}return set}
 function appointmentRows(){const today=isoDate(),year=$('appointmentYear').value,month=$('appointmentMonth').value,status=$('appointmentStatus').value,emp=$('appointmentEmployeeFilter').value,conflictFilter=$('appointmentConflictFilter').value,filter=$('appointmentsFilter').value,sort=$('appointmentsSort').value;let items=[];if(status==='done'){items=state.entries.filter(e=>(!filter||e.customerId===filter)&&(!emp||e.employee===emp)).map(e=>({date:e.date,start:e.start,end:e.end,customerId:e.customerId,service:e.service,done:true,minutes:e.minutes,employee:e.employee}))}else{const start=year?year+'-01-01':'2024-01-01',end=year?year+'-12-31':String(new Date().getFullYear()+3)+'-12-31';const allAppointments=state.appointments.flatMap(a=>datesFor(a,start,end));const conflicts=conflictingKeys(allAppointments);items=allAppointments.filter(x=>(!filter||x.appointment.customerId===filter)&&(!emp||x.appointment.employee===emp)).filter(x=>status!=='future'||x.date>=today).map(x=>({...x,customerId:x.appointment.customerId,service:x.appointment.service,conflict:conflicts.has(x.appointment.id+'|'+x.originalDate)}))}items=items.filter(x=>(!year||x.date.startsWith(year+'-'))&&(!month||x.date.slice(5,7)===month)&&((status==='done'||conflictFilter==='all')|| (conflictFilter==='yes'?x.conflict:!x.conflict)));items.sort((a,b)=>sort==='customer'?((state.customers.find(c=>c.id===a.customerId)?.name||'').localeCompare(state.customers.find(c=>c.id===b.customerId)?.name||'','de')||a.date.localeCompare(b.date)||a.start.localeCompare(b.start)):(a.date.localeCompare(b.date)||a.start.localeCompare(b.start)));return items.slice(0,500)}
 function completedAppointmentEntry(item){return state.entries.find(e=>e.appointmentId===item.appointment.id&&e.appointmentOccurrence===item.originalDate)}
+function isAppointmentDone(item){return completedAppointmentEntry(item)?.orderStatus==='done'}
 function completeAppointment(item){
  const existing=completedAppointmentEntry(item);
  if(existing){editEntry(existing.id);return}
@@ -1056,7 +1090,7 @@ function completeAppointment(item){
  }
  $('linkedAppointment').value=key;
  selectLinkedAppointment();
- $('orderStatus').value='done';
+ $('orderStatus').value='progress';
  $('linkedAppointmentInfo').textContent='Termin übernommen. Bitte tatsächliche Zeiten prüfen, Auftragsstatus und Notizen ergänzen und unten speichern.';
  $('orderStatus').scrollIntoView({behavior:'smooth',block:'center'});
 }
