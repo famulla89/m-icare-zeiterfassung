@@ -377,7 +377,9 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   ok('Mitarbeiter dokumentiert Zwischenstand: AK bleibt in Bearbeitung, keine Rechnung');
   await page.locator('#selectedDayList button').filter({hasText:'Arbeitszeit bearbeiten'}).click();
   await page.locator('#orderStatus').selectOption('done');
-  await page.locator('#workDone').fill('Alle Zimmer gereinigt, Materialnachschub benötigte zusätzliche Zeit');
+  await page.locator('#workDone').fill('Alle fünf Fenster gereinigt, Materialnachschub benötigte zusätzliche Zeit');
+  await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
+  await page.locator('#correctionEditor').selectOption('Testkraft');
   await page.locator('#saveBtn').click();
   await page.waitForFunction(id=>state.entries.some(e=>e.appointmentId===id&&e.orderStatus==='done'),scheduled[0].id);
   await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';renderAppointments()});
