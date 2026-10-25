@@ -34,6 +34,8 @@ jobs:
           node --check quote-calculator.js
           node --check quote-ui.js
           node --check billing-ui.js
+          node --check voice-input.js
+          node tests/voice-input-smoke.cjs
           node tests/billing-core-smoke.cjs
           node --check report-print.js
           node --check tests/pdf-all-exports-e2e.cjs
