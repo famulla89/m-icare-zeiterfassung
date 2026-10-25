@@ -122,12 +122,12 @@
   const sum=euro(d.rows.reduce((a,r)=>a+amount(r.total),0));
   if(Math.abs(sum-euro(d.net))>0.02)throw Error('Positionen stimmen nicht mit Nettobetrag überein');
   if(Math.abs(euro(d.net+d.tax)-euro(d.gross))>0.02)throw Error('Gesamtbetrag inkonsistent');
+  if(d.taxMode==='small'&&(Number(d.vat)!==0||Number(d.tax)!==0))throw Error('Kleinunternehmer-Dokument darf keine Umsatzsteuer ausweisen');
   return d;
  }
  function createDocument(d){validateDocument(d);return structuredClone(d)}
  async function pdf(d){
   validateDocument(d);
-  if(d.taxMode==='small'&&(d.vat!==0||d.tax!==0))throw Error('Kleinunternehmer-Rechnung darf keine Umsatzsteuer ausweisen');
   if(typeof document==='undefined')throw Error('PDF benötigt Browsergrafik');
   const W=1240,H=1754,blue='#124e8a',dark='#152b42',muted='#516478',jpgs=[];
   const euros=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
