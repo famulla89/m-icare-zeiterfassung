@@ -450,7 +450,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(await page.locator('#qManualNet').inputValue(),'100.00','Only one fifth of total quote must be invoiced');
   assert.equal(await page.locator('#qVisits').inputValue(),'1');
   const partialLabel=await page.locator('#qPartInvoiceInfo').innerText();
-  assert(partialLabel.includes('Teilrechnung 1 von 5')&&partialLabel.includes('100,00 €'),'UI must show partial invoice and agreed 1/5 amount');
+  assert(partialLabel.includes('Teilrechnung 1 von 5')&&/100,00\s*€/.test(partialLabel),'UI must show partial invoice and agreed 1/5 amount. Actual: '+JSON.stringify(partialLabel));
   const rawPart=await page.evaluate(()=>MiCareQuoteUI.collect());
   assert.equal(rawPart.sourceVisitNumber,1);
   assert.equal(rawPart.sourceVisitCount,5);
