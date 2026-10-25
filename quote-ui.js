@@ -396,6 +396,63 @@
   if((state.employees||[]).includes(previous))select.value=previous;
  }
  let quoteToAccept=null,acceptBusy=false;
+ let acceptPlanRows=[];
+ function instructionsFromQuote(doc){
+  const parts=[doc.service,...(doc.rows||[]).map(r=>r.title),doc.notes||''];
+  return [...new Set(parts.filter(Boolean))].join(' | ').slice(0,1400);
+ }
+ function buildAcceptedPlan(doc){
+  const date=byId('qAcceptDate').value,emp=byId('qAcceptEmployee').value,start=byId('qAcceptStart').value,end=byId('qAcceptEnd').value;
+  const values={...doc.formValues,PlanRhythm:byId('qAcceptRhythm').value};
+  const days=proposedDays(values,doc.calculation?.visits,date,start,end);
+  if(days.length!==Number(doc.calculation?.visits))throw Error('Anzahl der Termine weicht vom Angebot ab. Angebot vor der Annahme korrigieren.');
+  if(!state.employees.includes(emp))throw Error('Bitte Mitarbeiter auswählen');
+  return days.map((d,i)=>({date:d,start,end,employee:emp,sequence:i+1}));
+ }
+ function drawAcceptPlan(){
+  const doc=(state.quotes||[]).find(q=>q.id===quoteToAccept);
+  const list=byId('qAcceptPlanRows'),status=byId('qAcceptPlanStatus');list.replaceChildren();
+  if(!doc)return;
+  try{
+   acceptPlanRows=buildAcceptedPlan(doc);
+   const total=acceptPlanRows.length;
+   status.textContent=total+' Arbeitskarten werden vorbereitet. Auftragsdaten kommen aus '+doc.number+'.';
+   for(const [i,p] of acceptPlanRows.entries()){
+    const row=document.createElement('div');row.className='qAcceptAkRow';row.dataset.index=String(i);
+    row.style.cssText='padding:10px 6px;border-bottom:1px solid #d5e2ed';
+    const head=document.createElement('strong');head.textContent='AK '+(i+1)+' von '+total+' · '+doc.service+' · Offen';row.append(head);
+    const grid=document.createElement('div');grid.className='grid';grid.style.marginTop='8px';
+    const fields=[['date','Datum','date'],['start','Beginn','time'],['end','Ende','time'],['employee','Mitarbeiter','select']];
+    for(const [name,label,type] of fields){
+     const wrapper=document.createElement('div');const l=document.createElement('label');l.textContent=label;wrapper.append(l);
+     const input=document.createElement(type==='select'?'select':'input');
+     input.dataset.field=name;
+     if(type!=='select')input.type=type;else for(const e of state.employees)option(input,e,e);
+     input.value=p[name];input.setAttribute('aria-label','AK '+(i+1)+' '+label);wrapper.append(input);grid.append(wrapper);
+    }
+    row.append(grid);list.append(row);
+   }
+  }catch(e){acceptPlanRows=[];status.textContent='⚠ '+e.message;list.textContent='Bitte Planung korrigieren, dann erneut berechnen.'}
+ }
+ function editedPlanRows(doc){
+  const rows=[...byId('qAcceptPlanRows').querySelectorAll('.qAcceptAkRow')];
+  if(!rows.length||rows.length!==Number(doc.calculation?.visits))
+   throw Error('Bitte erst die Arbeitskartenplanung vollständig berechnen.');
+  const unique=new Set();
+  const out=rows.map((row,i)=>{
+   const read=field=>row.querySelector('[data-field="'+field+'"]').value;
+   const date=read('date'),start=read('start'),end=read('end'),employee=read('employee');
+   MiCareSchedulePlanner.parse(date);
+   if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)||start>=end)throw Error('AK '+(i+1)+': Uhrzeiten ungültig');
+   if(!state.employees.includes(employee))throw Error('AK '+(i+1)+': Mitarbeiter ungültig');
+   const key=date+'|'+start+'|'+end+'|'+employee;
+   if(unique.has(key))throw Error('AK '+(i+1)+': gleicher Mitarbeiter, Datum und Uhrzeit bereits vorhanden');
+   unique.add(key);
+   return {date,start,end,employee};
+  });
+  return out;
+ }
+
  function openAcceptDialog(doc){
   if(doc.kind!=='quote'||doc.acceptedAt)return;
   quoteToAccept=doc.id;
@@ -415,31 +472,34 @@
    'Wochentage '+(doc.formValues?.PlanWeekdays||[]).map(n=>['So','Mo','Di','Mi','Do','Fr','Sa'][n]).join(', ')+', bis '+formatDate(doc.formValues.PlanEndDate)+
    '. Die Anzahl muss mit dem angenommenen Angebot übereinstimmen.':
    visits+' geplante Einsätze im ausgewählten Abstand.';
+  byId('qAcceptWorkInstructions').value=instructionsFromQuote(doc);
   byId('qAcceptDialog').showModal();
+  drawAcceptPlan();
  }
  function scheduleForQuote(doc){
   if(!state.customers.some(c=>c.id===doc.customerId))throw Error('Kunde nicht gefunden');
   if(doc.objectId&&!state.objects.some(o=>o.id===doc.objectId&&o.customerId===doc.customerId))throw Error('Geschäftsstelle nicht gefunden');
-  const date=byId('qAcceptDate').value,emp=byId('qAcceptEmployee').value,start=byId('qAcceptStart').value,end=byId('qAcceptEnd').value;
-  if(!(state.employees||[]).includes(emp))throw Error('Bitte einen Mitarbeiter auswählen');
-  const values={...doc.formValues,PlanRhythm:byId('qAcceptRhythm').value};
-  const days=proposedDays(values,doc.calculation?.visits,date,start,end);
-  if(days.length!==Number(doc.calculation?.visits))
-   throw Error('Terminanzahl '+days.length+' stimmt nicht mit dem Angebot ('+doc.calculation?.visits+') überein. Angebot erst korrigieren.');
-  const visits=days.length,netCents=Math.round(doc.net*100),taxCents=Math.round(doc.tax*100);
+  const slots=editedPlanRows(doc),visits=slots.length;
+  const netCents=Math.round(doc.net*100),taxCents=Math.round(doc.tax*100);
   const base=Math.floor(netCents/visits),baseTax=Math.floor(taxCents/visits);
-  const proposed=days.map((day,i)=>({
+  const instructions=byId('qAcceptWorkInstructions').value.trim().slice(0,1500);
+  const proposed=slots.map((slot,i)=>({
    id:crypto.randomUUID(),customTitle:doc.service+' – '+(i+1)+'/'+visits+' · '+doc.number,
    quoteId:doc.id,quoteNumber:doc.number,quoteVisit:i+1,quoteVisitCount:visits,
    plannedInvoiceNetCents:base+(i<netCents%visits?1:0),plannedInvoiceTaxCents:baseTax+(i<taxCents%visits?1:0),
-   customerId:doc.customerId,objectId:doc.objectId||null,employee:emp,
+   customerId:doc.customerId,objectId:doc.objectId||null,employee:slot.employee,workInstructions:instructions,
    service:/fenster|glas|wintergarten/i.test(doc.service)?'Glas- & Fensterreinigung':
      (typeof SERVICES!=='undefined'&&SERVICES.includes(doc.service))?doc.service:'Sonderreinigungen',
-   date:day,start,end,repeat:'once',interval:1,until:'',exceptions:{},status:'open'
+   date:slot.date,start:slot.start,end:slot.end,repeat:'once',interval:1,until:'',exceptions:{},status:'open'
   }));
-  if((state.appointments||[]).some(a=>a.quoteId===doc.id))throw Error('Arbeitskarten für dieses Angebot bereits angelegt.');
-  const collisions=proposed.flatMap(x=>employeeConflicts(x)).filter(Boolean);
-  if(collisions.length&&!confirm('⚠ Mitarbeiter hat '+collisions.length+' Terminkonflikt(e). Trotzdem planen?'))return null;
+  if((state.appointments||[]).some(a=>a.quoteId===doc.id))throw Error('Für dieses Angebot existieren bereits Arbeitskarten');
+  const external=proposed.flatMap(x=>employeeConflicts(x)).filter(Boolean);
+  const internal=[];
+  for(let i=0;i<proposed.length;i++)for(let j=i+1;j<proposed.length;j++){
+   const a=proposed[i],b=proposed[j];
+   if(a.employee===b.employee&&a.date===b.date&&a.start<b.end&&b.start<a.end)internal.push(i+1+' / '+(j+1));
+  }
+  if((external.length||internal.length)&&!confirm('⚠ '+external.length+' Kollision(en) mit bestehenden Terminen und '+internal.length+' Überschneidung(en) innerhalb dieses Angebots. Trotzdem planen?'))return null;
   return proposed;
  }
  async function confirmAcceptedQuote(){
@@ -460,7 +520,11 @@
    byId('qAcceptDialog').close();quoteToAccept=null;
    if(activeId===doc.id)activeId=null;
    showSaved();
-   notify(proposed.length+' offene AK für '+doc.number+' eingeplant. Kein Auftrag ist erledigt.');
+   calendarMonth=proposed[0].date.slice(0,7);chosenDay=proposed[0].date;
+   document.getElementById('appointmentCalendarPanel').open=true;
+   showScreen('appointmentsPanel');
+   renderAppointments();
+   notify(proposed.length+' offene AK für '+doc.number+' angelegt. Sie stehen unter „Angenommene Aufträge“.');
   }catch(e){alert('Angebot kann nicht angenommen werden: '+e.message)}
   finally{acceptBusy=false;btn.disabled=false}
  }
@@ -600,6 +664,8 @@
   byId('qPdf').onclick=makePdf;
   byId('qFinalize').onclick=finalizeInvoice;
   byId('qAcceptConfirm').onclick=confirmAcceptedQuote;
+  byId('qAcceptGenerate').onclick=drawAcceptPlan;
+  for(const id of ['qAcceptDate','qAcceptEmployee','qAcceptStart','qAcceptEnd','qAcceptRhythm'])byId(id).addEventListener('change',drawAcceptPlan);
   byId('qAcceptCancel').onclick=()=>{byId('qAcceptDialog').close();quoteToAccept=null};
   byId('qAcceptDialog').addEventListener('cancel',()=>{quoteToAccept=null});
   byId('qNew').onclick=clear;
