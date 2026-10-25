@@ -356,6 +356,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.deepEqual(scheduled.map(a=>a.plannedInvoiceNetCents),[10000,10000,10000,10000,10000]);
   assert.equal(scheduled[1].start,'11:00','Second AK time customized in acceptance dialog');
   assert(scheduled.every(a=>a.workInstructions.includes('Hausmeister')),'Scope and instructions copied from offer');
+  await page.waitForFunction(()=>document.getElementById('acceptedOrdersPanel')?.getClientRects().length>0 && document.getElementById('acceptedOrdersList')?.textContent?.includes('5 Arbeitskarten'),null,{timeout:15000});
   assert(await page.locator('#acceptedOrdersPanel').isVisible(),'Accepted orders dashboard opens automatically');
   assert((await page.locator('#acceptedOrdersList').innerText()).includes(contract.number));
   assert((await page.locator('#acceptedOrdersList').innerText()).includes('5 Arbeitskarten'));
