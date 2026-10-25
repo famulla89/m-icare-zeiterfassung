@@ -201,7 +201,7 @@
    if(doc.kind==='invoice'&&(!doc.sellerName||!doc.sellerAddress||!doc.sellerTaxId||!doc.customerAddress||!doc.serviceDate))
     alert('Wichtige Rechnungs-Pflichtangaben fehlen. Die PDF bleibt ausdrücklich als Rechnungsentwurf gekennzeichnet. Bitte ergänze Firmenanschrift, Steuernummer, Kundenanschrift und Leistungsdatum.');
    const pdf=await MiCareQuote.pdf(doc);
-   await saveExport('M-iCare_'+(doc.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+'_'+doc.number.replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf',pdf,'Angebote');
+   await saveExport('M-iCare_'+(doc.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+'_'+doc.number.replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf',pdf,doc.kind==='quote'?'Kostenvoranschlaege':'Rechnungsentwuerfe');
    notify('PDF-Entwurf erstellt: '+doc.number);
   }catch(e){alert('PDF konnte nicht erstellt werden: '+e.message)}
   finally{button.disabled=false}
@@ -223,18 +223,50 @@
   byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
   renderWindowItems();calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
  }
+ async function exportSavedPdf(item,button){
+  if(button.disabled)return;
+  button.disabled=true;
+  try{
+   const pdf=await MiCareQuote.pdf(item);
+   const type=item.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf';
+   const name='M-iCare_'+type+'_'+item.number.replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf';
+   await saveExport(name,pdf,item.kind==='quote'?'Kostenvoranschlaege':'Rechnungsentwuerfe');
+   notify(type+' '+item.number+' als PDF ausgegeben');
+  }catch(e){alert('PDF konnte nicht erstellt werden: '+e.message)}
+  finally{button.disabled=false}
+ }
  function showSaved(){
   const area=byId('qSavedList');area.replaceChildren();
-  const items=[...(state.quotes||[])].reverse();
-  if(!items.length){area.textContent='Noch keine Kalkulation gespeichert.';return}
-  for(const item of items){
+  const items=[...(state.quotes||[])].filter(q=>q&&['quote','invoice'].includes(q.kind));
+  const search=value('SavedSearch').trim().toLocaleLowerCase('de-DE');
+  const kind=value('SavedType')||'all';
+  const filtered=items.filter(item=>{
+   if(kind!=='all'&&item.kind!==kind)return false;
+   if(!search)return true;
+   return [item.number,item.customerName,item.customerNumber,item.objectName,item.service,item.orderNumber,item.date,item.serviceDate].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(search));
+  }).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b.number||'').localeCompare(String(a.number||'')));
+  const quotes=items.filter(x=>x.kind==='quote').length,invoices=items.filter(x=>x.kind==='invoice').length;
+  byId('qSavedTotals').textContent=items.length+' Dokument(e): '+quotes+' Kostenvoranschläge und '+invoices+' Rechnungsentwürfe · '+filtered.length+' angezeigt.';
+  if(!filtered.length){area.textContent=items.length?'Keine Dokumente für den gewählten Filter.':'Noch keine Kostenvoranschläge oder Rechnungsentwürfe gespeichert.';return}
+  for(const item of filtered){
    const line=document.createElement('div');line.className='quoteSavedItem';
-   const title=document.createElement('div');title.textContent=(item.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+' '+item.number+' · '+item.customerName+' · '+de(item.gross||0);
-   const actions=document.createElement('div');actions.className='row';
-   const open=document.createElement('button');open.type='button';open.className='secondary';open.textContent='Bearbeiten';open.onclick=()=>loadQuote(item.id);
-   const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='Löschen';
-   del.onclick=async()=>{if(!confirm('Entwurf '+item.number+' unwiderruflich löschen?'))return;state.quotes=state.quotes.filter(q=>q.id!==item.id);if(activeId===item.id)activeId=null;await saveState();showSaved()};
-   actions.append(open,del);line.append(title,actions);area.append(line);
+   const description=document.createElement('div');description.className='docLine';
+   const title=document.createElement('strong');
+   title.textContent=(item.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+' · '+item.number+' · '+de(item.gross||0);
+   const customer=document.createElement('div');customer.textContent=(item.customerNumber?'Kunde '+item.customerNumber+' · ':'')+(item.customerName||'Unbekannter Kunde');
+   const meta=document.createElement('div');meta.className='docMeta';meta.textContent='Datum: '+(item.date||'–')+' · '+(item.orderNumber||'ohne AK')+' · '+(item.service||'–');
+   description.append(title,customer,meta);
+   const actions=document.createElement('div');actions.className='row docActions';
+   const open=document.createElement('button');open.type='button';open.className='secondary';open.textContent='✏️ Bearbeiten';open.onclick=()=>loadQuote(item.id);
+   const pdf=document.createElement('button');pdf.type='button';pdf.className='secondary';pdf.textContent='📄 PDF';pdf.onclick=()=>exportSavedPdf(item,pdf);
+   const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='🗑 Löschen';
+   del.onclick=async()=>{
+    if(!confirm('Entwurf '+item.number+' unwiderruflich aus der Liste löschen? Bereits exportierte PDF-Dateien im PC-Ordner bleiben bestehen.'))return;
+    state.quotes=state.quotes.filter(q=>q.id!==item.id);
+    if(activeId===item.id)activeId=null;
+    await saveState();showSaved();
+   };
+   actions.append(open,pdf,del);line.append(description,actions);area.append(line);
   }
  }
  function clear(){
@@ -282,6 +314,13 @@
   byId('qSave').onclick=()=>persist().catch(e=>alert('Kalkulation nicht gespeichert: '+e.message));
   byId('qPdf').onclick=makePdf;
   byId('qNew').onclick=clear;
+  byId('qSavedSearch').addEventListener('input',showSaved);
+  byId('qSavedType').addEventListener('change',showSaved);
+  byId('qChooseDirectory').onclick=async()=>{
+   await chooseFolder();
+   byId('qFolderHint').textContent=window.MiCareDesktopFiles?'Windows-Speicherordner auswählen. Bei Erfolg werden neue PDFs und Sicherungen dorthin geschrieben.':'Wenn der Ordner freigegeben ist, legt M-iCare Sicherungen und neue PDF-Exporte darin ab.';
+  };
+  byId('qExportBackup').onclick=()=>exportJson().catch(e=>alert('Datensicherung fehlgeschlagen: '+e.message));
   byId('qApplyPublicCompany').onclick=()=>{
    if(!confirm('Öffentliche M-iCare-Kontaktdaten (Lippestraße 9, Hagen) in die vier Felder übernehmen? Mögliche Adressänderungen vorher prüfen. Steuernummer und IBAN bleiben unverändert.'))return;
    for(const [k,v] of Object.entries(companyPublic))byId('q'+k).value=v;
