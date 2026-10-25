@@ -181,6 +181,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#qWindowPicker [data-window="standard"]').click();
   await page.locator('.quoteWindowRow input[type="number"]').first().fill('5');
   await page.locator('#qManualNet').fill('149');
+  await page.locator('#qLegacyBilling > summary').click();
   await page.locator('#qKind').selectOption('invoice');
   await page.locator('#qValidUntil').fill('2026-11-17');
   const invoiceDownload=page.waitForEvent('download');
