@@ -1103,9 +1103,15 @@ async function saveEditedAk(e){
   a.exceptions??={};a.exceptions[occurrence]={date,start,end};
  }
  a.workInstructions=$('akEditInstructions').value.trim().slice(0,1500);
- $('akEditDialog').close();akEditingOccurrence=null;
- await saveState();calendarMonth=date.slice(0,7);chosenDay=date;renderAppointments();
- notify(akLabel(a)+' aktualisiert – Datum, Uhrzeit und Mitarbeiter gespeichert.');
+ const saveButton=$('akEditSave');saveButton.disabled=true;
+ try{
+  await saveState();
+  $('akEditDialog').close();akEditingOccurrence=null;
+  calendarMonth=date.slice(0,7);chosenDay=date;renderAppointments();
+  notify(akLabel(a)+' aktualisiert – Datum, Uhrzeit und Mitarbeiter gespeichert.');
+ }catch(e){
+  alert('AK konnte nicht gespeichert werden: '+e.message);
+ }finally{saveButton.disabled=false}
 }
 function draftQuoteDatesInMonth(first,last){
  const result=[];
