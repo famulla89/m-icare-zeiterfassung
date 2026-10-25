@@ -581,6 +581,7 @@ $('plannedAkSearch').addEventListener('input',renderPlannedWorkScreen);
 function setWorkEntryMode(mode){
  workEntryMode=mode;
  $('plannedWorkPanel').classList.toggle('hidden',mode!=='planned');
+ if(mode==='planned')$('plannedWorkPanel').open=true; // Expand automatically when an AK is opened or corrected; user may collapse it afterward.
  $('workModeHint').textContent=mode==='planned'?'Geplanten Termin auswählen, tatsächliche Zeiten prüfen und gegebenenfalls Abweichung begründen.':'Ein Arbeitstag, ein Eintrag. Kein geplanter Termin notwendig.';
  $('workModeFree').style.outline=mode==='free'?'2px solid #148ee0':'none';
  $('workModePlanned').style.outline=mode==='planned'?'2px solid #148ee0':'none';
