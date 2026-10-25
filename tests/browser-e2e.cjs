@@ -1,4 +1,5 @@
 'use strict';
+const {firstRun,unlock}=require('./auth-test-helper.cjs');
 const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
@@ -24,6 +25,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  page.on('dialog',async dialog=>{dialogs.push(dialog.message());await dialog.accept()});
  console.log('E2E step 1: load app');
  await page.goto(base+'index.html',{waitUntil:'load'});
+ await firstRun(page);
  await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0,{timeout:15000});
  assert(await page.locator('#home').isVisible(),'Home screen is visible');
  const fixture=JSON.parse(fs.readFileSync(path.join(root,'testdata/micare-10-kunden.json'),'utf8'));
