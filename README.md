@@ -1,4 +1,16 @@
-# M-iCare Zeiterfassung – Testversion 1.6.0
+# M-iCare Zeiterfassung – Testversion 1.7.0
+
+## Angebot → Annahme → Arbeitskarten → Zeiterfassung → Rechnung (Version 1.7.0)
+
+1. **Angebots- & Rechnungsrechner:** Kunden/Geschäftsstelle und Leistung auswählen, Einsätze/Preis kalkulieren, Wunschtermin und Uhrzeit, Wiederholung (täglich/wöchentlich/14-tägig), Mitarbeiter eintragen. Erst als Kostenvoranschlag speichern oder PDF exportieren; damit wird **noch kein Termin angelegt**.
+2. **Kunde sagt zu:** In der Dokumentenübersicht das Angebot mit **„Kunde hat angenommen · AK planen“** bestätigen. Bis 52 Einzeltermine werden als **offene Arbeitskarten** im Kalender erzeugt (ohne geleistete Arbeitszeit). Das angenommene Angebot wird gegen nachträgliche Bearbeitung gesperrt.
+3. **Kalender:** Auf einen Tag klicken → Kunde, Objekt, **AK-Nummer** und Status sehen. **AK bearbeiten** passt Datum und Beginn/Ende an. **Arbeit dokumentieren** erfasst den realen Mitarbeiter-Einsatz.
+4. **Mitarbeiter:** Bei neuer Arbeitszeiterfassung ist Status zunächst **„In Bearbeitung“**, niemals automatisch „Erledigt“. Mehr- oder Minderzeit benötigt einen Grund. Bereits gespeicherte Dokumentation erfordert bei Korrektur den Bearbeitenden und einen Korrekturgrund.
+5. **Rechnung:** Erst bei wirklich erledigtem Einsatz wird **„Rechnung erstellen“** eingeblendet. Der Rechner übernimmt den ursprünglichen Angebotsumfang und teilt den vereinbarten Nettobetrag centgenau auf die geplante Einsatzanzahl auf. Beispielsweise 5 × Fensterreinigung zu 500 € netto: jede einzelne AK mit 100 € netto; nach Abschluss zunächst nur 100 € abrechnen. Die Rechnungs-PDF zeigt ursprüngliche Angebotsnummer, AK und Einsatznummer.
+6. **E-Mail:** Erst nach finaler Rechnung kann eine E-Mail mit PDF-Anhang vorbereitet werden; kein automatischer Versand.
+
+**Grenzen:** Wochentage/Termine können nach der Planung pro AK verschoben werden. Diese Fassung erstellt pro angenommenem Angebot höchstens 52 einmalige AKs; kein Vertragsmodul mit automatischer Rechnungsbündelung. Die app-lokale Rechnungsnummernvergabe ist noch nicht geräteübergreifend abgesichert und sollte vor produktivem Parallelbetrieb zentralisiert werden. Bei regulärer Besteuerung können durch Cent-Rundung über mehrere Einzelrechnungen Abweichungen zum Angebots-USt-Gesamtwert entstehen – vor Freigabe steuerlich prüfen. Bestehende AKs und Angebote bleiben erhalten.
+
 
 Eigenständige Offline-PWA für M-iCare Gebäudereinigung. **Nicht** verbunden mit dem Repository malteser-dienstnachweis.
 
