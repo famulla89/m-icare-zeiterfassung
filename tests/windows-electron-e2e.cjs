@@ -154,6 +154,31 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   assert(fs.existsSync(path.join(folderQa,'Rechnungsentwuerfe','Rechnungsentwuerfe_Uebersicht.json')));
   console.log('NATIVE WINDOWS FOLDER PASS: folder chosen, automatic complete backup and separate document indexes, PDF persisted');
 
+  // Mail draft must contain a real PDF attachment, but never send on its own.
+  await app.evaluate(({shell})=>{shell.openPath=async()=>''});
+  const mime=await page.evaluate(async()=>{
+   const pdf=createOrderStatusPdf('2026-10','');
+   const raw=await pdf.arrayBuffer();const u=new Uint8Array(raw);
+   let binary='';for(const b of u)binary+=String.fromCharCode(b);
+   return window.MiCareDesktopFiles.composeEmail({
+    recipient:'rechnungs-test@example.invalid',
+    subject:'Rechnung RG-2026-0001 – M-iCare QA',
+    body:'Anbei die Testrechnung. Kein automatischer Versand.',
+    name:'M-iCare_Rechnung_RG-2026-0001.pdf',
+    base64:btoa(binary)
+   });
+  });
+  assert(mime.opened,'Windows mail client opening should be requested');
+  const mimeText=fs.readFileSync(mime.path,'utf8');
+  assert(mimeText.startsWith('To: rechnungs-test@example.invalid\r\n'),'Windows EML has recipient with RFC822 line endings');
+  assert(mimeText.includes('Content-Type: application/pdf'),'Windows EML includes attachment');
+  assert(mimeText.includes('filename="M-iCare_Rechnung_RG-2026-0001.pdf"'));
+  const piece=mimeText.split('Content-Disposition: attachment; filename="M-iCare_Rechnung_RG-2026-0001.pdf"')[1];
+  assert(piece,'Attached file header must be present');
+  const b64=piece.split('\r\n\r\n')[1].split('\r\n--MiCare_')[0].replace(/\s/g,'');
+  assert.equal(Buffer.from(b64,'base64').subarray(0,5).toString(),'%PDF-','Windows attached PDF must be readable');
+  console.log('NATIVE WINDOWS INVOICE EMAIL PASS: valid EML with PDF, no message sent');
+
   assert(!pageerrors.length,'Windows renderer JavaScript errors: '+pageerrors.join('; '));
   console.log('NATIVE WINDOWS ELECTRON E2E PASS: offline protocol, AK search, completed correction, reason, no duplicates, quality reports');
  } finally {await app.close();}
