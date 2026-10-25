@@ -5,7 +5,7 @@ const {pathToFileURL}=require('node:url');
 protocol.registerSchemesAsPrivileged([{scheme:'micare',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true}}]);
 const root=path.join(__dirname,'web');
 let targetFolder='';
-const allowedDirs=new Set(['Backups','Kostenvoranschlaege','Rechnungsentwuerfe','Angebote','Kundendaten','Termine','Arbeitszeiten','Reporting']);
+const allowedDirs=new Set(['Backups','Kostenvoranschlaege','Rechnungsentwuerfe','Rechnungen','Angebote','Kundendaten','Termine','Arbeitszeiten','Reporting']);
 const configFile=()=>path.join(app.getPath('userData'),'folder-config.json');
 async function writeConfig(){await fs.writeFile(configFile(),JSON.stringify({folder:targetFolder}),{encoding:'utf8',mode:0o600})}
 function validDocumentName(name){return typeof name==='string'&&name.length<=180&&/^[A-Za-z0-9_\-\.]+\.(?:json|pdf|xlsx|csv)$/i.test(name)&&!name.includes('..')&&path.basename(name)===name}
@@ -27,6 +27,30 @@ app.whenReady().then(async()=>{
   const st=await fs.stat(selected);
   if(!st.isDirectory())throw Error('Kein Ordner ausgewählt');
   targetFolder=selected;await writeConfig();return targetFolder;
+ });
+
+ ipcMain.handle('micare:composeEmail',async(event,args)=>{
+  if(!validSender(event))throw Error('Unzulässiger Ursprung');
+  const {recipient,subject,body,name,base64}=args||{};
+  if(typeof recipient!=='string'||recipient.length>254||!/^[^\\s@<>\\r\\n]+@[^\\s@<>\\r\\n]+\\.[^\\s@<>\\r\\n]+$/.test(recipient))throw Error('Kunden-E-Mail ungültig');
+  if(typeof subject!=='string'||subject.length>250||/[\\r\\n]/.test(subject))throw Error('Betreff ungültig');
+  if(typeof body!=='string'||body.length>5000)throw Error('Nachricht ungültig');
+  if(typeof name!=='string'||!/^M-iCare_Rechnung_[A-Za-z0-9_-]+\\.pdf$/.test(name))throw Error('PDF-Dateiname ungültig');
+  if(typeof base64!=='string'||base64.length>28e6||!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))throw Error('PDF-Anhang ungültig');
+  const pdf=Buffer.from(base64,'base64');
+  if(pdf.length>20*1024*1024||pdf.subarray(0,5).toString()!=='%PDF-')throw Error('Anhang ist keine gültige PDF-Datei');
+  const safeName=name.replace(/\\.pdf$/,'');
+  const boundary='MiCare_'+Date.now();
+  const text64=Buffer.from(body,'utf8').toString('base64').match(/.{1,76}/g).join('\\r\\n');
+  const pdf64=(base64.match(/.{1,76}/g)||[]).join('\\r\\n');
+  const subject64=Buffer.from(subject,'utf8').toString('base64');
+  const eml='To: '+recipient+'\\r\\nSubject: =?UTF-8?B?'+subject64+'?=\\r\\nMIME-Version: 1.0\\r\\nContent-Type: multipart/mixed; boundary="'+boundary+'"\\r\\n\\r\\n--'+boundary+'\\r\\nContent-Type: text/plain; charset=UTF-8\\r\\nContent-Transfer-Encoding: base64\\r\\n\\r\\n'+text64+'\\r\\n--'+boundary+'\\r\\nContent-Type: application/pdf; name="'+name+'"\\r\\nContent-Disposition: attachment; filename="'+name+'"\\r\\nContent-Transfer-Encoding: base64\\r\\n\\r\\n'+pdf64+'\\r\\n--'+boundary+'--\\r\\n';
+  const dir=targetFolder?path.join(targetFolder,'Rechnungen','E-Mail-Entwuerfe'):path.join(app.getPath('userData'),'Email-Entwuerfe');
+  await fs.mkdir(dir,{recursive:true});
+  const dest=path.join(dir,safeName+'_'+new Date().toISOString().replace(/[:.]/g,'-')+'.eml');
+  await fs.writeFile(dest,eml,{flag:'wx'});
+  const openError=await shell.openPath(dest);
+  return {path:dest,opened:openError==='',error:openError||''};
  });
  ipcMain.handle('micare:saveFile',async(event,args)=>{
   if(!validSender(event))throw Error('Unzulässiger Ursprung');
