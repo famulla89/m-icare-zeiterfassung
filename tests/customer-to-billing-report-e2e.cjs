@@ -94,6 +94,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
 
   // Complete existing AK via the actual UI and timesheet form.
   await page.evaluate(()=>renderAppointments());
+  await page.locator('#appointmentsList .akAccordion').first().locator('summary').click();
   await page.locator('#appointmentsList button').filter({hasText:'Arbeit dokumentieren'}).first().click();
   assert(await page.locator('#plannedEditorScreen').isVisible(),'Completion should open planned work editor');
   await page.locator('#workDone').fill('5 Fenster beidseitig gereinigt, Rahmen abgewischt');
