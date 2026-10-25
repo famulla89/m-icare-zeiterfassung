@@ -14,6 +14,8 @@ on:
       - tests/auth-test-helper.cjs
       - tests/browser-e2e.cjs
       - tests/customer-to-billing-report-e2e.cjs
+      - tests/weekday-contract-e2e.cjs
+      - schedule-planner.js
       - tests/chaos-input-e2e.cjs
       - tests/quote-calculator-smoke.cjs
       - .github/workflows/browser-e2e.yml
@@ -47,6 +49,7 @@ jobs:
           node tests/quote-calculator-smoke.cjs
           node tests/browser-e2e.cjs
           node tests/customer-to-billing-report-e2e.cjs
+          node tests/weekday-contract-e2e.cjs
           node tests/chaos-input-e2e.cjs
 
       - name: Publish synthetic AK report examples for PDF/CSV review
