@@ -1,6 +1,14 @@
 name: M-iCare Android APK
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/android-apk.yml'
+      - 'index.html'
+      - 'quote-calculator.js'
+      - 'quote-ui.js'
+      - 'report-print.js'
+      - 'logo.svg'
   push:
     paths:
       - 'android-app/**'
