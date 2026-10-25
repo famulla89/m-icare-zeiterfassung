@@ -30,7 +30,7 @@
   current=readAccount();
   document.body.classList.remove('micare-authenticated');
   el('micareLock').hidden=false;
-  const setup=!current;el('micareSetup').hidden=!setup;el('micareUnlock').hidden=setup;
+  const setup=!current;el('micareSetup').hidden=!setup;
   el('micareLoginTitle').textContent=setup?'M-iCare einrichten':'M-iCare entsperren';
   el('micareLoginSubmit').textContent=setup?'Benutzerkonto erstellen':'Anmelden';
   el('micareConfirmPass').required=setup;
