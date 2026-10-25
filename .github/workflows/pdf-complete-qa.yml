@@ -52,10 +52,14 @@ jobs:
           test "$(find test-output/pdf -maxdepth 1 -name '*.pdf' | wc -l)" -eq 18
           for f in test-output/pdf/*.pdf; do
             pdfinfo "$f" | grep -q '^Pages:'
-            pdftoppm -f 1 -l 1 -scale-to 600 -singlefile -png "$f" "${f%.pdf}-preview"
-            test -s "${f%.pdf}-preview.png"
+            pages="$(pdfinfo "$f" | awk '/^Pages:/ {print $2}')"
+            test "$pages" -ge 1
+            pdftoppm -scale-to 1100 -png "$f" "${f%.pdf}-page"
+            rendered="$(find test-output/pdf -maxdepth 1 -name "$(basename "${f%.pdf}")-page-*.png" | wc -l)"
+            test "$rendered" -eq "$pages" || { echo "FEHLER: $f hat $pages Seiten, aber $rendered gerenderte Bilder"; exit 1; }
+            while IFS= read -r preview; do test -s "$preview"; done < <(find test-output/pdf -maxdepth 1 -name "$(basename "${f%.pdf}")-page-*.png")
           done
-      - name: Publish inspectable PDFs + first-page previews and QA report
+      - name: Publish inspectable PDFs + every-page previews and QA report
         if: always()
         uses: actions/upload-artifact@v4
         with:
