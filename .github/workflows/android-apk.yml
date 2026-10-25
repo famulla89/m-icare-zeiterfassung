@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/android-apk.yml'
       - 'index.html'
+      - 'login-gate.js'
       - 'quote-calculator.js'
       - 'quote-ui.js'
       - 'report-print.js'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'android-app/**'
       - 'index.html'
+      - 'login-gate.js'
       - 'cloud-transfer.js'
       - 'quote-calculator.js'
       - 'tests/quote-calculator-smoke.cjs'
@@ -61,6 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           node tests/quote-calculator-smoke.cjs
+          node --check login-gate.js
           node tests/cloud-transfer-smoke.cjs
           node tests/app-core-smoke.cjs
           node tests/logic-fuzz-smoke.cjs
