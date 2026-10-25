@@ -164,10 +164,24 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(offer.calculation.visits,1,'Offer must contain only one service visit');
   assert(offer.rows.every(r=>!r.title.includes('8 Einsätze')),'Offer must not secretly quote eight visits');
   await page.screenshot({path:path.join(out,'03_Angebot_AK.png'),fullPage:true});
+  // Same rendered source: in-app image MUST be the first JPEG embedded in the downloaded PDF.
+  await page.waitForFunction(()=>{
+   const img=document.getElementById('qPreviewImg');
+   return img&&!img.hidden&&img.complete&&img.naturalWidth===1240&&img.naturalHeight===1754;
+  },null,{timeout:20000});
+  const previewBytes=Buffer.from(await page.evaluate(async()=>{
+   const src=document.getElementById('qPreviewImg').src;
+   const image=await fetch(src).then(r=>r.arrayBuffer());
+   return Array.from(new Uint8Array(image));
+  }));
+  assert(previewBytes.length>10000,'In-app preview must be a real rendered PDF page image');
+  assert((await page.locator('#qPreviewStatus').innerText()).includes('Original-PDF-Ansicht'));
   const offerDownload=page.waitForEvent('download');await page.locator('#qPdf').click();
   const offerFile=await offerDownload;
   const offerBytes=fs.readFileSync(await offerFile.path());assert.equal(offerBytes.subarray(0,5).toString(),'%PDF-');
   fs.writeFileSync(path.join(out,'03_Kostenvoranschlag_AK_03-11-2026.pdf'),offerBytes);
+  assert(offerBytes.includes(previewBytes),'App preview and exported PDF MUST share byte-identical first-page JPEG, including logo and layout');
+  ok('App-Vorschau identisch mit exportiertem Kostenvoranschlag-PDF','Originalgrafik pixelgenau identisch');
   const logoOffer=await page.evaluate(()=>window.__qaOfferInvoiceLogo.at(-1));
   assert(logoOffer&&logoOffer.colored>200,'Kostenvoranschlag PDF must visibly contain the real M-iCare logo');
   ok('Kostenvoranschlag mit Arbeitskarte, Kleinunternehmer und PDF',offer.number+' / '+offer.gross+' EUR');
