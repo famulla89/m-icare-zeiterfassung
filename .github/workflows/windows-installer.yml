@@ -53,6 +53,7 @@ jobs:
           node tests/cloud-transfer-smoke.cjs
           node tests/quote-calculator-smoke.cjs
           node --check login-gate.js
+          node tests/schedule-planner-smoke.cjs
           node tests/logic-fuzz-smoke.cjs
           node --check tests/browser-e2e.cjs
       - name: Install dependencies
