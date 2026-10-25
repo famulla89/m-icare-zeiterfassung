@@ -247,7 +247,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
   await page.locator('#home [data-jump="quoteCalculator"]').click();
   assert.equal(await page.locator('.quoteSavedItem').count(),3,'Document overview survives restart');
-  assert((await page.locator('#qSavedTotals').innerText()).includes('2 Kostenvoranschläge und 1 Rechnungsentwürfe'),'Separate document counts preserved');
+  assert((await page.locator('#qSavedTotals').innerText()).includes('2 Kostenvoranschläge und 1 Rechnungen (0 endgültig, 1 Entwürfe)'),'Separate document counts preserved');
   await page.screenshot({path:path.join(out,'04_Dokumentenuebersicht.png'),fullPage:true});
   ok('Dokumentenübersicht mit Suche, Typfilter, PDF-Nachdruck und Neustart','3 gespeicherte Dokumente');
 
