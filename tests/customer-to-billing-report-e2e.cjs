@@ -21,7 +21,12 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
  page.setDefaultTimeout(15000);
  const errors=[],dialogs=[];
  page.on('pageerror',e=>errors.push(String(e)));
- page.on('dialog',async d=>{dialogs.push(d.message());await d.accept()});
+ let acceptInvoicePrompt=false;
+ page.on('dialog',async d=>{
+  dialogs.push(d.message());
+  if(d.message().includes('jetzt vorbereiten?')&&!acceptInvoicePrompt)await d.dismiss();
+  else await d.accept();
+ });
  try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
  await firstRun(page);
@@ -425,8 +430,11 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#workDone').fill('Alle fünf Fenster gereinigt, Materialnachschub benötigte zusätzliche Zeit');
   await page.locator('#correctionReason').selectOption('Auftragsstatus falsch gewählt');
   await page.locator('#correctionEditor').selectOption('Testkraft');
+  acceptInvoicePrompt=true;
   await page.locator('#saveBtn').click();
   await page.waitForFunction(id=>state.entries.some(e=>e.appointmentId===id&&e.orderStatus==='done'),scheduled[0].id);
+  assert(dialogs.some(x=>x.includes('Teilrechnung 1 von 5')&&x.includes('jetzt vorbereiten?')),'After first completion app should offer 1/5 partial invoice');
+  acceptInvoicePrompt=false;
   await page.locator('#goHome').click();
   await page.locator('#home [data-jump="appointmentsPanel"]').click();
   await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
