@@ -1301,8 +1301,13 @@ function renderAcceptedOrders(){
    const work=el('button',entry?'📝 Dokumentation öffnen':'📝 Arbeit erfassen');work.type='button';work.className='secondary smallbtn';
    work.onclick=()=>completeAppointment(occ);actions.append(work);
    if(completed&&!paid){
-    const bill=el('button','🧾 Rechnung erstellen');bill.type='button';bill.className='secondary smallbtn';
+    const bill=el('button',Number(a.quoteVisitCount)>1?'🧾 Teilrechnung '+a.quoteVisit+'/'+a.quoteVisitCount+' erstellen':'🧾 Rechnung erstellen');bill.type='button';bill.className='secondary smallbtn';
     bill.onclick=()=>{showScreen('quoteCalculator');window.MiCareQuoteUI?.openForAppointment(a.id,a.date)};actions.append(bill);
+   }
+   if(paid){
+    const billDoc=state.quotes.find(d=>d.kind==='invoice'&&d.finalizedAt&&d.appointmentId===a.id);
+    const view=el('button','📄 '+(Number(a.quoteVisitCount)>1?'Teilrechnung':'Rechnung')+' als PDF');view.type='button';view.className='secondary smallbtn';
+    view.onclick=async()=>{try{await saveExport('M-iCare_Rechnung_'+billDoc.number+'.pdf',await MiCareQuote.pdf(billDoc),'Rechnungen')}catch(e){alert('PDF konnte nicht ausgegeben werden: '+e.message)}};actions.append(view);
    }
    row.append(actions);expand.append(row);
   }
