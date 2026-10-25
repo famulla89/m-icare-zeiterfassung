@@ -176,6 +176,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   }));
   assert(inlinePreviewBytes.length>10000,'In-app preview must be a real rendered PDF page image');
   assert((await page.locator('#qPreviewStatus').innerText()).includes('Original-PDF-Ansicht'));
+  await page.locator('#qPdfPreviewPanel').screenshot({path:path.join(out,'03a_App_PDF_Vorschau_Originaldesign.png')});
   const offerDownload=page.waitForEvent('download');await page.locator('#qPdf').click();
   const offerFile=await offerDownload;
   const offerBytes=fs.readFileSync(await offerFile.path());assert.equal(offerBytes.subarray(0,5).toString(),'%PDF-');
