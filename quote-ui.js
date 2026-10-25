@@ -657,7 +657,7 @@
    const url=URL.createObjectURL(picture);
    const old=previewUrl;previewUrl=url;
    img.onload=()=>{if(old)URL.revokeObjectURL(old)};
-   img.onerror=()=>{if(id===previewRevision)invalidatePdfPreview('Die Vorschau konnte nicht angezeigt werden. Bitte PDF-Daten prüfen.')}};
+   img.onerror=()=>{if(id===previewRevision)invalidatePdfPreview('Die Vorschau konnte nicht angezeigt werden. Bitte PDF-Daten prüfen.')};
    img.src=url;img.hidden=false;
    status.textContent='Original-PDF-Ansicht · Seite 1 · '+doc.number+' · '+de(doc.gross)+' · '+(doc.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+'.';
   }catch(e){if(id===previewRevision)invalidatePdfPreview('Vorschau noch nicht verfügbar: '+e.message)}
