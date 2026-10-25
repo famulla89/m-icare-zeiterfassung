@@ -85,7 +85,12 @@ const server=http.createServer((req,res)=>{
   assert((await page.locator('#micareContractReminders').innerText()).includes(quote.number));
   await page.locator('#micareContractReminders button').filter({hasText:'Kunde kontaktiert'}).click();
   await page.waitForFunction(id=>Boolean(state.quotes.find(q=>q.id===id)?.reminderDoneAt),quote.id);
-  assert(!(await page.locator('#micareContractReminders').innerText()).includes(quote.number));
+  await page.waitForFunction(number=>!document.getElementById('micareContractReminders').textContent.includes(number),quote.number);
+  await page.reload();
+  const {unlock}=require('./auth-test-helper.cjs');
+  await unlock(page);
+  await page.waitForFunction(number=>!document.getElementById('micareContractReminders').textContent.includes(number),quote.number);
+  assert(await page.evaluate(id=>Boolean(state.quotes.find(q=>q.id===id)?.reminderDoneAt),quote.id),'Acknowledgement must survive restart');
   assert.deepEqual(errors,[]);
   console.log('WEEKDAY CONTRACT PASS: 18 Tue/Wed proposal dates, preview ghost calendar, 18 open AK on acceptance, 30-day renewal reminder and acknowledgement');
  }catch(e){console.error('WEEKDAY CONTRACT FAILED',e);process.exitCode=1}
