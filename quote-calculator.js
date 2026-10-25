@@ -193,6 +193,9 @@
     write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+formatPdfDate(d.date),700,y,470,'23px Arial');y+=45;
     write('Leistungszeitraum: '+(formatPdfDate(d.serviceDate)||'bitte ergänzen'),70,y,1050);y+=42;
     write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;
+    if(d.kind==='invoice'&&d.sourceQuoteNumber){
+     y+=write('Zum angenommenen Angebot: '+d.sourceQuoteNumber+(d.sourceVisitCount?' · Einsatz '+d.sourceVisitNumber+' von '+d.sourceVisitCount:''),70,y,1090,'20px Arial');
+    }
     if(d.kind==='quote'&&d.formValues?.PlanDate){
      const plan=d.formValues;
      const cadence=plan.PlanRhythm==='1'?'täglich':plan.PlanRhythm==='14'?'alle 2 Wochen':'wöchentlich';
