@@ -163,6 +163,19 @@ const server=http.createServer((req,res)=>{
    return checks;
   });
   check('Kaputte/doppelte/inkonsistente Sicherung abgewiesen',invalidSnapshots.every(Boolean));
+  const beforeImport=await page.evaluate(()=>JSON.stringify({customers:state.customers,objects:state.objects,appointments:state.appointments,entries:state.entries}));
+  await page.evaluate(async()=>{
+   const invalid={version:2,employees:['QA Mitarbeiter'],entries:[],customers:[null],objects:[],appointments:[]};
+   const file=new File([JSON.stringify(invalid)],'fehlerhafte-kunden.json',{type:'application/json'});
+   await importJson({target:{files:[file],value:''}});
+  });
+  const afterImport=await page.evaluate(()=>JSON.stringify({customers:state.customers,objects:state.objects,appointments:state.appointments,entries:state.entries}));
+  check('Raw-JSON-Import mit kaputtem Kunden verändert keine Daten',beforeImport===afterImport);
+  await page.evaluate(async()=>{
+   const file=new File(['{ das ist KEIN JSON'], 'ungültig.json',{type:'application/json'});
+   await importJson({target:{files:[file],value:''}});
+  });
+  check('Defektes JSON lässt alle bisherigen Daten stehen',beforeImport===await page.evaluate(()=>JSON.stringify({customers:state.customers,objects:state.objects,appointments:state.appointments,entries:state.entries})));
   check('Keine JavaScript-Abstürze',errors.length===0,JSON.stringify(errors));
   fs.writeFileSync(path.join(out,'CHAOS-ERGEBNIS.json'),JSON.stringify({createdAt:new Date().toISOString(),checks,dialogCount:alerts.length,dialogs:alerts.slice(0,30),errors,finalCounts:await count()},null,2));
   console.log('CHAOS ALL PASS:',checks.length);
