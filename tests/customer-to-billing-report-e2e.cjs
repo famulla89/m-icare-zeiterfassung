@@ -316,8 +316,10 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#qNew').click();
   await page.locator('#qCustomer').selectOption(created.customer.id);
   await page.locator('#qObject').selectOption(created.object.id);
-  await page.locator('#qScope').selectOption('rooms');
-  await page.locator('#qService').fill('Unterhaltsreinigung');
+  await page.locator('#qScope').selectOption('windows');
+  await page.locator('#qService').fill('Glas- & Fensterreinigung');
+  await page.locator('#qWindowPicker [data-window="standard"]').click();
+  await page.locator('.quoteWindowRow input[type="number"]').first().fill('5');
   await page.locator('#qVisits').fill('5');
   await page.locator('#qManualNet').fill('500');
   await page.locator('#qPlanDate').fill('2026-11-10');
