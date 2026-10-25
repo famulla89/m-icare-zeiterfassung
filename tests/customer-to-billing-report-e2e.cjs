@@ -105,6 +105,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#qCustomer').selectOption(created.customer.id);
   await page.locator('#qObject').selectOption(created.object.id);
   await page.locator('#qAppointment').selectOption(ak.id);
+  assert.equal(await page.locator('#qVisits').inputValue(),'1','One-time AK must default to exactly one service visit');
   assert.equal(await page.locator('#qScope').inputValue(),'windows');
   await page.locator('#qWindowPicker [data-window="standard"]').click();
   await page.locator('.quoteWindowRow input[type="number"]').first().fill('5');
@@ -121,6 +122,8 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const offer=await page.evaluate(()=>state.quotes[0]);
   assert.equal(offer.appointmentId,ak.id);assert.equal(offer.customerId,created.customer.id);
   assert.equal(offer.taxMode,'small');assert.equal(offer.orderNumber.includes(String(ak.akNumber)),true);
+  assert.equal(offer.calculation.visits,1,'Offer must contain only one service visit');
+  assert(offer.rows.every(r=>!r.title.includes('8 Einsätze')),'Offer must not secretly quote eight visits');
   await page.screenshot({path:path.join(out,'03_Angebot_AK.png'),fullPage:true});
   const offerDownload=page.waitForEvent('download');await page.locator('#qPdf').click();
   const offerFile=await offerDownload;
@@ -133,6 +136,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#qCustomer').selectOption(created.customer.id);
   await page.locator('#qObject').selectOption(created.object.id);
   await page.locator('#qAppointment').selectOption(ak.id);
+  assert.equal(await page.locator('#qVisits').inputValue(),'1','Invoice must inherit one-time AK visit count');
   await page.locator('#qWindowPicker [data-window="standard"]').click();
   await page.locator('.quoteWindowRow input[type="number"]').first().fill('5');
   await page.locator('#qManualNet').fill('149');
