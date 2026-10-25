@@ -2,7 +2,9 @@
 /* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
 (function(){
  const byId=id=>document.getElementById(id);
- const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','Iban','Notes'];
+ const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','Iban','Notes'];
+ // Einträge in öffentlich zugänglichen Firmenverzeichnissen; mögliche Adressänderungen bitte prüfen.
+ const companyPublic={SellerName:'M-iCare Gebäudereinigung',SellerAddress:'Lippestraße 9, 58097 Hagen',SellerEmail:'info@m-icare-gebaeudereinigung.de',SellerPhone:'0162 8564663'};
  const typeAreas={standard:{label:'Standardfenster',sqm:1.5},large:{label:'Große Glasflächen',sqm:4},sliding:{label:'Schiebeelemente',sqm:2.5},mullion:{label:'Sprossenfenster',sqm:1.2},winter:{label:'Wintergarten',sqm:1},roof:{label:'Glasüberdachung',sqm:1}};
  let windowItems=[];
  const de=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
@@ -175,13 +177,13 @@
    appointmentId:a?.id||'',orderNumber:a?'AK '+(a.akNumber||'–')+' / '+orderCode(a):'',
    service:value('Service').trim()||'Reinigungsleistung',serviceDate:value('ServiceDate').trim(),
    validUntil:value('Kind')==='quote'?value('ValidUntil'):'',dueDate:value('Kind')==='invoice'?value('ValidUntil'):'',
-   sellerName:value('SellerName').trim(),sellerAddress:value('SellerAddress').trim(),sellerTaxId:value('SellerTax').trim(),sellerEmail:value('SellerEmail').trim(),iban:value('Iban').trim(),
+   sellerName:value('SellerName').trim(),sellerAddress:value('SellerAddress').trim(),sellerTaxId:value('SellerTax').trim(),sellerEmail:value('SellerEmail').trim(),sellerPhone:value('SellerPhone').trim(),iban:value('Iban').trim(),
    notes:value('Notes').trim(),taxMode:value('TaxMode'),vat:out.vat,net:out.net,tax:out.tax,gross:out.gross,rows:out.rows,calculation:out,formValues:readValues()
   };
   return MiCareQuote.createDocument(doc);
  }
  function saveSettings(){
-  const keep=['SellerName','SellerAddress','SellerTax','SellerEmail','Iban','TaxMode'];
+  const keep=['SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','Iban','TaxMode'];
   state.quoteSettings=Object.fromEntries(keep.map(k=>[k,value(k)]));
  }
  async function persist(){
@@ -250,6 +252,8 @@
  function refresh(){
   const settings=state.quoteSettings||{};
   for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&(k==='TaxMode'||!node.value))node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
+  // Öffentliche Kontaktdaten nur in wirklich leere Felder eintragen. Nie vorhandene Angaben überschreiben.
+  for(const [k,v] of Object.entries(companyPublic)){const field=byId('q'+k);if(!field.value.trim())field.value=v}
   byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
  }
  function init(){
@@ -278,6 +282,11 @@
   byId('qSave').onclick=()=>persist().catch(e=>alert('Kalkulation nicht gespeichert: '+e.message));
   byId('qPdf').onclick=makePdf;
   byId('qNew').onclick=clear;
+  byId('qApplyPublicCompany').onclick=()=>{
+   if(!confirm('Öffentliche M-iCare-Kontaktdaten (Lippestraße 9, Hagen) in die vier Felder übernehmen? Mögliche Adressänderungen vorher prüfen. Steuernummer und IBAN bleiben unverändert.'))return;
+   for(const [k,v] of Object.entries(companyPublic))byId('q'+k).value=v;
+   calculate();notify('Öffentliche M-iCare-Kontaktdaten eingesetzt. Vor PDF-Versand Anschrift prüfen.');
+  };
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
   updateScope();
  }
