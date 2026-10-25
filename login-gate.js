@@ -32,6 +32,8 @@
   el('micareLock').hidden=false;
   const setup=!current;el('micareSetup').hidden=!setup;el('micareUnlock').hidden=setup;
   el('micareLoginTitle').textContent=setup?'M-iCare einrichten':'M-iCare entsperren';
+  el('micareLoginSubmit').textContent=setup?'Benutzerkonto erstellen':'Anmelden';
+  el('micareConfirmPass').required=setup;
   el('micareLoginMessage').textContent=setup?'Lege einmalig deinen Benutzernamen und ein sicheres Passwort für dieses Gerät fest. Deine vorhandenen Kundendaten bleiben erhalten.':'Melde dich mit deinem Benutzernamen und Passwort an.';
   if(!setup){
    el('micareLoginUser').value=current.username;
@@ -55,7 +57,7 @@
   }
  }
  function failures(){try{return JSON.parse(localStorage.getItem('micare-failed-logins-v1')||'{}')}catch{return {}}}
- function lockout(){const f=failures();const seconds=Math.ceil((Number(f.until)||0-Date.now())/1000);return seconds>0?seconds:0}
+ function lockout(){const f=failures();const seconds=Math.ceil(((Number(f.until)||0)-Date.now())/1000);return seconds>0?seconds:0}
  async function onSubmit(event){
   event.preventDefault();
   if(authPending)return;
