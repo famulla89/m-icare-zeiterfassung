@@ -160,6 +160,13 @@ let activeBrowser=null;
   assert.equal(hidden.original,'none','Original interactive report MUST be hidden in PDF');
   const bytes=await page.pdf({format:'A4',landscape:true,printBackground:true,preferCSSPageSize:true,displayHeaderFooter:false});
   const o=verifyPdf(filename,bytes,{text:{must:[data.h,'Zeitraum:'],not:['Arbeitskarte direkt suchen','Ansehen / korrigieren','Dokumentieren','Tagesbackup herunterladen','Alle Berichte']}});
+  // Eine gelungene erste Seite genügt nicht: Kopf, Datum und Firmenlogo
+  // müssen auch auf jeder weiteren Seite erscheinen. Der Druckkopf ist fixiert.
+  for(let pageNum=1;pageNum<=o.pages;pageNum++){
+   const pageText=execFileSync('pdftotext',['-f',String(pageNum),'-l',String(pageNum),'-layout',path.join(out,filename),'-'],{encoding:'utf8'});
+   assert(pageText.includes(data.h),filename+' page '+pageNum+' missing repeated report heading/logo header');
+   assert(pageText.includes('Zeitraum:'),filename+' page '+pageNum+' missing repeated report date header');
+  }
   if(tab==='orders')assert(o.pages<=4,'Order report excessively long for synthetic dataset: '+o.pages+' pages');
   results.push(o);console.log('REPORT PDF PASS',filename,o.pages,'pages');
   await page.emulateMedia({media:'screen'});
