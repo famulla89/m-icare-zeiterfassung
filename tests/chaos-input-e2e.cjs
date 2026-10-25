@@ -93,9 +93,9 @@ const server=http.createServer((req,res)=>{
   check('Gültiger Termin speicherbar',(await tryAppointment('2026-11-03','09:00','11:00','once','1',''))===1);
   // Simulate extremely fast double submit before storage finishes: must never create same AK twice.
   await page.evaluate(async()=>{
-   document.getElementById('appointmentDate').value='2026-11-04';
-   document.getElementById('appointmentStart').value='13:00';
-   document.getElementById('appointmentEnd').value='14:00';
+   for(const [id,value] of [['appointmentDate','2026-11-04'],['appointmentStart','13:00'],['appointmentEnd','14:00'],['appointmentUntil','']]){
+    const node=document.getElementById(id);node.value=value;node.dispatchEvent(new Event('change',{bubbles:true}));
+   }
    document.getElementById('appointmentRepeat').value='once';
    await Promise.all([addAppointment({preventDefault(){}}),addAppointment({preventDefault(){}})]);
   });
