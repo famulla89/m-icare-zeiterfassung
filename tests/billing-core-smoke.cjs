@@ -31,7 +31,7 @@ assert(final.notes.includes('Bisherige Teilrechnungen'));
 bill(final);st=core.status(state,quote);
 assert.equal(st.billed,10);assert.equal(st.unbilled.length,0);
 assert.throws(()=>core.prepare(state,quote,'ak10',{}),/Keine erledigte/);
-state.quotes.push({...final,id:'bad-duplicate',number:'RG-2026-0098'});
+state.quotes.push({...final,id:'bad-duplicate',number:'RG-2026-0098',finalizedAt:new Date().toISOString()});
 assert.throws(()=>core.status(state,quote),/Doppelte Abrechnung/);
 state.quotes.pop();
 // Complete contract without interim invoices: single complete final invoice
