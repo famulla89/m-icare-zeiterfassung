@@ -606,7 +606,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const billedCards=page.locator('#acceptedOrdersList details[data-quote-id="'+tenQuote.id+'"]');
   if(!await billedCards.evaluate(n=>n.open))await billedCards.locator(':scope > summary').click();
   assert.equal(await billedCards.locator('.appt').count(),10);
-  assert.equal(await billedCards.locator('button').filter({hasText:'Teilrechnung'}).count(),0,'No AK can be billed twice after final');
+  assert.equal(await billedCards.locator('.appt button').filter({hasText:/rechnung.*erstellen/i}).count(),0,'No AK can be billed twice after final; PDF downloads remain available');
   assert((await billedCards.innerText()).includes('10 endgültig abgerechnet'));
   ok('Nach Schlussrechnung sind alle zehn AK als abgerechnet markiert');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
