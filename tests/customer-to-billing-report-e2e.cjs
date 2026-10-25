@@ -363,6 +363,26 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
   assert.equal(await page.locator('#acceptedOrdersList').locator('.appt').count(),5);
   assert((await page.locator('#acceptedOrdersList').innerText()).includes('Offen'));
+  // Both large panels must be closable and reopenable.
+  await page.locator('#acceptedOrdersPanel > summary').click();
+  assert.equal(await page.locator('#acceptedOrdersPanel').evaluate(e=>e.open),false);
+  await page.locator('#acceptedOrdersPanel > summary').click();
+  assert.equal(await page.locator('#acceptedOrdersPanel').evaluate(e=>e.open),true);
+  // Real AK editing in installed-style dialog: individual start/end and instructions persist.
+  await page.locator('#acceptedOrdersList .appt').nth(1).locator('button').filter({hasText:'AK bearbeiten'}).click();
+  assert(await page.locator('#akEditDialog').isVisible(),'Edit AK dialog opens rather than window.prompt');
+  assert.equal(await page.locator('#akEditStart').inputValue(),'11:00');
+  await page.locator('#akEditStart').fill('12:00');
+  await page.locator('#akEditEnd').fill('14:00');
+  await page.locator('#akEditInstructions').fill('Fünf Testfenster; Rahmen reinigen und Schlüssel beim Hausmeister abholen.');
+  await page.locator('#akEditSave').click();
+  await page.waitForFunction(id=>state.appointments.find(a=>a.id===id)?.start==='12:00',scheduled[1].id);
+  assert.equal(await page.evaluate(id=>state.appointments.find(a=>a.id===id)?.end,scheduled[1].id),'14:00');
+  assert((await page.evaluate(id=>state.appointments.find(a=>a.id===id)?.workInstructions,scheduled[1].id)).includes('Hausmeister'));
+  await page.reload();await unlock(page);
+  await page.waitForFunction(id=>state.appointments.find(a=>a.id===id)?.start==='12:00',scheduled[1].id);
+  ok('AK bearbeiten funktioniert als Formular auf Windows und bleibt nach Neustart gespeichert');
+  await page.evaluate(()=>showScreen('appointmentsPanel'));
   ok('Annahme-Dialog erzeugt fünf individuell bearbeitbare AK und zeigt sie in eigener Auftragsübersicht');
   assert.equal((await page.evaluate(()=>state.entries.length)),1,'Accepting a quote MUST NOT mark work as done or create worktime entries');
   await page.locator('#goHome').click();
@@ -384,6 +404,11 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const beforeEntry=await page.evaluate(()=>state.entries.length);
   await page.locator('#selectedDayList button').filter({hasText:'Arbeit dokumentieren'}).click();
   assert.equal(await page.locator('#orderStatus').inputValue(),'progress','Start of work must not default to completed');
+  assert(await page.locator('#plannedWorkPanel').isVisible());
+  await page.locator('#plannedWorkPanel > summary').click();
+  assert.equal(await page.locator('#plannedWorkPanel').evaluate(e=>e.open),false);
+  await page.locator('#plannedWorkPanel > summary').click();
+  assert.equal(await page.locator('#plannedWorkPanel').evaluate(e=>e.open),true);
   await page.locator('#workDone').fill('Zunächst drei Zimmer gereinigt');
   await page.locator('#saveBtn').click();
   await page.waitForFunction(num=>state.entries.length>num,beforeEntry);
@@ -413,6 +438,13 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(await page.locator('#qKind').inputValue(),'invoice');
   assert.equal(await page.locator('#qManualNet').inputValue(),'100.00','Only one fifth of total quote must be invoiced');
   assert.equal(await page.locator('#qVisits').inputValue(),'1');
+  const partialLabel=await page.locator('#qPartInvoiceInfo').innerText();
+  assert(partialLabel.includes('Teilrechnung 1 von 5')&&partialLabel.includes('100,00 €'),'UI must show partial invoice and agreed 1/5 amount');
+  const rawPart=await page.evaluate(()=>MiCareQuoteUI.collect());
+  assert.equal(rawPart.sourceVisitNumber,1);
+  assert.equal(rawPart.sourceVisitCount,5);
+  assert.equal(rawPart.net,100);
+  assert.equal(rawPart.sourceQuoteNumber,contract.number);
   const part=await page.evaluate(()=>MiCareQuoteUI.calculate());
   assert.equal(part.net,100);assert.equal(part.tax,0);
   ok('Erledigte AK öffnet Rechnungsrechner mit korrekt anteiligem Preis 100 EUR');
