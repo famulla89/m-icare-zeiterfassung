@@ -42,6 +42,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test customer, worktime, planned correction, reporting, PDF, backup
         run: |
+          node tests/schedule-planner-smoke.cjs
           node tests/auth-login-e2e.cjs
           node tests/quote-calculator-smoke.cjs
           node tests/browser-e2e.cjs
