@@ -365,8 +365,8 @@
   if(doc.objectId&&!state.objects.some(o=>o.id===doc.objectId&&o.customerId===doc.customerId))throw Error('Geschäftsstelle nicht gefunden');
   const date=byId('qAcceptDate').value,emp=byId('qAcceptEmployee').value,start=byId('qAcceptStart').value,end=byId('qAcceptEnd').value;
   const rhythm=Number(byId('qAcceptRhythm').value);
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!Number.isFinite(new Date(date+'T12:00:00').getTime()))throw Error('Datum wählen');
-  if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)||start>=end)throw Error('Beginn/Ende prüfen');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(new Date(date+'T12:00:00').getTime()))throw Error('Datum wählen');
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||start>=end)throw Error('Beginn/Ende prüfen');
   if(!(state.employees||[]).includes(emp))throw Error('Mitarbeiter auswählen');
   if(![1,7,14].includes(rhythm))throw Error('Abstand wählen');
   const totalCents=Math.round(doc.net*100),vatCents=Math.round(doc.tax*100);
