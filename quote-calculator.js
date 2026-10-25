@@ -126,7 +126,7 @@
   if(d.invoiceType==='final'&&Array.isArray(d.performedWork)){
    if(d.performedWork.length>1000)throw Error('Zu viele Arbeitskarten für den PDF-Leistungsnachweis');
    for(const item of d.performedWork){
-    if(!item||typeof item.akNumber!=='string'||String(item.workDone||'').length>3000||String(item.service||'').length>300)throw Error('Ungültiger Leistungsnachweis in der Schlussrechnung');
+    if(!item||typeof item.akNumber!=='string'||String(item.workDone||'').length>12000||String(item.service||'').length>300)throw Error('Ungültiger Leistungsnachweis in der Schlussrechnung');
    }
   }
   return d;
@@ -177,16 +177,24 @@
    return lines.length?lines:['–'];
   }
   const appendix=Array.isArray(d.performedWork)&&d.invoiceType==='final'?d.performedWork:[];
-  const detailItems=appendix.map(w=>{
+  const detailItems=appendix.flatMap(w=>{
    const title=wrapDetail('AK '+w.akNumber+' · '+formatPdfDate(w.date)+' · '+String(w.service||''),1065,'bold 22px Arial');
    const detail=wrapDetail(String(w.workDone||'Leistung gemäß Arbeitskarte ausgeführt'),1060,'20px Arial');
    const status=wrapDetail('Vereinbart: '+euros(w.net)+' netto · '+(w.priorInvoice?'Bereits abgerechnet: '+w.priorInvoice:'Mit dieser Schlussrechnung abgerechnet')+(w.employee?' · '+w.employee:''),1060,'19px Arial');
-   const height=35*title.length+31*detail.length+30*status.length+30;
-   return {work:w,title,detail,status,height};
+   // Eine umfangreiche Leistungsbeschreibung darf niemals abgeschnitten werden.
+   const available=Math.max(31,1150-35*title.length-30*status.length-30);
+   const maxLines=Math.max(1,Math.floor(available/31));
+   const blocks=[];
+   for(let i=0;i<detail.length;i+=maxLines){
+    const chunk=detail.slice(i,i+maxLines);
+    blocks.push({work:w,title,detail:chunk,status,
+     height:35*title.length+31*chunk.length+30*status.length+30});
+   }
+   return blocks;
   });
   const detailPages=[];let page=[],used=0;
   for(const item of detailItems){
-   if(item.height>1170)throw Error('Arbeitskartenbeschreibung zu lang für eine einzelne PDF-Seite. Bitte in der AK aufteilen.');
+   if(item.height>1190)throw Error('Arbeitskarte enthält zu viele Kopfzeilen für den PDF-Leistungsnachweis');
    if(page.length&&used+item.height>1190){detailPages.push(page);page=[];used=0}
    page.push(item);used+=item.height;
   }
