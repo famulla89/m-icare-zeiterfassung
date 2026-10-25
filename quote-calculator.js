@@ -174,9 +174,9 @@
    if(pageIndex===0){
     write('Absender',70,y,490,'bold 25px Arial',blue);write('Empfänger',670,y,490,'bold 25px Arial',blue);y+=43;
     y+=Math.max(write(d.sellerName||'Absender ergänzen',70,y,500,'bold 25px Arial'),write(d.customerName,670,y,500,'bold 25px Arial'));
-    const left=[d.sellerAddress,d.sellerTaxId?'Steuernummer / USt-ID: '+d.sellerTaxId:'Steuernummer noch ergänzen',d.sellerEmail],
-    right=[d.customerAddress,d.objectName,d.objectAddress];
-    for(let i=0;i<3;i++)y+=Math.max(write(left[i]||'',70,y,490),write(right[i]||'',670,y,490),29);
+    const left=[d.sellerAddress,d.sellerTaxId?'Steuernummer / USt-ID: '+d.sellerTaxId:'Steuernummer noch ergänzen',d.sellerEmail,d.sellerPhone?'Tel.: '+d.sellerPhone:''],
+    right=[d.customerAddress,d.objectName,d.objectAddress,''];
+    for(let i=0;i<4;i++)y+=Math.max(write(left[i]||'',70,y,490),write(right[i]||'',670,y,490),29);
     y=Math.max(y+35,420);
     write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+formatPdfDate(d.date),700,y,470,'23px Arial');y+=45;
     write('Leistungszeitraum: '+(formatPdfDate(d.serviceDate)||'bitte ergänzen'),70,y,1050);y+=42;
