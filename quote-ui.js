@@ -279,7 +279,7 @@
   byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
   if(Array.isArray(values.PlanWeekdays))document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=values.PlanWeekdays.map(Number).includes(Number(x.value)));
   togglePlanMode();
-  renderWindowItems();showPartInvoiceInfo();calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
+  renderWindowItems();showPartInvoiceInfo();calculate();schedulePdfPreview();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
  }
  async function exportSavedPdf(item,button){
   if(button.disabled)return;
@@ -636,6 +636,37 @@
    line.append(description,actions);area.append(line);
   }
  }
+ let previewTimer=null,previewRevision=0,previewUrl='';
+ function invalidatePdfPreview(message){
+  previewRevision++;
+  if(previewTimer!==null){clearTimeout(previewTimer);previewTimer=null}
+  const img=byId('qPreviewImg');if(img){img.hidden=true;img.removeAttribute('src')}
+  if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=''}
+  const status=byId('qPreviewStatus');if(status)status.textContent=message||'Eingaben geändert – Vorschau wird aktualisiert.';
+ }
+ async function renderPdfPreview(){
+  if(!byId('qPdfPreviewPanel').open)return;
+  const id=++previewRevision;
+  const status=byId('qPreviewStatus'),img=byId('qPreviewImg');
+  if(!value('Customer')){invalidatePdfPreview('Bitte zuerst einen Kunden auswählen. Danach siehst du das PDF direkt hier in der App.');return}
+  status.textContent='PDF-Layout wird aktualisiert …';
+  try{
+   const doc=collect();
+   const picture=await MiCareQuote.previewImage(doc);
+   if(id!==previewRevision)return;
+   const url=URL.createObjectURL(picture);
+   const old=previewUrl;previewUrl=url;
+   img.onload=()=>{if(old)URL.revokeObjectURL(old)};
+   img.onerror=()=>{if(id===previewRevision)invalidatePdfPreview('Die Vorschau konnte nicht angezeigt werden. Bitte PDF-Daten prüfen.')}};
+   img.src=url;img.hidden=false;
+   status.textContent='Original-PDF-Ansicht · Seite 1 · '+doc.number+' · '+de(doc.gross)+' · '+(doc.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+'.';
+  }catch(e){if(id===previewRevision)invalidatePdfPreview('Vorschau noch nicht verfügbar: '+e.message)}
+ }
+ function schedulePdfPreview(){
+  invalidatePdfPreview('Eingaben geändert – Vorschau wird nach der Eingabe aktualisiert.');
+  if(!byId('qPdfPreviewPanel').open||!value('Customer'))return;
+  previewTimer=setTimeout(()=>{previewTimer=null;renderPdfPreview()},650);
+ }
  function clear(){
   activeId=null;windowItems=[];renderWindowItems();
   const radio=document.querySelector('input[name="qMode"][value="business"]');if(radio)radio.checked=true;
@@ -646,14 +677,14 @@
   byId('qNotes').value='';byId('qServiceDate').value='';byId('qPlanDate').value='';byId('qPlanStart').value='09:00';byId('qPlanEnd').value='11:00';byId('qPlanRhythm').value='7';byId('qPlanMode').value='count';byId('qPlanEndDate').value='';byId('qPlanEveryWeeks').value='1';byId('qPlanReminderDays').value='30';document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=false);togglePlanMode();
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
   for(const k of ['Wc','Kitchen','Heavy'])byId('q'+k).checked=false;
-  byId('qVat').disabled=value('TaxMode')==='small';updateObjects();updateNumber();calculate();window.scrollTo(0,0);
+  byId('qVat').disabled=value('TaxMode')==='small';updateObjects();updateNumber();calculate();schedulePdfPreview();window.scrollTo(0,0);
  }
  function refresh(){
   const settings=state.quoteSettings||{};
   for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&(k==='TaxMode'||!node.value))node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
   // Öffentliche Kontaktdaten nur in wirklich leere Felder eintragen. Nie vorhandene Angaben überschreiben.
   for(const [k,v] of Object.entries(companyPublic)){const field=byId('q'+k);if(!field.value.trim())field.value=v}
-  refreshPlanEmployees();togglePlanMode();byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
+  refreshPlanEmployees();togglePlanMode();byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();schedulePdfPreview();
  }
  function init(){
   for(const k of tracked){
@@ -689,6 +720,22 @@
   byId('qAcceptCancel').onclick=()=>{byId('qAcceptDialog').close();quoteToAccept=null};
   byId('qAcceptDialog').addEventListener('cancel',()=>{quoteToAccept=null});
   byId('qNew').onclick=clear;
+  byId('qJumpPreview').onclick=()=>{
+   const panel=byId('qPdfPreviewPanel');panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'});renderPdfPreview();
+  };
+  byId('qPreviewNow').onclick=renderPdfPreview;
+  byId('qPdfPreviewPanel').addEventListener('toggle',()=>{
+   if(byId('qPdfPreviewPanel').open)renderPdfPreview();
+   else invalidatePdfPreview('Vorschau geschlossen. Öffne den Bereich, um das PDF-Layout zu sehen.');
+  });
+  byId('quoteCalculator').addEventListener('input',event=>{
+   if(event.target.closest('#qPdfPreviewPanel')||event.target.closest('#qDocumentOverview'))return;
+   schedulePdfPreview();
+  });
+  byId('quoteCalculator').addEventListener('change',event=>{
+   if(event.target.closest('#qPdfPreviewPanel')||event.target.closest('#qDocumentOverview'))return;
+   schedulePdfPreview();
+  });
   byId('qPlanPreviewButton').onclick=previewPlan;
   for(const key of ['PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanEndDate','PlanEveryWeeks','PlanReminderDays','PlanRhythm'])byId('q'+key).addEventListener('change',previewPlan);
   byId('qPlanMode').addEventListener('change',previewPlan);
