@@ -1099,7 +1099,8 @@ async function desktopBackup(){
   await desktopSaveFile('M-iCare_Aktueller_Stand.json',raw,'Backups',true);
   await desktopSaveFile('M-iCare_Tagesbackup_'+isoDate()+'.json',raw,'Backups',true);
   await desktopSaveFile('Kostenvoranschlaege_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='quote'),null,2),'Kostenvoranschlaege',true);
-  await desktopSaveFile('Rechnungsentwuerfe_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='invoice'),null,2),'Rechnungsentwuerfe',true);
+  await desktopSaveFile('Rechnungsentwuerfe_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='invoice'&&!x.finalizedAt),null,2),'Rechnungsentwuerfe',true);
+  await desktopSaveFile('Rechnungen_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='invoice'&&x.finalizedAt),null,2),'Rechnungen',true);
   state.lastBackup=new Date().toISOString();backupError='';unsavedBackup=false;
   await write('app',state);updateStatus();
  }catch(e){
@@ -1116,7 +1117,8 @@ async function performBackup(){
   const kd=await folder.getDirectoryHandle('Kundendaten',{create:true}),td=await folder.getDirectoryHandle('Termine',{create:true}),ad=await folder.getDirectoryHandle('Arbeitszeiten',{create:true});
   const contents=JSON.stringify(state,null,2);
   await writeHandle(await folder.getDirectoryHandle('Kostenvoranschlaege',{create:true}),'Kostenvoranschlaege_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='quote'),null,2));
-  await writeHandle(await folder.getDirectoryHandle('Rechnungsentwuerfe',{create:true}),'Rechnungsentwuerfe_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='invoice'),null,2));
+  await writeHandle(await folder.getDirectoryHandle('Rechnungsentwuerfe',{create:true}),'Rechnungsentwuerfe_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='invoice'&&!x.finalizedAt),null,2));
+  await writeHandle(await folder.getDirectoryHandle('Rechnungen',{create:true}),'Rechnungen_Uebersicht.json',JSON.stringify((state.quotes||[]).filter(x=>x.kind==='invoice'&&x.finalizedAt),null,2));
   await writeHandle(kd,'kunden.json',JSON.stringify(fileData('customers'),null,2));
   await writeHandle(td,'termine.json',JSON.stringify(fileData('appointments'),null,2));
   await writeHandle(ad,'arbeitszeiten.json',JSON.stringify(fileData('work'),null,2));await writeHandle(kd,'Kundenuebersicht.xlsx',makeCustomersXlsx());await writeHandle(td,'Terminplanung.xlsx',makeAppointmentsXlsx());await writeHandle(ad,'Arbeitszeiten_Gesamt.xlsx',makeAllWorkXlsx());await writeVersioned(kd,'Kunden','json',JSON.stringify(fileData('customers'),null,2));await writeVersioned(kd,'Kunden','xlsx',makeCustomersXlsx());await writeVersioned(td,'Termine','json',JSON.stringify(fileData('appointments'),null,2));await writeVersioned(td,'Termine','xlsx',makeAppointmentsXlsx());await writeVersioned(ad,'Arbeitszeiten','json',JSON.stringify(fileData('work'),null,2));await writeVersioned(ad,'Arbeitszeiten','xlsx',makeAllWorkXlsx());
