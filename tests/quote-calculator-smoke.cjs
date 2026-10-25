@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const m=require('../quote-calculator.js');
 const file=fs.readFileSync('index.html','utf8');
 for(const id of ['quoteCalculator','qCustomer','qObject','qAppointment','qArea','qHourly','qWindowPicker','qManualNet','qTaxMode','qVat','qSellerPhone','qApplyPublicCompany','qSave','qPdf','qSavedList'])assert(file.includes('id="'+id+'"'),'Missing UI field '+id);
-assert(file.includes(",'quoteCalculator','backupSection'")||file.includes(" 'quoteCalculator','backupSection'"),'New screen is not in navigation');
+assert(file.includes("'quoteCalculator','billingScreen','backupSection'"),'Quotation and billing screens must both be in navigation');
 new vm.Script(fs.readFileSync('quote-ui.js','utf8'));
 new vm.Script(fs.readFileSync('quote-calculator.js','utf8'));
 function create(overrides={}){
