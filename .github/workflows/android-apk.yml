@@ -6,6 +6,7 @@ on:
       - '.github/workflows/android-apk.yml'
       - 'index.html'
       - 'login-gate.js'
+      - 'schedule-planner.js'
       - 'quote-calculator.js'
       - 'quote-ui.js'
       - 'report-print.js'
@@ -15,6 +16,7 @@ on:
       - 'android-app/**'
       - 'index.html'
       - 'login-gate.js'
+      - 'schedule-planner.js'
       - 'cloud-transfer.js'
       - 'quote-calculator.js'
       - 'tests/quote-calculator-smoke.cjs'
@@ -54,7 +56,7 @@ jobs:
       - name: Bundle current offline web app
         run: |
           mkdir -p android-app/app/src/main/assets
-          cp index.html login-gate.js cloud-transfer.js quote-calculator.js quote-ui.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+          cp index.html login-gate.js schedule-planner.js cloud-transfer.js quote-calculator.js quote-ui.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
