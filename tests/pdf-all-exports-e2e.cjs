@@ -37,6 +37,20 @@ let activeBrowser=null;
  page.on('dialog',async d=>d.accept());
  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
  await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
+ await page.evaluate(()=>{
+  window.__qaLogoDraws=[];
+  const original=CanvasRenderingContext2D.prototype.drawImage;
+  CanvasRenderingContext2D.prototype.drawImage=function(image,...args){
+   if(image instanceof HTMLImageElement && /\/logo\.svg(?:$|[?#])/.test(image.currentSrc||image.src||''))
+    window.__qaLogoDraws.push({width:image.naturalWidth,height:image.naturalHeight});
+   return original.call(this,image,...args);
+  };
+ });
+ async function checkPdfLogo(name,pages,before){
+  const draws=await page.evaluate(start=>window.__qaLogoDraws.slice(start),before);
+  assert(draws.length>=pages,name+' missing M-iCare logo on some PDF pages: '+draws.length+' logo draws for '+pages+' pages');
+  assert(draws.every(l=>l.width>0&&l.height>0),name+' uses an invalid logo image');
+ }
  const fixture=JSON.parse(fs.readFileSync(path.join(root,'testdata/micare-10-kunden.json'),'utf8'));
  await page.evaluate(async d=>{
   state=structuredClone(d);state.changeHistory??=[];state.appointmentTrash??=[];state.quotes??=[];state.quoteSettings??={};
@@ -44,6 +58,7 @@ let activeBrowser=null;
  },fixture);
  const results=[];
  async function fromBlob(name,expression,options){
+  const logoBefore=await page.evaluate(()=>window.__qaLogoDraws.length);
   const base64=await page.evaluate(async code=>{
    const blob=await(0,eval)(code);
    if(!(blob instanceof Blob))throw Error('PDF export did not return Blob');
@@ -51,11 +66,12 @@ let activeBrowser=null;
    return await new Promise((resolve,reject)=>{reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
   },expression);
   const bytes=Buffer.from(base64,'base64');
-  const result=verifyPdf(name,bytes,options);results.push(result);console.log('PDF PASS',result.name,result.pages,Math.round(result.bytes/1024)+'KB');
+  const result=verifyPdf(name,bytes,options);results.push(result);await checkPdfLogo(name,result.pages,logoBefore);console.log('PDF PASS',result.name,result.pages,Math.round(result.bytes/1024)+'KB');
  }
  async function downloaded(name,fn){
+  const logoBefore=await page.evaluate(()=>window.__qaLogoDraws.length);
   const promise=page.waitForEvent('download',{timeout:30000});await fn();
-  const d=await promise;const bytes=fs.readFileSync(await d.path());const result=verifyPdf(name,bytes);results.push(result);console.log('PDF PASS',result.name,result.pages,Math.round(result.bytes/1024)+'KB');
+  const d=await promise;const bytes=fs.readFileSync(await d.path());const result=verifyPdf(name,bytes);results.push(result);await checkPdfLogo(name,result.pages,logoBefore);console.log('PDF PASS',result.name,result.pages,Math.round(result.bytes/1024)+'KB');
  }
  // 1. Arbeitszeiten Monatsauswertung – mit Daten + leerer Monat.
  await fromBlob('01_Monatszeiten_Oktober_mit_Einsaetzen.pdf',"createMonthlyPdf('2026-10')");
@@ -120,6 +136,12 @@ let activeBrowser=null;
    cols:[...document.querySelectorAll('#reportPrintSnapshot .printMainAK thead th')].map(x=>x.textContent),
    sections:document.querySelectorAll('#reportPrintSnapshot .objectPanel').length
   }));
+  const reportLogo=await page.evaluate(()=>{
+   const image=document.querySelector('#reportPrintSnapshot .printReportHeader img');
+   return {source:image?.src||'',width:image?.naturalWidth||0,height:image?.naturalHeight||0};
+  });
+  assert(reportLogo.source.endsWith('/logo.svg')&&reportLogo.width>0&&reportLogo.height>0,
+   'Reporting PDF '+filename+' must show loaded original M-iCare logo');
   assert.equal(data.forms,0,'PDF snapshot must not contain interactive controls');
   assert(data.sections>0,'PDF snapshot must have report content');
   if(tab==='orders'){
