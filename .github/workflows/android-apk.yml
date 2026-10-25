@@ -54,6 +54,9 @@ jobs:
           set -euo pipefail
           node tests/quote-calculator-smoke.cjs
           node tests/cloud-transfer-smoke.cjs
+          node tests/app-core-smoke.cjs
+          node tests/logic-fuzz-smoke.cjs
+          node tests/reporting-smoke.cjs
           APK=android-app/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           "$ANDROID_SDK_ROOT/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/micare-apk-badging.txt
