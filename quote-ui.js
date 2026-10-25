@@ -264,7 +264,7 @@
  function loadQuote(id){
   const doc=(state.quotes||[]).find(q=>q.id===id);if(!doc)return;
   if(doc.finalizedAt||doc.acceptedAt){alert('Abgeschlossene Rechnung oder angenommenes Angebot ist gesperrt. PDF über die Übersicht ausgeben.');return}
-  activeId=id;const values=doc.formValues||{};
+  activeId=id;if(doc.kind==='invoice'){const legacy=document.getElementById('qLegacyBilling');if(legacy)legacy.open=true}const values=doc.formValues||{};
   for(const [k,v] of Object.entries(values)){
    if(k==='WindowItems'){windowItems=Array.isArray(v)?structuredClone(v).slice(0,8):[];continue}
    if(k==='Mode'){const radio=document.querySelector('input[name="qMode"][value="'+v+'"]');if(radio)radio.checked=true;continue}
@@ -711,5 +711,5 @@
   updateScope();
  }
  init();
- window.MiCareQuoteUI={refresh,calculate,collect,openForAppointment,loadQuote};
+ window.MiCareQuoteUI={refresh,calculate,collect,openForAppointment,loadQuote,emailFinalInvoice};
 })();
