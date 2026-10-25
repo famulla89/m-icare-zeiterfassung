@@ -64,6 +64,26 @@ public class MainActivity extends Activity {
         intent.putExtra(Intent.EXTRA_TITLE,safe);
         startActivityForResult(intent,403);
       }catch(Exception e){pendingExportBytes=null;reportExport(false,"Export fehlgeschlagen: "+e.getMessage());}});}
+      @JavascriptInterface public void shareInvoicePdf(String name,String base64,String recipient,String subject,String body){runOnUiThread(()->{try{
+        if(name==null||!name.matches("M-iCare_Rechnung_[a-zA-Z0-9_\\-]+\\.pdf"))throw new IllegalArgumentException("Ungültiger Rechnungsdateiname");
+        if(recipient==null||!recipient.matches("[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]+")||recipient.length()>254)throw new IllegalArgumentException("Ungültige Kunden-E-Mail");
+        if(base64==null||base64.length()>30_000_000)throw new IllegalArgumentException("PDF zu groß");
+        byte[] bytes=android.util.Base64.decode(base64,android.util.Base64.DEFAULT);
+        if(bytes.length<5||bytes[0]!='%'||bytes[1]!='P'||bytes[2]!='D'||bytes[3]!='F'||bytes[4]!='-')throw new IllegalArgumentException("Kein gültiges PDF");
+        File dir=new File(getCacheDir(),"shared");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cacheordner konnte nicht erstellt werden");
+        File file=new File(dir,name);
+        try(FileOutputStream out=new FileOutputStream(file)){out.write(bytes);}
+        Uri uri=FileProvider.getUriForFile(MainActivity.this,getPackageName()+".fileprovider",file);
+        Intent share=new Intent(Intent.ACTION_SEND);
+        share.setType("application/pdf");
+        share.putExtra(Intent.EXTRA_EMAIL,new String[]{recipient});
+        share.putExtra(Intent.EXTRA_SUBJECT,subject==null?"Rechnung":subject.replace("\\r"," ").replace("\\n"," "));
+        share.putExtra(Intent.EXTRA_TEXT,body==null?"":body);
+        share.putExtra(Intent.EXTRA_STREAM,uri);
+        share.setClipData(ClipData.newRawUri("M-iCare Rechnung",uri));
+        share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(share,"Rechnung mit PDF senden – E-Mail-App auswählen"));
+      }catch(Exception e){android.widget.Toast.makeText(MainActivity.this,"Rechnung konnte nicht geteilt werden: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();}});}
       @JavascriptInterface public void saveJson(String name,String json){runOnUiThread(()->{
         pendingName="M-iCare-Vollsicherung.json";pendingJson=json;
         Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,pendingName);startActivityForResult(intent,SAVE_FILE);
