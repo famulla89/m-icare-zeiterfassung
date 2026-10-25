@@ -1,4 +1,5 @@
 'use strict';
+const {firstRun,unlock}=require('./auth-test-helper.cjs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -16,6 +17,7 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   const pageerrors=[];
   page.on('pageerror',err=>pageerrors.push(String(err)));
   await page.waitForFunction(()=>document.querySelector('#employee')?.options.length>0,{timeout:30000});
+  await firstRun(page);
   assert(await page.locator('#home').isVisible(),'Installed Electron app must display home screen');
   assert.equal(await page.evaluate(()=>location.protocol),'micare:','Must run in packaged offline protocol');
 
