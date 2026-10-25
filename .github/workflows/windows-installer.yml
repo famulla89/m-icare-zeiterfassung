@@ -1,6 +1,14 @@
 name: M-iCare Windows Installer
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/windows-installer.yml'
+      - 'index.html'
+      - 'quote-calculator.js'
+      - 'quote-ui.js'
+      - 'report-print.js'
+      - 'logo.svg'
   push:
     paths:
       - 'windows-app/**'
