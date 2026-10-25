@@ -282,6 +282,32 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.screenshot({path:path.join(out,'06_Reporting_Kunden.png'),fullPage:true});
   ok('Reporting Kunden und Geschäftsstellen','Neu angelegter Kunde erscheint in der Auswertung');
 
+  // Test a completed-order invoice and its email attachment, without actually delivering mail.
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.locator('#qSavedSearch').fill(invoice.number);
+  await page.locator('#qSavedList button').filter({hasText:'Bearbeiten'}).click();
+  const newPdf=page.waitForEvent('download');
+  await page.locator('#qFinalize').click();
+  const receipt=await newPdf;
+  assert.equal(fs.readFileSync(await receipt.path()).subarray(0,5).toString(),'%PDF-');
+  await page.waitForFunction(id=>state.quotes.some(d=>d.id===id&&d.finalizedAt),invoice.id);
+  const finalized=await page.evaluate(id=>state.quotes.find(d=>d.id===id),invoice.id);
+  assert(finalized.number.startsWith('RG-2026-'));
+  assert.equal(finalized.emailStatus,'not-confirmed');
+  await page.locator('#qSavedSearch').fill(finalized.number);
+  assert.equal(await page.locator('.quoteSavedItem button').filter({hasText:'Bearbeiten'}).count(),0);
+  assert.equal(await page.locator('.quoteSavedItem button').filter({hasText:'Löschen'}).count(),0);
+  const emailDownload=page.waitForEvent('download');
+  await page.locator('.quoteSavedItem button').filter({hasText:'E-Mail mit PDF'}).click();
+  const mail=fs.readFileSync(await (await emailDownload).path(),'utf8');
+  assert(mail.includes('Content-Type: application/pdf'));
+  assert(mail.includes(finalized.number+'.pdf'));
+  assert(mail.includes('Content-Disposition: attachment'));
+  assert.equal(await page.evaluate(id=>state.quotes.find(d=>d.id===id).emailStatus,invoice.id),'not-confirmed');
+  fs.writeFileSync(path.join(out,'08_Email_mit_Rechnungs_PDF.eml'),mail);
+  ok('Rechnung abgeschlossen und E-Mail mit PDF als Entwurf vorbereitet','PDF-Anhang vorhanden, kein automatischer Versand');
+
   assert.deepEqual(errors,[],'No unhandled browser JavaScript errors');
   fs.writeFileSync(path.join(out,'QA-ERGEBNIS.json'),JSON.stringify({created:new Date().toISOString(),customer:created.customer.publicNumber,object:created.object.publicNumber,ak:ak.akNumber,date:ak.date,offer:offer.number,invoiceDraft:invoice.number,tests:checkpoints,dialogs},null,2));
   console.log('WORKFLOW ALL PASS: '+checkpoints.length+' checkpoints');
