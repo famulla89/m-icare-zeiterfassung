@@ -10,6 +10,8 @@ on:
       - quote-calculator.js
       - quote-ui.js
       - billing-ui.js
+      - voice-input.js
+      - tests/voice-input-smoke.cjs
       - tests/billing-core-smoke.cjs
       - login-gate.js
       - tests/auth-login-e2e.cjs
@@ -50,6 +52,7 @@ jobs:
           node tests/auth-login-e2e.cjs
           node tests/quote-calculator-smoke.cjs
           node tests/billing-core-smoke.cjs
+          node tests/voice-input-smoke.cjs
           node tests/browser-e2e.cjs
           node tests/customer-to-billing-report-e2e.cjs
           node tests/weekday-contract-e2e.cjs
