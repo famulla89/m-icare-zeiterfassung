@@ -1690,8 +1690,83 @@ async function exportOrderStatusPdf(){
 
 async function exportXlsx(){let m=$('historyMonth').value;await saveExport('M-iCare_'+m+'.xlsx',makeXlsx(m),'Arbeitszeiten')}
 async function importJson(ev){let f=ev.target.files?.[0];if(!f)return;try{if(f.size>10*1024*1024)throw Error('Datei zu groß (max. 10 MB)');let o=JSON.parse(await f.text());if(!o||!Array.isArray(o.entries)||!Array.isArray(o.employees)||o.entries.length>50000||o.employees.length>5000)throw Error('Ungültige oder zu große Sicherung');let employees=o.employees.map(x=>{if(typeof x!=='string'||x.length>80||!x.trim())throw Error('Ungültiger Mitarbeiter');return x});let entries=o.entries.map(x=>{if(!x||typeof x!=='object'||typeof x.id!=='string'||x.id.length>100||typeof x.employee!=='string'||typeof x.date!=='string'||typeof x.endDate!=='string'||typeof x.start!=='string'||typeof x.end!=='string'||!SERVICES.includes(x.service)||!employees.includes(x.employee)||typeof x.object!=='string'||x.object.length>160||typeof x.notes!=='string'||x.notes.length>300)throw Error('Ungültiger Eintrag');let m=((x.orderStatus==='absent'||x.orderStatus==='cancelled')&&x.start===x.end&&x.date===x.endDate&&Number(x.breakMinutes)===0)?0:duration(x);return {...x,minutes:m}});const importedState={version:2,employees,entries,customers:Array.isArray(o.customers)?o.customers:[],objects:Array.isArray(o.objects)?o.objects:[],appointments:Array.isArray(o.appointments)?o.appointments:[],quotes:Array.isArray(o.quotes)?o.quotes.filter(q=>q&&typeof q.id==='string'&&typeof q.kind==='string').slice(0,1500):[],quoteSettings:o.quoteSettings&&typeof o.quoteSettings==='object'&&!Array.isArray(o.quoteSettings)?o.quoteSettings:{},appointmentTrash:Array.isArray(o.appointmentTrash)?o.appointmentTrash.filter(t=>t&&typeof t==='object'&&t.appointment&&typeof t.appointment.id==='string').slice(0,5000):[],changeHistory:Array.isArray(o.changeHistory)?o.changeHistory.filter(h=>h&&typeof h==='object'&&typeof h.time==='string'&&typeof h.type==='string'&&typeof h.action==='string').slice(-4000):[],lastSave:null,lastBackup:null};MiCareCloudTransfer.validateSnapshot(importedState);if(!confirm('ACHTUNG: '+entries.length+' Einträge und '+employees.length+' Mitarbeiter importieren? Alle vorhandenen Daten werden überschrieben. Bitte vorher eine eigene Sicherung herunterladen.'))return;await exportJson();rememberSnapshot();state=importedState;state.changeHistory.push({id:crypto.randomUUID(),time:new Date().toISOString(),type:'Datensicherung',action:'Importiert',name:f.name,details:entries.length+' Einträge und '+employees.length+' Mitarbeiter'});ensureCustomerNumbers();await saveState();resetEdit();render();notify('Sicherung importiert')}catch(e){alert('Import nicht möglich: '+e.message)}finally{ev.target.value=''}}
-function applySpeechResult(field,transcript){let words=transcript.trim();const dates=['date','endDate','appointmentDate','appointmentUntil'],times=['start','end','appointmentStart','appointmentEnd'];if(dates.includes(field)){const months=['januar','februar','märz','april','mai','juni','juli','august','september','oktober','november','dezember'];let a=words.toLowerCase().replace(/,/g,'').match(/(\d{1,2})\.?\s*([a-zäöü]+|\d{1,2})\.?\s*(\d{4})/);if(!a){notify('Datum bitte mit Tag, Monat und Jahr sprechen');return}let m=months.indexOf(a[2])+1;if(!m)m=Number(a[2]);const d=String(a[1]).padStart(2,'0')+'.'+String(m).padStart(2,'0')+'.'+a[3];try{const iso=germanToIso(d);words=field.startsWith('appointment')?iso:d}catch(e){notify(e.message);return}}if(times.includes(field)){const a=words.toLowerCase().match(/(\d{1,2})\s*(?:uhr|:|\.|\s)?\s*(\d{1,2})?/);if(!a){notify('Uhrzeit nicht erkannt');return}const h=Number(a[1]),m=Number(a[2]||0);if(h>23||m>59){notify('Uhrzeit ungültig');return}words=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}$(field).value=words;$(field).dispatchEvent(new Event('change',{bubbles:true}));calc();notify('Spracheingabe übernommen')}
-function voice(field){if(window.MiCareNative?.speech){window.micareNativeSpeechField=field;window.MiCareNative.speech();return}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){notify('Spracheingabe in diesem Browser nicht verfügbar');return}const r=new SR();r.lang='de-DE';r.interimResults=false;r.onresult=e=>applySpeechResult(field,e.results[0][0].transcript);r.onerror=()=>notify('Spracheingabe fehlgeschlagen');try{r.start()}catch(e){notify(e.message)}}
+function applySpeechResult(field,transcript){
+ const input=$(field);
+ if(!input){notify('Eingabefeld nicht gefunden');return}
+ let words=String(transcript||'').trim();
+ if(!words){notify('Keine Spracheingabe erkannt');return}
+ const dates=['date','endDate','appointmentDate','appointmentUntil'];
+ const times=['start','end','appointmentStart','appointmentEnd'];
+ if(['editCustomerZip','newObjectZip'].includes(field)){
+  const postal=MiCareVoiceInput.postal(words);
+  if(postal===null){notify('PLZ nicht erkannt. Bitte genau fünf Ziffern sprechen, z. B. fünf acht null neun sieben.');return}
+  words=postal;
+ }else if(['editCustomerHouseNumber','newObjectHouseNumber'].includes(field)){
+  const house=MiCareVoiceInput.houseNumber(words);
+  if(house===null){notify('Hausnummer nicht erkannt. Zum Beispiel zwölf a sprechen.');return}
+  words=house;
+ }else if(input.type==='tel'){
+  const phone=MiCareVoiceInput.phone(words);
+  if(phone===null){notify('Telefonnummer nicht erkannt. Ziffern einzeln sprechen.');return}
+  words=phone;
+ }else if(dates.includes(field)||input.type==='date'){
+  const months=['januar','februar','märz','april','mai','juni','juli','august','september','oktober','november','dezember'];
+  const value=words.toLocaleLowerCase('de-DE').replace(/,/g,'').match(/(\d{1,2})\.?\s*([a-zäöü]+|\d{1,2})\.?\s*(\d{4})/);
+  if(!value){notify('Datum bitte mit Tag, Monat und Jahr sprechen.');return}
+  let month=months.indexOf(value[2])+1;if(!month)month=Number(value[2]);
+  const day=String(value[1]).padStart(2,'0')+'.'+String(month).padStart(2,'0')+'.'+value[3];
+  try{const iso=germanToIso(day);words=input.type==='date'||field.startsWith('appointment')?iso:day}
+  catch(e){notify(e.message);return}
+ }else if(times.includes(field)||input.type==='time'){
+  const value=words.toLowerCase().match(/(\d{1,2})\s*(?:uhr|:|\.|\s)?\s*(\d{1,2})?/);
+  if(!value){notify('Uhrzeit nicht erkannt');return}
+  const h=Number(value[1]),m=Number(value[2]||0);
+  if(h>23||m>59){notify('Uhrzeit ungültig');return}
+  words=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+ }
+ if(input.maxLength>0&&words.length>input.maxLength){notify('Diktat für dieses Feld zu lang. Bitte kürzer sprechen.');return}
+ input.value=words;
+ input.dispatchEvent(new Event('input',{bubbles:true}));
+ input.dispatchEvent(new Event('change',{bubbles:true}));
+ if(typeof editableFields!=='undefined'&&editableFields.has(field))screenDirty=true;
+ if(typeof calc==='function')calc();
+ notify('Spracheingabe übernommen: '+words);
+}
+function voice(field){
+ if(window.MiCareNative?.speech){window.micareNativeSpeechField=field;window.MiCareNative.speech();return}
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){notify('Spracheingabe in diesem Browser nicht verfügbar');return}
+ const r=new SR();r.lang='de-DE';r.interimResults=false;
+ r.onresult=e=>applySpeechResult(field,e.results[0][0].transcript);
+ r.onerror=()=>notify('Spracheingabe fehlgeschlagen – bitte erneut versuchen');
+ try{r.start()}catch(e){notify(e.message)}
+}
+function setupExtraVoiceButtons(){
+ const voiceable=new Set([
+  'editCustomerZip','editCustomerCity','editCustomerPhone','editCustomerMobile',
+  'newObjectZip','newObjectCity','newObjectHouseNumber','editCustomerHouseNumber',
+  'appointmentCustomTitle','appointmentDate','appointmentStart','appointmentEnd','appointmentUntil',
+  'akEditDate','akEditStart','akEditEnd','akEditInstructions','workDone','orderRemarks','deviationNote','correctionNote',
+  'qService','qNotes','qSellerName','qSellerAddress','qSellerPhone','qServiceDate',
+  'qPlanDate','qPlanStart','qPlanEnd','qPlanEndDate','qValidUntil',
+  'billSeller','billAddress','billTax','billPhone','billDue','keyLocation',
+  'newCustomerName','newCustomerAddress'
+ ]);
+ for(const id of voiceable){
+  const input=$(id);if(!input||input.disabled||input.readOnly||input.type==='hidden'||input.type==='password')continue;
+  const parent=input.parentElement;
+  if(parent.querySelector('button[data-voice="'+id+'"]'))continue;
+  if(!parent.classList.contains('microw')){
+   const container=document.createElement('div');container.className='microw';
+   input.before(container);container.append(input);
+  }
+  const button=document.createElement('button');
+  button.type='button';button.className='secondary mic';button.dataset.voice=id;
+  button.textContent='🎤';button.title='Dieses Feld diktieren';
+  button.setAttribute('aria-label','Spracheingabe für '+(document.querySelector('label[for="'+id+'"]')?.textContent||id));
+  input.parentElement.append(button);
+ }
+}
 window.micareNativeSpeechResult=function(words){if(window.micareNativeSpeechField)applySpeechResult(window.micareNativeSpeechField,words)};
 /* Eigenständiger OOXML-XLSX-Export (ZIP "store" ohne externe Bibliothek), auch vollständig offline. */
 const te=new TextEncoder();function u16(n){return [n&255,(n>>>8)&255]}function u32(n){return [n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]}function bytes(...parts){let a=parts.map(p=>p instanceof Uint8Array?p:Uint8Array.from(p)),out=new Uint8Array(a.reduce((s,p)=>s+p.length,0)),i=0;for(let b of a){out.set(b,i);i+=b.length}return out}
@@ -1847,7 +1922,7 @@ document.querySelectorAll('[data-picker]').forEach(b=>b.addEventListener('click'
 $('saveCustomerChanges').onclick=saveCustomerChanges;$('selectedObject').onchange=()=>{if(!confirmDiscardChanges())return;newObjectMode=false;fillObjectEditor();captureCurrentScreen()};$('newObjectMode').onclick=()=>{if(!newObjectMode&&!state.customers.some(c=>c.id===$('selectedCustomer').value&&!c.archived))return alert('Bitte zuerst einen Kunden auswählen');if(!confirmDiscardChanges())return;newObjectMode=!newObjectMode;updateObjectPicker();fillObjectEditor();captureCurrentScreen();if(newObjectMode){$('newObjectName').focus();notify('Neue Geschäftsstelle: Namen und Adresse eintragen, dann speichern')}};$('newCustomerMode').onclick=()=>{if(!confirmDiscardChanges())return;if(!newCustomerMode){lastSelectedCustomer=$('selectedCustomer').value;newCustomerMode=true;newObjectMode=false;$('selectedCustomer').value=''}else{newCustomerMode=false;newObjectMode=false;$('selectedCustomer').disabled=false;$('selectedCustomer').value=lastSelectedCustomer;renderCustomers()}fillCustomerEditor();captureCurrentScreen();if(newCustomerMode)$('editCustomerName').focus()};$('customerSearch').oninput=renderAllCustomers;$('customerStateFilter').onchange=renderAllCustomers;$('allCustomersPdf').onclick=exportAllCustomersPdf;$('appointmentForm').onsubmit=addAppointment;$('appointmentRepeat').onchange=toggleAppointmentInterval;$('appointmentEmployeeFilter').onchange=renderAppointments;$('appointmentConflictFilter').onchange=renderAppointments;$('appointmentCustomer').onchange=()=>{updateAppointmentObjects();captureCurrentScreen()};$('appointmentsSort').onchange=renderAppointments;$('appointmentsFilter').onchange=renderAppointments;$('appointmentStatus').onchange=renderAppointments;$('appointmentMonth').onchange=renderAppointments;$('appointmentYear').onchange=renderAppointments;$('selectedCustomer').onchange=()=>{newCustomerMode=false;newObjectMode=false;renderCustomers();captureCurrentScreen()};$('customerChoice').onchange=()=>{const c=state.customers.find(x=>x.id===$('customerChoice').value);if(c)$('object').value=c.name;updateEntryObjects()};$('deleteCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c)return;const entries=state.entries.filter(e=>e.customerId===c.id||(!e.customerId&&e.object?.trim().toLowerCase()===c.name.toLowerCase()));const appointments=state.appointments.filter(a=>a.customerId===c.id);if(entries.length||appointments.length){$('linkedCustomerMessage').textContent='Dieser Kunde hat '+entries.length+' Arbeitszeiteinträge und '+appointments.length+' Terminserien. Diese Daten bleiben erhalten.';const dlg=$('linkedCustomerDialog');$('linkedCustomerNo').onclick=()=>dlg.close();$('linkedCustomerArchive').onclick=async()=>{dlg.close();c.archived=true;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde archiviert – Einträge bleiben erhalten')};dlg.showModal();return}const count=state.objects.filter(o=>o.customerId===c.id).length;if(!confirm('ACHTUNG: Soll der Kunde „'+c.name+'“ mit '+count+' Geschäftsstelle(n) wirklich endgültig gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.'))return;state.customers=state.customers.filter(x=>x.id!==c.id);state.objects=state.objects.filter(o=>o.customerId!==c.id);newCustomerMode=false;newObjectMode=false;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde endgültig gelöscht')};$('archiveCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c||!confirm('Kunden archivieren?'))return;c.archived=true;await saveState();renderCustomers();notify('Kunde archiviert')};
 $('calPrev').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m-2,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};$('calNext').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};
 for(let i=1;i<=12;i++){let o=el('option',new Date(2026,i-1,1).toLocaleDateString('de-DE',{month:'long'}));o.value=String(i).padStart(2,'0');$('appointmentMonth').append(o)}$('appointmentPdf').onclick=()=>{const rows=appointmentRows();const title=$('appointmentStatus').value==='done'?'Geleistete Einsätze':'Geplante Termine';const w=window.open('','_blank');if(!w)return alert('Popup blockiert. Bitte Popups zulassen');const safe=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));w.document.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>M-iCare Terminübersicht</title><style>body{font:14px Arial;margin:30px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #bbb;padding:8px;text-align:left}h1{color:#145284}</style></head><body><h1>'+title+'</h1><p>Gefilterte Übersicht · '+rows.length+' Einträge</p><table><tr><th>Datum</th><th>Uhrzeit</th><th>Kunde / ID</th><th>Objekt / ID</th><th>Leistung</th></tr>'+rows.map(x=>'<tr><td>'+safe(formatDate(x.date))+'</td><td>'+safe(x.start+'–'+x.end)+'</td><td>'+safe(customerDisplay(state.customers.find(c=>c.id===x.customerId)))+'</td><td>'+safe(objectDisplay(state.objects.find(o=>o.id===x.appointment?.objectId)))+'</td><td>'+safe(x.service)+'</td></tr>').join('')+'</table><p>Drucken → Als PDF speichern</p></body></html>');w.document.close();w.focus();w.print()};
-document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['home','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history', 'quoteCalculator','billingScreen','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
+setupExtraVoiceButtons();document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['home','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history', 'quoteCalculator','billingScreen','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
 let screenDirty=false;
 const editableFields=new Set(['editCustomerName','editCustomerAddress','editCustomerHouseNumber','editCustomerZip','editCustomerCity','newObjectName','newObjectAddress','newObjectHouseNumber','newObjectZip','newObjectCity','keyHolder','keyLocation','employee','service','object','date','endDate','start','end','breakMinutes','notes','linkedAppointment','orderStatus','workDone','orderRemarks','appointmentDate','appointmentStart','appointmentEnd','appointmentRepeat','appointmentInterval','appointmentUntil','newEmployee','editCustomerPhone','editCustomerMobile','editCustomerEmail','customerChoice','entryObjectChoice','deviationReason','deviationNote','correctionReason','correctionNote','appointmentCustomer','appointmentObject','appointmentEmployee','appointmentService','newCustomerName','newCustomerAddress']);
 function captureCurrentScreen(){screenDirty=false}
