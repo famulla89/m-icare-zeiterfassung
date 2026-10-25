@@ -224,7 +224,7 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
  </div>
  <div><label for="qManualNet">Dein eigener Gesamtpreis netto € (0 = Preisvorschlag)</label><input id="qManualNet" type="number" min="0" step="0.01" value="0"></div>
    <div><label for="qTaxMode">Steuerregelung</label><select id="qTaxMode"><option value="small">Kleinunternehmer (§ 19 UStG) – ohne Umsatzsteuer</option><option value="regular">Regelbesteuerung (falls zutreffend)</option></select></div><div><label for="qVat">Umsatzsteuer bei Regelbesteuerung</label><select id="qVat"><option value="19">19 %</option><option value="7">7 % (nur falls rechtlich zutreffend)</option><option value="0">0 % (nur bei zutreffender Steuerregel)</option></select></div>
-   <div><label for="qKind">Dokumenttyp</label><select id="qKind"><option value="quote">Kostenvoranschlag</option><option value="invoice">Rechnungsentwurf</option></select></div>
+   <div><label for="qKind">Dokumenttyp</label><select id="qKind"><option value="quote">Kostenvoranschlag</option><option value="invoice">Rechnungsentwurf</option></select></div><div id="qPartInvoiceInfo" class="status hidden" style="grid-column:1/-1" role="status" aria-live="polite">🧾 Für eine erledigte AK wird die passende (Teil-)Rechnung vorbereitet.</div>
    <div><label for="qNumber">Dokumentnummer</label><input id="qNumber" maxlength="80" placeholder="z. B. KV-2026-001"></div>
    <div><label for="qServiceDate">Leistungsdatum / Zeitraum</label><input id="qServiceDate" maxlength="100" placeholder="z. B. Oktober 2026"></div>
    <div><label for="qValidUntil">Gültig bis / Zahlungsziel</label><input id="qValidUntil" type="date"></div>
@@ -1085,6 +1085,9 @@ async function saveEditedAk(e){
  const a=state.appointments.find(a=>a.id===appointmentId);
  if(!a)return alert('Die Arbeitskarte existiert nicht mehr.');
  const date=$('akEditDate').value,start=$('akEditStart').value,end=$('akEditEnd').value,employee=$('akEditEmployee').value;
+ const savedEntry=state.entries.find(e=>e.appointmentId===a.id&&e.appointmentOccurrence===occurrence);
+ if(savedEntry&&(a.date!==date||a.start!==start||a.end!==end||a.employee!==employee))
+  return alert('Für diese AK wurden bereits Arbeitszeiten erfasst. Datum, Mitarbeiter und geplante Uhrzeit dürfen dann nicht mehr umgeplant werden. Bitte die Arbeitsdokumentation mit Korrekturgrund öffnen.');
  try{MiCareSchedulePlanner.parse(date)}catch(err){return alert(err.message)}
  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||start>=end)return alert('Bitte Start- und Endzeit prüfen.');
  if(!state.employees.includes(employee))return alert('Bitte einen gültigen Mitarbeiter auswählen.');
