@@ -574,19 +574,36 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(finalDoc.invoiceType,'final');
   assert.equal(finalDoc.alreadyInvoicedNet,100);
   assert(finalDoc.serviceDate.includes(' – '),'Schlussrechnung nennt den Leistungszeitraum über mehrere AK');
+  assert.equal(finalDoc.performedWork.length,10,'Complete work record must include all ten AKs');
+  assert.equal(finalDoc.performedWork.filter(w=>w.priorInvoice).length,1,'Earlier partial invoice must be marked');
+  assert.equal(finalDoc.performedWork[0].priorInvoice,finalTen.number);
+  assert(finalDoc.performedWork[0].workDone.includes('Fünf Testfenster'));
   const closingPdf=await page.evaluate(async doc=>{
-    let heading='';const original=CanvasRenderingContext2D.prototype.fillText;
+    let heading='';const rendered=[];const original=CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText=function(text,...args){
-      if(String(text).startsWith('SCHLUSSRECHNUNG'))heading=String(text);
+      const value=String(text);rendered.push(value);
+      if(value.startsWith('SCHLUSSRECHNUNG'))heading=value;
       return original.call(this,text,...args);
     };
     try{const pdf=await MiCareQuote.pdf({...doc,finalizedAt:'2026-10-25T00:00:00Z'});
-      const b=new Uint8Array(await pdf.arrayBuffer());
-      return {heading,header:String.fromCharCode(...b.slice(0,5))};
+      const bytes=new Uint8Array(await pdf.arrayBuffer());
+      const all=rendered.join(' ');
+      return {heading,header:String.fromCharCode(...bytes.slice(0,5)),
+       appendixPages:rendered.filter(t=>t.startsWith('Ausgeführte Arbeiten – Anlage')).length,
+       akHeaders:rendered.filter(t=>/^AK \d+ ·/.test(t)),
+       hasPrior:all.includes(doc.precedingInvoiceNumbers[0]),
+       hasWorkDetails:all.includes('Fünf Testfenster')&&all.includes('Leistung erledigt'),
+       showsAmounts:all.includes('Bereits berechnet')&&all.includes('Diese Schlussrechnung')};
     }finally{CanvasRenderingContext2D.prototype.fillText=original}
   },finalDoc);
   assert.equal(closingPdf.heading,'SCHLUSSRECHNUNG','Final invoice PDF must be clearly labeled');
   assert.equal(closingPdf.header,'%PDF-');
+  assert(closingPdf.appendixPages>=2,'All 10 AK should be on a legible multipage appendix');
+  assert.equal(closingPdf.akHeaders.length,10,'Exactly 10 AK headings must be printed in PDF');
+  assert(closingPdf.hasWorkDetails,'PDF must actually print all documented work');
+  assert(closingPdf.hasPrior,'Previously issued partial invoice must be visible');
+  assert(closingPdf.showsAmounts,'PDF must show prior invoices and remaining balance');
+  ok('Schlussrechnungs-PDF zeigt alle zehn ausgeführten AK, Arbeitsbeschreibungen und frühere Teilrechnung');
   const beforeFinalPreview=await page.evaluate(()=>state.quotes.filter(q=>q.finalizedAt).length);
   const previewDownload=page.waitForEvent('download');
   await page.locator('#billPreview').click();
