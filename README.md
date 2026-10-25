@@ -1,4 +1,18 @@
-# M-iCare Zeiterfassung – Testversion 1.9.0
+# M-iCare Zeiterfassung – Testversion 1.9.1
+
+## Fehlerkorrekturen und Teilrechnung – Testversion 1.9.1
+
+- **AK bearbeiten funktioniert in der installierten Windows-App:** Der alte `prompt()`-Dialog wurde durch eine eigene Eingabemaske ersetzt. Geplantes Datum, Beginn/Ende, zuständiger Mitarbeiter und Arbeitsanweisung können dort geändert werden. Eine bestehende Arbeitszeiterfassung sperrt nachträgliche Terminänderungen; Ist-Zeit-Korrekturen laufen weiterhin über den nachvollziehbaren Korrekturgrund.
+- **Aufklappen/Zuklappen:** In der Arbeitszeiterfassung kann der gesamte Bereich „Geplanten Auftrag zuordnen“ aufgeklappt oder zugeklappt werden. Auch „Angenommene Aufträge – mit Arbeitskarten“ ist als Klappbereich nutzbar. Die AK-Einzelliste bleibt unabhängig aufklappbar.
+- **Keine unbemerkte „Erledigt“-Vorauswahl:** Ein neu übernommener Auftrag beginnt zunächst mit Status „In Bearbeitung“. Erst die bewusste Auswahl „Erledigt“ schließt den tatsächlichen Einsatz ab.
+- **Nach erstmaligem Abschluss:** Die App bietet unmittelbar an, die Rechnung oder **Teilrechnung** für die erledigte AK zu *vorbereiten*. Das erstellt keine ungeprüfte endgültige Rechnung und verschickt keine E-Mail. Wenn eine AK später korrigiert und erneut als erledigt markiert wird, kommt keine zweite automatische Rechnungsfrage.
+- **Teilrechnung 1 von 10:** Aus einem angenommenen Angebot über zehn Einsätze und 1.000 € netto wird die einzelne AK mit 100 € netto berechnet. Die Rechnung zeigt Angebot, AK und Teilrechnungsnummer innerhalb der Serie. Das PDF trägt in diesem Fall die Überschrift „TEILRECHNUNG“ (final) bzw. „TEILRECHNUNGSENTWURF“ (zur Prüfung). Doppeltes endgültiges Abrechnen derselben AK wird verhindert.
+- **Sichtbarkeit:** Im Bereich „Angenommene Aufträge“ kann jede noch offene AK bearbeitet/dokumentiert, eine erledigte AK abgerechnet und eine bereits abgerechnete AK-PDF wieder geöffnet werden.
+- **Speichersicherheit:** Der AK-Bearbeitungsdialog schließt erst, wenn die Änderungen dauerhaft in IndexedDB gespeichert sind; ein schneller App-Neustart darf die Daten nicht verlieren.
+- **Automatisierte Prüfungen:** Benutzer- und Auftragsanlage, Kalender, AK-Bearbeitungsformular mit Neustart, fünfteiliger Auftrag sowie zehnteiliges Angebot mit einer Teilrechnung über 100 €, Rechnungs-PDF, Reporting und unzulässige Eingaben.
+
+**Wichtig:** Dies bleibt eine Testversion. Die lokale Benutzeranmeldung ersetzt keine Datenverschlüsselung; parallele Rechnungsnummernvergabe auf mehreren Geräten ist noch nicht zentral abgesichert. Vor produktiver Nutzung echte Steuernummer/IBAN, Zahlungsbedingungen und Rechnungsanforderungen prüfen.
+
 
 ## Angenommene Angebote und Arbeitskarten – Version 1.9.0
 
