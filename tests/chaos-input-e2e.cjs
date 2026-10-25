@@ -150,7 +150,8 @@ const server=http.createServer((req,res)=>{
   check('Sonderzeichen und HTML im Text brechen UI nicht',await page.locator('img[src="x"]').count()===0);
   await page.reload();
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
-  check('Daten nach Neustart intakt',await page.evaluate(()=>state.customers.length===1&&state.appointments.length===2&&state.quotes.length===2));
+  const recovered=await count();
+  check('Daten nach Neustart intakt',recovered.customers===1&&recovered.appointments===2&&recovered.quotes===2,JSON.stringify(recovered));
 
   // Cloud import must never accept dangling customer/object links or duplicate ids.
   const invalidSnapshots=await page.evaluate(()=>{
