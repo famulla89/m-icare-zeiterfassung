@@ -211,6 +211,7 @@
    else if(!['Customer','Object','Appointment'].includes(k))node.value=v;
   }
   if(!values.TaxMode)byId('qTaxMode').value=doc.taxMode||'regular';
+  byId('qVat').disabled=value('TaxMode')==='small';
   if(!values.Scope){byId('qScope').value=(values.WindowItems?.length?'combined':'rooms')}
   updateScope();
   byId('qCustomer').value=doc.customerId;updateObjects();
@@ -241,12 +242,12 @@
   byId('qNotes').value='';byId('qServiceDate').value='';
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
   for(const k of ['Wc','Kitchen','Heavy'])byId('q'+k).checked=false;
-  updateObjects();updateNumber();calculate();window.scrollTo(0,0);
+  byId('qVat').disabled=value('TaxMode')==='small';updateObjects();updateNumber();calculate();window.scrollTo(0,0);
  }
  function refresh(){
   const settings=state.quoteSettings||{};
   for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&(k==='TaxMode'||!node.value))node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
-  refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
+  byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
  }
  function init(){
   for(const k of tracked){
