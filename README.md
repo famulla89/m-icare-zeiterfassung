@@ -1,4 +1,16 @@
-# M-iCare Zeiterfassung – Testversion 1.7.0
+# M-iCare Zeiterfassung – Testversion 1.8.0
+
+## Auftragsplanung mit Wochentagen und Kunden-Erinnerung (Testversion 1.8.0)
+
+**Beispiel:** Ein Kunde bucht vom 03.11. bis 31.12.2026 jeweils dienstags und mittwochs eine Fensterreinigung. Im Angebots- und Rechnungsrechner „Zeitraum mit festen Wochentagen“ auswählen, Anfang/Ende, **Di** und **Mi**, Mitarbeiter und Uhrzeiten eintragen. M-iCare berechnet 18 Einsätze. Bei 900 € netto entstehen nach Annahme 18 offene AK zu je 50 € netto.
+
+- **Unverbindlicher Entwurf:** „Termine und Überschneidungen prüfen“ zeigt alle Tage mit Warnhinweisen bei Kollisionen. Noch nicht angenommene gespeicherte Angebote erscheinen im Kalender **lila** als „ANGEBOTSENTWURF – noch KEINE Arbeitskarte“. Diese Entwürfe blockieren keine Mitarbeitenden.
+- **Verbindlich:** Erst „Kunde hat angenommen · AK planen“ verwandelt die angebotenen Einsätze in echte offene Arbeitskarten. Mitarbeiter kann Termine dokumentieren und erst nach Erledigung abrechnen.
+- **Einstellungen:** Wiederholung jede Woche oder alle 2/3/4 Wochen, Wochentage Mo–So; alternativ feste Einsatzanzahl mit täglichem/wöchentlichem Abstand. Das Planungsmodul begrenzt diese Testfassung auf 104 AK pro angenommenem Angebot und maximal zwei Jahre im Datumsbereich.
+- **Vertragsende:** Standardmäßig 30 Tage vorher, alternativ 60/14/7/0 Tage oder aus. Auf der Startseite unter **„Vertragsende & Kundenpflege“** erscheint der fällige Vorgang mit Kundenkontakt, Vertragsende und den Aktionen „Kunde kontaktiert“ / „In 7 Tagen erneut erinnern“.
+- **WICHTIGE GRENZE:** Dies sind **In-App-Erinnerungen, die beim Öffnen und Verwenden von M-iCare geprüft werden**. Sie sind **keine garantierten Android-/Windows-Pushbenachrichtigungen bei geschlossener App**. Für zuverlässige Meldungen bei geschlossener App wäre ein zusätzlicher, vom Betriebssystem geplanter Benachrichtigungsdienst bzw. eine serverseitige Überwachung nötig.
+- **Daten & Steuer:** Bestehende Angebote/Arbeitskarten bleiben erhalten. Rechnungsnummern müssen für echten Parallelbetrieb mehrerer Geräte zentral koordiniert werden. Preise bei Teilabrechnung und Umsatzsteuer ggf. fachlich prüfen.
+
 
 ## Angebot → Annahme → Arbeitskarten → Zeiterfassung → Rechnung (Version 1.7.0)
 
