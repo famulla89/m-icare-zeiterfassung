@@ -277,6 +277,8 @@
   updateScope();
   byId('qCustomer').value=doc.customerId;updateObjects();
   byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
+  if(Array.isArray(values.PlanWeekdays))document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=values.PlanWeekdays.map(Number).includes(Number(x.value)));
+  togglePlanMode();
   renderWindowItems();calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
  }
  async function exportSavedPdf(item,button){
@@ -397,9 +399,9 @@
  function openAcceptDialog(doc){
   if(doc.kind!=='quote'||doc.acceptedAt)return;
   quoteToAccept=doc.id;
-  const visitCount=Number(doc.calculation?.visits);
-  if(!Number.isInteger(visitCount)||visitCount<1||visitCount>52)return alert('Ein Angebot kann maximal 52 einzeln geplante Einsätze enthalten. Bitte Anzahl prüfen.');
-  byId('qAcceptInfo').textContent=doc.number+' · '+visitCount+' geplante Einsätze · '+de(doc.gross)+' insgesamt. Beim Bestätigen werden '+visitCount+' offene Arbeitskarten erzeugt.';
+  const visits=Number(doc.calculation?.visits);
+  if(!Number.isInteger(visits)||visits<1||visits>104)return alert('Anzahl Einsätze prüfen.');
+  byId('qAcceptInfo').textContent=doc.number+' · '+visits+' Einsätze · '+de(doc.gross)+' Gesamtpreis. Erst nach Bestätigung werden die Termine verbindlich.';
   byId('qAcceptDate').value=doc.formValues?.PlanDate||new Date().toISOString().slice(0,10);
   const employees=byId('qAcceptEmployee');employees.replaceChildren();
   for(const emp of state.employees||[])option(employees,emp,emp);
@@ -407,34 +409,37 @@
   byId('qAcceptStart').value=doc.formValues?.PlanStart||'09:00';
   byId('qAcceptEnd').value=doc.formValues?.PlanEnd||'11:00';
   byId('qAcceptRhythm').value=doc.formValues?.PlanRhythm||'7';
+  const range=doc.formValues?.PlanMode==='range';
+  byId('qAcceptRhythm').parentElement.hidden=range;
+  byId('qAcceptScheduleSummary').textContent=range?
+   'Wochentage '+(doc.formValues?.PlanWeekdays||[]).map(n=>['So','Mo','Di','Mi','Do','Fr','Sa'][n]).join(', ')+', bis '+formatDate(doc.formValues.PlanEndDate)+
+   '. Die Anzahl muss mit dem angenommenen Angebot übereinstimmen.':
+   visits+' geplante Einsätze im ausgewählten Abstand.';
   byId('qAcceptDialog').showModal();
  }
  function scheduleForQuote(doc){
-  const visits=Number(doc.calculation?.visits);
-  if(!Number.isInteger(visits)||visits<1||visits>52)throw Error('Ungültige Anzahl Reinigungseinsätze (maximal 52)');
   if(!state.customers.some(c=>c.id===doc.customerId))throw Error('Kunde nicht gefunden');
   if(doc.objectId&&!state.objects.some(o=>o.id===doc.objectId&&o.customerId===doc.customerId))throw Error('Geschäftsstelle nicht gefunden');
   const date=byId('qAcceptDate').value,emp=byId('qAcceptEmployee').value,start=byId('qAcceptStart').value,end=byId('qAcceptEnd').value;
-  const rhythm=Number(byId('qAcceptRhythm').value);
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(new Date(date+'T12:00:00').getTime()))throw Error('Datum wählen');
-  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||start>=end)throw Error('Beginn/Ende prüfen');
-  if(!(state.employees||[]).includes(emp))throw Error('Mitarbeiter auswählen');
-  if(![1,7,14].includes(rhythm))throw Error('Abstand wählen');
-  const totalCents=Math.round(doc.net*100),vatCents=Math.round(doc.tax*100);
-  const base=Math.floor(totalCents/visits),baseTax=Math.floor(vatCents/visits);
-  const proposed=Array.from({length:visits},(_,i)=>{
-   const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+i*rhythm);
-   const day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-   return {id:crypto.randomUUID(),customTitle:doc.service+' – '+(i+1)+'/'+visits+' · '+doc.number,
-    quoteId:doc.id,quoteNumber:doc.number,quoteVisit:i+1,quoteVisitCount:visits,
-    plannedInvoiceNetCents:base+(i<totalCents%visits?1:0),plannedInvoiceTaxCents:baseTax+(i<vatCents%visits?1:0),
-    customerId:doc.customerId,objectId:doc.objectId||null,employee:emp,service:
-    /fenster|glas|wintergarten/i.test(doc.service)?'Glas- & Fensterreinigung':(typeof SERVICES!=='undefined'&&SERVICES.includes(doc.service))?doc.service:'Sonderreinigungen',
-    date:day,start,end,repeat:'once',interval:1,until:'',exceptions:{},status:'open'};
-  });
-  if((state.appointments||[]).some(a=>a.quoteId===doc.id))throw Error('Für dieses Angebot wurden bereits Arbeitskarten erstellt');
-  const conflicts=proposed.flatMap(x=>employeeConflicts(x)).filter(Boolean);
-  if(conflicts.length&&!confirm('⚠ Der Mitarbeiter hat bei '+conflicts.length+' Einsatzzeit(en) bereits Termine. Trotzdem planen?'))return null;
+  if(!(state.employees||[]).includes(emp))throw Error('Bitte einen Mitarbeiter auswählen');
+  const values={...doc.formValues,PlanRhythm:byId('qAcceptRhythm').value};
+  const days=proposedDays(values,doc.calculation?.visits,date,start,end);
+  if(days.length!==Number(doc.calculation?.visits))
+   throw Error('Terminanzahl '+days.length+' stimmt nicht mit dem Angebot ('+doc.calculation?.visits+') überein. Angebot erst korrigieren.');
+  const visits=days.length,netCents=Math.round(doc.net*100),taxCents=Math.round(doc.tax*100);
+  const base=Math.floor(netCents/visits),baseTax=Math.floor(taxCents/visits);
+  const proposed=days.map((day,i)=>({
+   id:crypto.randomUUID(),customTitle:doc.service+' – '+(i+1)+'/'+visits+' · '+doc.number,
+   quoteId:doc.id,quoteNumber:doc.number,quoteVisit:i+1,quoteVisitCount:visits,
+   plannedInvoiceNetCents:base+(i<netCents%visits?1:0),plannedInvoiceTaxCents:baseTax+(i<taxCents%visits?1:0),
+   customerId:doc.customerId,objectId:doc.objectId||null,employee:emp,
+   service:/fenster|glas|wintergarten/i.test(doc.service)?'Glas- & Fensterreinigung':
+     (typeof SERVICES!=='undefined'&&SERVICES.includes(doc.service))?doc.service:'Sonderreinigungen',
+   date:day,start,end,repeat:'once',interval:1,until:'',exceptions:{},status:'open'
+  }));
+  if((state.appointments||[]).some(a=>a.quoteId===doc.id))throw Error('Arbeitskarten für dieses Angebot bereits angelegt.');
+  const collisions=proposed.flatMap(x=>employeeConflicts(x)).filter(Boolean);
+  if(collisions.length&&!confirm('⚠ Mitarbeiter hat '+collisions.length+' Terminkonflikt(e). Trotzdem planen?'))return null;
   return proposed;
  }
  async function confirmAcceptedQuote(){
@@ -447,7 +452,11 @@
    state.appointments.push(...proposed);
    doc.acceptedAt=new Date().toISOString();
    doc.appointmentIds=proposed.map(x=>x.id);
+   doc.contractEnd=proposed.at(-1).date;
+   doc.reminderDays=Number(doc.formValues?.PlanReminderDays??30);
+   doc.reminderDoneAt='';
    await saveState();
+   window.MiCareContractReminders?.refresh();
    byId('qAcceptDialog').close();quoteToAccept=null;
    if(activeId===doc.id)activeId=null;
    showSaved();
