@@ -88,6 +88,7 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 #micareLoginCard label{margin-top:13px}
 #micareLoginCard .authFoot{font-size:.78rem;color:#586878}
 #micareLoginMessage{min-height:35px}
+.calendarGrid .draftEvent{background:#e9e0fa;color:#54327a;border:1px solid #bba5dd}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -1053,6 +1054,47 @@ async function editAppointmentFromCalendar(x){
  }
  await saveState();calendarMonth=date.slice(0,7);chosenDay=date;renderAppointments();notify(akLabel(a)+' aktualisiert');
 }
+function draftQuoteDatesInMonth(first,last){
+ const result=[];
+ for(const q of state.quotes||[]){
+  if(q.kind!=='quote'||q.acceptedAt||!q.formValues?.PlanDate)continue;
+  try{
+   const values=q.formValues;
+   const dates=MiCareSchedulePlanner.build({
+    mode:values.PlanMode||'count',start:values.PlanDate,end:values.PlanEndDate,
+    weekdays:values.PlanWeekdays||[],intervalWeeks:Number(values.PlanEveryWeeks||1),
+    visits:Number(q.calculation?.visits||1),rhythm:Number(values.PlanRhythm||7),
+    startTime:values.PlanStart||'09:00',endTime:values.PlanEnd||'11:00'
+   });
+   for(const date of dates)if(date>=first&&date<=last)result.push({date,quote:q});
+  }catch{}
+ }
+ return result;
+}
+function renderContractReminders(){
+ const panel=$('micareContractReminders');if(!panel)return;
+ panel.replaceChildren();
+ const heading=el('strong','🔔 Vertragsende & Kundenpflege');panel.append(heading);
+ const today=isoDate();
+ const due=(state.quotes||[]).filter(q=>q.kind==='quote'&&q.acceptedAt&&q.reminderDays!==-1&&!q.reminderDoneAt&&q.contractEnd)
+  .map(q=>({...q,remindAt:MiCareSchedulePlanner.addDays(q.contractEnd,-Number(q.reminderDays??30))}))
+  .filter(q=>q.remindAt<=today&&(!q.reminderSnoozedUntil||q.reminderSnoozedUntil<=today))
+  .sort((a,b)=>a.contractEnd.localeCompare(b.contractEnd));
+ if(!due.length){panel.append(el('p','Aktuell keine fälligen Erinnerungen. Angenommene Angebote werden hier zum gewählten Zeitpunkt vor Vertragsende angezeigt.'));return}
+ const msg=el('p','⚠ '+due.length+' Auftrag/Aufträge benötigen eine Kunden-Nachfrage!');panel.append(msg);
+ for(const quote of due.slice(0,15)){
+  const item=el('div','');item.style.borderTop='1px solid #d1deea';item.style.padding='9px 0';
+  item.append(el('strong',quote.customerName+' · '+quote.number));
+  item.append(el('div','Auftragsende: '+formatDate(quote.contractEnd)+' · Kontakt aufnehmen wegen Folgeauftrag'));
+  const actions=el('div','');actions.className='row';actions.style.marginTop='5px';
+  const done=el('button','✓ Kunde kontaktiert');done.type='button';done.className='secondary smallbtn';
+  done.onclick=async()=>{quote.reminderDoneAt=new Date().toISOString();await saveState();renderContractReminders()};
+  const later=el('button','In 7 Tagen erneut erinnern');later.type='button';later.className='secondary smallbtn';
+  later.onclick=async()=>{quote.reminderSnoozedUntil=MiCareSchedulePlanner.addDays(isoDate(),7);await saveState();renderContractReminders()};
+  actions.append(done,later);item.append(actions);panel.append(item);
+ }
+}
+window.MiCareContractReminders={refresh:renderContractReminders};
 function renderCalendar(){
  const [yr,mo]=calendarMonth.split('-').map(Number),first=new Date(yr,mo-1,1),days=new Date(yr,mo,0).getDate(),grid=$('calendarGrid');
  $('calendarTitle').textContent=first.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
@@ -1061,6 +1103,7 @@ function renderCalendar(){
  for(let i=0;i<(first.getDay()+6)%7;i++){const x=el('div','');x.className='blank';grid.append(x)}
  const firstDate=calendarMonth+'-01',lastDate=calendarMonth+'-'+String(days).padStart(2,'0');
  const planned=(state.appointments||[]).flatMap(a=>datesFor(a,firstDate,lastDate));
+ const drafts=draftQuoteDatesInMonth(firstDate,lastDate);
  const work=(state.entries||[]).filter(e=>e.date>=firstDate&&e.date<=lastDate);
  const scheduledByKey=new Map(planned.map(o=>[appointmentKey(o.appointment,o.originalDate),o]));
  // Show a planned order's actual work on its real date when it differs from the scheduled day.
@@ -1068,16 +1111,17 @@ function renderCalendar(){
  if(!chosenDay.startsWith(calendarMonth))chosenDay=firstDate;
  for(let day=1;day<=days;day++){
   const value=calendarMonth+'-'+String(day).padStart(2,'0'),events=planned.filter(a=>a.date===value),free=freeWork.filter(e=>e.date===value);
-  const count=events.length+free.length,doneCount=events.filter(isAppointmentDone).length+free.length;
+  const draftCount=drafts.filter(x=>x.date===value).length;
+  const count=events.length+free.length+draftCount,doneCount=events.filter(isAppointmentDone).length+free.length;
   const b=el('button',String(day)+(count?' · '+count:''));
-  b.type='button';b.className=(count?(doneCount===0?'hasEvent ':doneCount===count?'allDone ':'mixedStatus '):'')+(chosenDay===value?'chosen':'');
-  b.title=count?(events.length+' geplante Termine, '+free.length+' weitere tatsächliche Arbeitszeiteinträge'):'Keine Termine oder Arbeitszeiten';
+  b.type='button';b.className=(draftCount&&!events.length&&!free.length?'draftEvent ':count?(doneCount===0?'hasEvent ':doneCount===count?'allDone ':'mixedStatus '):'')+(chosenDay===value?'chosen':'');
+  b.title=count?(events.length+' verbindliche AK, '+draftCount+' unverbindliche Angebotsvorschläge, '+free.length+' weitere Arbeitszeiteinträge'):'Keine Termine oder Arbeitszeiten';
   b.onclick=()=>{chosenDay=value;$('appointmentDate').value=value;$('appointmentDate').dispatchEvent(new Event('change',{bubbles:true}));renderCalendar()};
   grid.append(b);
  }
  $('selectedDayTitle').textContent='Termine und Arbeitszeiten am '+formatDate(chosenDay);
  const area=$('selectedDayList');area.replaceChildren();
- const events=planned.filter(a=>a.date===chosenDay),extra=freeWork.filter(e=>e.date===chosenDay);
+ const events=planned.filter(a=>a.date===chosenDay),extra=freeWork.filter(e=>e.date===chosenDay),dayDrafts=drafts.filter(x=>x.date===chosenDay);
  for(const x of events){
   const c=state.customers.find(z=>z.id===x.appointment.customerId),entry=completedAppointmentEntry(x);
   const done=entry?.orderStatus==='done';
@@ -1093,13 +1137,20 @@ function renderCalendar(){
   }
   line.append(actions);area.append(line);
  }
+ for(const draft of dayDrafts){
+  const box=el('div','🟣 ANGEBOTSENTWURF · '+draft.quote.number+' · '+draft.quote.customerName+' · '+draft.quote.service+' · noch KEINE Arbeitskarte');
+  box.className='appt';box.style.background='#f0e9fa';
+  const button=el('button','Angebot bearbeiten');button.type='button';button.className='secondary smallbtn';
+  button.onclick=()=>{showScreen('quoteCalculator');window.MiCareQuoteUI?.loadQuote(draft.quote.id)};
+  box.append(button);area.append(box);
+ }
  for(const e of extra){
   const c=state.customers.find(z=>z.id===e.customerId);
   const extraLabel=e.appointmentId?' · Zu geplantem Auftrag vom '+formatDate(e.appointmentOccurrence||e.date):'';
   const line=el('div','⏱ '+e.start+'–'+e.end+' · '+(c?customerDisplay(c):(e.object||'Freie Arbeitszeit'))+' · '+e.employee+' · '+e.service+' · '+hours(e.minutes||0)+' Std.'+extraLabel);
   line.className='appt';area.append(line);
  }
- if(!events.length&&!extra.length)area.append(el('span','Keine Termine oder Arbeitszeiten an diesem Tag.'));
+ if(!events.length&&!extra.length&&!dayDrafts.length)area.append(el('span','Keine Termine oder Arbeitszeiten an diesem Tag.'));
 }
 
 function repeatLabel(a){return a.repeat==='weekdays'?'Wochentage: '+(a.weekdays||[]).map(d=>['So','Mo','Di','Mi','Do','Fr','Sa'][d]).join(', '):a.repeat==='workdays'?'Alle '+(Number(a.interval)||1)+' Arbeitstage (Mo–Sa)':a.repeat==='days'?'Alle '+(Number(a.interval)||1)+' Kalendertage':a.repeat==='weekly'?'Wöchentlich':a.repeat==='monthly'?'Monatlich':'Einmalig'}
@@ -1855,7 +1906,7 @@ $('reportTableCsv').onclick=async()=>{
 $('reportPrint').onclick=()=>MiCareReportPrint.print();
 
 function showScreen(id,remember=true){if(!screenIds.includes(id))id='home';if(id!==currentScreen&&!confirmDiscardChanges())return;if(remember&&id!==currentScreen&&screenHistory[screenHistory.length-1]!==currentScreen)screenHistory.push(currentScreen);if(currentScreen==='customersPanel'&&id!=='customersPanel'){newCustomerMode=false;$('selectedCustomer').disabled=false;if(lastSelectedCustomer)$('selectedCustomer').value=lastSelectedCustomer}
-currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();captureCurrentScreen()}
+currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home')renderContractReminders()if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();captureCurrentScreen()}
 function goBack(){if(!confirmDiscardChanges())return;const previous=screenHistory.pop()||'home';captureCurrentScreen();showScreen(previous,false)}
 $('goBack').onclick=goBack;$('goHome').onclick=()=>{if(!confirmDiscardChanges())return;screenHistory=[];captureCurrentScreen();showScreen('home',false)};
 document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));
