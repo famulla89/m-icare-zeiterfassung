@@ -10,6 +10,7 @@ on:
       - 'quote-calculator.js'
       - 'quote-ui.js'
       - 'billing-ui.js'
+      - 'voice-input.js'
       - 'report-print.js'
       - 'logo.svg'
   push:
@@ -23,6 +24,7 @@ on:
       - 'tests/quote-calculator-smoke.cjs'
       - 'quote-ui.js'
       - 'billing-ui.js'
+      - 'voice-input.js'
       - 'report-print.js'
       - 'sw.js'
       - 'manifest.webmanifest'
@@ -58,7 +60,7 @@ jobs:
       - name: Bundle current offline web app
         run: |
           mkdir -p android-app/app/src/main/assets
-          cp index.html login-gate.js schedule-planner.js cloud-transfer.js quote-calculator.js quote-ui.js billing-ui.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+          cp index.html login-gate.js schedule-planner.js cloud-transfer.js quote-calculator.js quote-ui.js billing-ui.js voice-input.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
@@ -70,6 +72,7 @@ jobs:
           node --check login-gate.js
           node --check billing-ui.js
           node tests/billing-core-smoke.cjs
+          node tests/voice-input-smoke.cjs
           node tests/schedule-planner-smoke.cjs
           node tests/cloud-transfer-smoke.cjs
           node tests/app-core-smoke.cjs
@@ -85,6 +88,7 @@ jobs:
           unzip -l "$APK" | grep -Fq 'assets/quote-calculator.js'
           unzip -l "$APK" | grep -Fq 'assets/quote-ui.js'
           unzip -l "$APK" | grep -Fq 'assets/billing-ui.js'
+          unzip -l "$APK" | grep -Fq 'assets/voice-input.js'
           unzip -l "$APK" | grep -Fq 'assets/report-print.js'
           unzip -l "$APK" | grep -Fq 'assets/cloud-transfer.js'
           echo 'PASS: normal M-iCare package, calculator UI, offers and cloud-transfer bundled'
