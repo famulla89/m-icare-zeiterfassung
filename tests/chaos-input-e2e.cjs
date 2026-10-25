@@ -159,7 +159,7 @@ const server=http.createServer((req,res)=>{
    let bad2=structuredClone(good);bad2.objects[0].customerId='unbekannt';
    let bad3=structuredClone(good);bad3.employees=['QA Mitarbeiter','QA Mitarbeiter'];
    let bad4=structuredClone(good);delete bad4.appointments;
-   const checks=[bad1,bad2,bad3,bad4].map(data=>{try{MiCareCloud.validateSnapshot(data);return false}catch{return true}});
+   const checks=[bad1,bad2,bad3,bad4].map(data=>{try{MiCareCloudTransfer.validateSnapshot(data);return false}catch{return true}});
    return checks;
   });
   check('Kaputte/doppelte/inkonsistente Sicherung abgewiesen',invalidSnapshots.every(Boolean));
