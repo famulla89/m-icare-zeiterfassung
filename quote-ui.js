@@ -177,7 +177,7 @@
    id:activeId||crypto.randomUUID(),kind:value('Kind'),number,createdAt:today,date:formatDate(today),
    customerId:c.id,customerNumber:c.publicNumber||'',customerName:c.name,customerAddress:[c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '),
    objectId:o?.id||'',objectName:o?.name||'',objectAddress:o?[o.address,[o.zip,o.city].filter(Boolean).join(' ')].filter(Boolean).join(', '):'',
-   appointmentId:a?.id||'',orderNumber:a?'AK '+(a.akNumber||'–')+' / '+orderCode(a):'',
+   appointmentId:a?.id||'',orderNumber:a?'AK '+(a.akNumber||'–')+' / '+orderCode(a):'',sourceQuoteId:a?.quoteId||'',sourceQuoteNumber:a?.quoteNumber||'',sourceVisitNumber:a?.quoteVisit||0,sourceVisitCount:a?.quoteVisitCount||0,
    service:value('Service').trim()||'Reinigungsleistung',serviceDate:value('ServiceDate').trim(),
    validUntil:value('Kind')==='quote'?value('ValidUntil'):'',dueDate:value('Kind')==='invoice'?value('ValidUntil'):'',
    sellerName:value('SellerName').trim(),sellerAddress:value('SellerAddress').trim(),sellerTaxId:value('SellerTax').trim(),sellerEmail:value('SellerEmail').trim(),sellerPhone:value('SellerPhone').trim(),recipientEmail:value('RecipientEmail').trim(),iban:value('Iban').trim(),
