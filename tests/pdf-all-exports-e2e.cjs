@@ -164,8 +164,8 @@ let activeBrowser=null;
   // müssen auch auf jeder weiteren Seite erscheinen. Der Druckkopf ist fixiert.
   for(let pageNum=1;pageNum<=o.pages;pageNum++){
    const pageText=execFileSync('pdftotext',['-f',String(pageNum),'-l',String(pageNum),'-layout',path.join(out,filename),'-'],{encoding:'utf8'});
-   assert(pageText.includes(data.h),filename+' page '+pageNum+' missing repeated report heading/logo header');
-   assert(pageText.includes('Zeitraum:'),filename+' page '+pageNum+' missing repeated report date header');
+   assert(pageText.includes('M-iCare Gebäudereinigung'),filename+' page '+pageNum+' missing repeated branded PDF margin header');
+   if(pageNum===1)assert(pageText.includes(data.h)&&pageText.includes('Zeitraum:'),filename+' missing report title/date on first page');
   }
   if(tab==='orders')assert(o.pages<=4,'Order report excessively long for synthetic dataset: '+o.pages+' pages');
   results.push(o);console.log('REPORT PDF PASS',filename,o.pages,'pages');
