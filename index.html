@@ -103,6 +103,87 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 #quoteCalculator #qPreviewStatus{margin:12px 0;color:#395773;font-size:.92rem}
 #quoteCalculator .qPdfPreviewPanel button{min-height:42px}
 @media(max-width:640px){#quoteCalculator .qPdfPreviewPanel{margin:12px -6px;padding:9px}#quoteCalculator .qPdfPreviewPaper{box-shadow:none}#quoteCalculator #qJumpPreview{width:100%}}
+
+/* M-iCare handbook-inspired visual system: screenshots in 1.9.3 PDFs are schematics.
+   Pure presentation overrides; identifiers, business logic and print output unchanged. */
+:root{--mc-navy:#173956;--mc-navy-deep:#12314a;--mc-blue:#168fd1;--mc-blue-soft:#eaf4fc;--mc-surface:#fff;--mc-border:#d4e4ef;--mc-text:#193d5b;--mc-muted:#587086;--mc-gold:#ecb34b;--mc-shadow:0 5px 18px rgba(24,57,84,.08);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:var(--mc-text);background:#f6f9fc}
+body{background:#f6f9fc;color:var(--mc-text);line-height:1.5}
+.wrap{max-width:1180px;padding:22px 20px 42px}
+header{padding:17px 22px;margin:0 0 19px;background:var(--mc-navy);color:white;border-radius:13px;box-shadow:var(--mc-shadow);gap:18px}
+header img{border-radius:9px;max-height:75px;width:min(27vw,165px);background:white;padding:6px}
+header h1{font-size:1.42rem;letter-spacing:.01em;color:white}
+header .sub,header .muted{color:#d8e7f1}
+header .badge{background:#35617f;color:#fff}
+header button.secondary{background:#e7f2fa;color:#164666}
+section{border:1px solid var(--mc-border);border-radius:14px;padding:23px;margin:16px 0;background:var(--mc-surface);box-shadow:var(--mc-shadow)}
+h2{font-size:1.25rem;line-height:1.28;color:var(--mc-navy);margin-bottom:14px}
+h3{color:var(--mc-navy)}
+.sub,.hint,.muted{color:var(--mc-muted)}
+label{color:#294a65;font-size:.89rem;letter-spacing:.005em}
+input,select,textarea{border:1px solid #c7d8e5;border-radius:8px;background:#fff;color:#1b3c57;min-height:43px;padding:10px 12px}
+textarea{min-height:88px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #198dd3;outline-offset:1px;border-color:#198dd3;box-shadow:0 0 0 3px rgba(25,141,211,.12)}
+button{border-radius:8px;background:var(--mc-blue);min-height:42px;padding:9px 14px;transition:background-color .16s,box-shadow .16s,transform .16s}
+button:hover:not(:disabled){filter:brightness(.97);box-shadow:0 2px 8px #1439581b}
+button:focus-visible{outline:3px solid var(--mc-gold);outline-offset:2px}
+button.secondary,.backbar button{background:#e8f3fb;color:#174e78;border:1px solid #d0e2ef}
+button.danger{background:#b74750;color:#fff}
+.tiles{gap:13px}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;min-height:105px;padding:19px 20px;background:var(--mc-blue-soft);border:1px solid var(--mc-border);border-radius:11px;color:var(--mc-navy);font-size:1.06rem;line-height:1.35;box-shadow:none}
+.tile:hover:not(:disabled),.tile:focus-visible{background:#dceefb;border-color:#8abde1}
+.tile small{font-size:.83rem;line-height:1.4;margin-top:5px;color:#567086}
+#home>h2{font-size:1.52rem;margin:6px 0 18px}
+#home>.status{border:1px solid #d6e6f1;background:#f2f7fc}
+.grid{gap:16px}
+.quoteBox,#quoteCalculator .quoteBox,.objectPanel,.backupGroup,#reportingScreen .reportMetric{border:1px solid var(--mc-border);background:#fbfdff;border-radius:11px;box-shadow:none}
+#quoteCalculator .quoteBox{padding:21px}
+#quoteCalculator .quoteBox h3{padding-bottom:11px;border-bottom:1px solid #dfeaf3}
+#quoteCalculator .quoteScopePanel,#quoteCalculator .quoteHelp{background:#edf6fc;border-color:#c7dfef}
+#quoteCalculator .quoteSummary{background:var(--mc-navy);border-radius:11px}
+#quoteCalculator .quoteWindowPicker button,#reportingScreen .reportMenu button{background:var(--mc-blue-soft);border:1px solid var(--mc-border);color:var(--mc-navy);border-radius:10px}
+#quoteCalculator .quoteWindowRow{border-color:var(--mc-border)}
+#reportingScreen .reportMenu button{min-height:100px}
+#reportingScreen .reportMetric{background:#edf6fc}
+#reportingScreen .reportBarFill{background:var(--mc-blue)}
+table th{background:#e5f2fb;color:var(--mc-navy);font-weight:750}
+table td{border-bottom-color:#e2ecf4}
+tbody tr:nth-child(even){background:#f8fbfe}
+.status{border:1px solid #d7e7f1;border-radius:9px}
+.status.warn{border-color:#ecd4a1}
+.status.good{border-color:#b7dfca}
+.backbar{background:rgba(246,249,252,.97);border-color:var(--mc-border);box-shadow:0 3px 12px #17395212}
+#micareLoginCard{border-color:var(--mc-border);box-shadow:var(--mc-shadow)}
+#quoteCalculator .qPdfPreviewPanel{background:#edf6fc;border-color:var(--mc-border)}
+#quoteCalculator .qPdfPreviewPaper{border-color:#bfd5e5}
+@media(min-width:850px){#home .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}#home .tile{min-height:107px}}
+@media(max-width:700px){
+ .wrap{padding:10px 10px 30px}
+ header{margin-bottom:12px;padding:12px;border-radius:10px;gap:10px;flex-wrap:wrap}
+ header img{width:94px;max-height:67px}
+ header h1{font-size:1.14rem}
+ header .sub{font-size:.77rem}
+ section{padding:15px 13px;margin:11px 0;border-radius:11px}
+ h2{font-size:1.13rem}
+ #home>h2{font-size:1.32rem}
+ .tiles{grid-template-columns:1fr}
+ .tile{min-height:77px;padding:13px 15px;font-size:.98rem}
+ .tile small{font-size:.8rem;margin-top:3px}
+ .grid,.three{grid-template-columns:1fr}
+ #quoteCalculator .quoteBox{padding:14px}
+ input,select,textarea{font-size:16px}
+ .row.actions>button{max-width:100%}
+ .backbar{top:0;padding:6px;gap:6px}
+ .backbar button{min-height:44px}
+ .tablewrap{max-width:100%;overflow-x:auto}
+}
+@media print{
+ :root{background:white}body{background:white}
+ header{background:white;color:#14243a;border:0;box-shadow:none}
+ header h1{color:#14243a}header .sub{color:#53667c}
+ section{box-shadow:none}
+ button{transition:none}
+}
+
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
