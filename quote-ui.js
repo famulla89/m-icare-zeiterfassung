@@ -378,7 +378,7 @@
     quoteId:doc.id,quoteNumber:doc.number,quoteVisit:i+1,quoteVisitCount:visits,
     plannedInvoiceNetCents:base+(i<totalCents%visits?1:0),plannedInvoiceTaxCents:baseTax+(i<vatCents%visits?1:0),
     customerId:doc.customerId,objectId:doc.objectId||null,employee:emp,service:
-    /fenster|glas|wintergarten/i.test(doc.service)?'Glas- & Fensterreinigung':(window.SERVICES||[]).includes(doc.service)?doc.service:'Sonderreinigungen',
+    /fenster|glas|wintergarten/i.test(doc.service)?'Glas- & Fensterreinigung':(typeof SERVICES!=='undefined'&&SERVICES.includes(doc.service))?doc.service:'Sonderreinigungen',
     date:day,start,end,repeat:'once',interval:1,until:'',exceptions:{},status:'open'};
   });
   if((state.appointments||[]).some(a=>a.quoteId===doc.id))throw Error('Für dieses Angebot wurden bereits Arbeitskarten erstellt');
