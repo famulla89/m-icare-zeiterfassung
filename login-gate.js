@@ -125,5 +125,5 @@
   showAuth();
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
- window.MiCareLogin={biometricResult};
+ window.MiCareLogin={biometricResult,lock:showAuth};
 })();
