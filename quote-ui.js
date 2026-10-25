@@ -2,7 +2,7 @@
 /* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
 (function(){
  const byId=id=>document.getElementById(id);
- const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','RecipientEmail','Iban','Notes'];
+ const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','RecipientEmail','Iban','Notes','PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanRhythm'];
  // Einträge in öffentlich zugänglichen Firmenverzeichnissen; mögliche Adressänderungen bitte prüfen.
  const companyPublic={SellerName:'M-iCare Gebäudereinigung',SellerAddress:'Lippestraße 9, 58097 Hagen',SellerEmail:'info@m-icare-gebaeudereinigung.de',SellerPhone:'0162 8564663'};
  const typeAreas={standard:{label:'Standardfenster',sqm:1.5},large:{label:'Große Glasflächen',sqm:4},sliding:{label:'Schiebeelemente',sqm:2.5},mullion:{label:'Sprossenfenster',sqm:1.2},winter:{label:'Wintergarten',sqm:1},roof:{label:'Glasüberdachung',sqm:1}};
@@ -190,7 +190,7 @@
   state.quoteSettings=Object.fromEntries(keep.map(k=>[k,value(k)]));
  }
  async function persist(){
-  if((state.quotes||[]).some(x=>x.id===activeId&&x.finalizedAt))throw Error('Endgültige Rechnung ist gesperrt und darf nicht verändert werden');
+  if((state.quotes||[]).some(x=>x.id===activeId&&(x.finalizedAt||x.acceptedAt)))throw Error('Endgültige Rechnung oder angenommenes Angebot darf nicht verändert werden');
   const doc=collect();state.quotes??=[];saveSettings();
   const i=state.quotes.findIndex(x=>x.id===doc.id);
   if(i>=0)state.quotes[i]=doc;else state.quotes.push(doc);
@@ -212,7 +212,7 @@
  }
  function loadQuote(id){
   const doc=(state.quotes||[]).find(q=>q.id===id);if(!doc)return;
-  if(doc.finalizedAt){alert('Endgültige Rechnung ist gesperrt. Für PDF und E-Mail bitte die Dokumentenübersicht verwenden.');return}
+  if(doc.finalizedAt||doc.acceptedAt){alert('Abgeschlossene Rechnung oder angenommenes Angebot ist gesperrt. PDF über die Übersicht ausgeben.');return}
   activeId=id;const values=doc.formValues||{};
   for(const [k,v] of Object.entries(values)){
    if(k==='WindowItems'){windowItems=Array.isArray(v)?structuredClone(v).slice(0,8):[];continue}
@@ -332,6 +332,109 @@
   }catch(e){alert('E-Mail konnte nicht vorbereitet werden: '+e.message)}
   finally{button.disabled=false}
  }
+
+ function elStatus(text){
+  const n=document.createElement('div');n.className='docMeta';n.textContent=text;return n;
+ }
+ function refreshPlanEmployees(){
+  const select=byId('qPlanEmployee'),previous=select.value;
+  select.replaceChildren();option(select,'','– Mitarbeiter auswählen –');
+  for(const name of (state.employees||[]))option(select,name,name);
+  if((state.employees||[]).includes(previous))select.value=previous;
+ }
+ let quoteToAccept=null,acceptBusy=false;
+ function openAcceptDialog(doc){
+  if(doc.kind!=='quote'||doc.acceptedAt)return;
+  quoteToAccept=doc.id;
+  const visitCount=Number(doc.calculation?.visits);
+  if(!Number.isInteger(visitCount)||visitCount<1||visitCount>52)return alert('Ein Angebot kann maximal 52 einzeln geplante Einsätze enthalten. Bitte Anzahl prüfen.');
+  byId('qAcceptInfo').textContent=doc.number+' · '+visitCount+' geplante Einsätze · '+de(doc.gross)+' insgesamt. Beim Bestätigen werden '+visitCount+' offene Arbeitskarten erzeugt.';
+  byId('qAcceptDate').value=doc.formValues?.PlanDate||new Date().toISOString().slice(0,10);
+  const employees=byId('qAcceptEmployee');employees.replaceChildren();
+  for(const emp of state.employees||[])option(employees,emp,emp);
+  employees.value=(state.employees||[]).includes(doc.formValues?.PlanEmployee)?doc.formValues.PlanEmployee:(state.employees||[])[0]||'';
+  byId('qAcceptStart').value=doc.formValues?.PlanStart||'09:00';
+  byId('qAcceptEnd').value=doc.formValues?.PlanEnd||'11:00';
+  byId('qAcceptRhythm').value=doc.formValues?.PlanRhythm||'7';
+  byId('qAcceptDialog').showModal();
+ }
+ function scheduleForQuote(doc){
+  const visits=Number(doc.calculation?.visits);
+  if(!Number.isInteger(visits)||visits<1||visits>52)throw Error('Ungültige Anzahl Reinigungseinsätze (maximal 52)');
+  if(!state.customers.some(c=>c.id===doc.customerId))throw Error('Kunde nicht gefunden');
+  if(doc.objectId&&!state.objects.some(o=>o.id===doc.objectId&&o.customerId===doc.customerId))throw Error('Geschäftsstelle nicht gefunden');
+  const date=byId('qAcceptDate').value,emp=byId('qAcceptEmployee').value,start=byId('qAcceptStart').value,end=byId('qAcceptEnd').value;
+  const rhythm=Number(byId('qAcceptRhythm').value);
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!Number.isFinite(new Date(date+'T12:00:00').getTime()))throw Error('Datum wählen');
+  if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)||start>=end)throw Error('Beginn/Ende prüfen');
+  if(!(state.employees||[]).includes(emp))throw Error('Mitarbeiter auswählen');
+  if(![1,7,14].includes(rhythm))throw Error('Abstand wählen');
+  const totalCents=Math.round(doc.net*100),vatCents=Math.round(doc.tax*100);
+  const base=Math.floor(totalCents/visits),baseTax=Math.floor(vatCents/visits);
+  const proposed=Array.from({length:visits},(_,i)=>{
+   const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+i*rhythm);
+   const day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+   return {id:crypto.randomUUID(),customTitle:doc.service+' – '+(i+1)+'/'+visits+' · '+doc.number,
+    quoteId:doc.id,quoteNumber:doc.number,quoteVisit:i+1,quoteVisitCount:visits,
+    plannedInvoiceNetCents:base+(i<totalCents%visits?1:0),plannedInvoiceTaxCents:baseTax+(i<vatCents%visits?1:0),
+    customerId:doc.customerId,objectId:doc.objectId||null,employee:emp,service:
+    /fenster|glas|wintergarten/i.test(doc.service)?'Glas- & Fensterreinigung':(window.SERVICES||[]).includes(doc.service)?doc.service:'Sonderreinigungen',
+    date:day,start,end,repeat:'once',interval:1,until:'',exceptions:{},status:'open'};
+  });
+  if((state.appointments||[]).some(a=>a.quoteId===doc.id))throw Error('Für dieses Angebot wurden bereits Arbeitskarten erstellt');
+  const conflicts=proposed.flatMap(x=>employeeConflicts(x)).filter(Boolean);
+  if(conflicts.length&&!confirm('⚠ Der Mitarbeiter hat bei '+conflicts.length+' Einsatzzeit(en) bereits Termine. Trotzdem planen?'))return null;
+  return proposed;
+ }
+ async function confirmAcceptedQuote(){
+  if(acceptBusy)return;acceptBusy=true;const btn=byId('qAcceptConfirm');btn.disabled=true;
+  try{
+   const doc=(state.quotes||[]).find(x=>x.id===quoteToAccept&&x.kind==='quote');
+   if(!doc||doc.acceptedAt)throw Error('Angebot wurde bereits angenommen oder nicht gefunden');
+   const proposed=scheduleForQuote(doc);if(!proposed)return;
+   if(!confirm('Kundenannahme bestätigen und '+proposed.length+' offene Arbeitskarte(n) für '+doc.number+' verbindlich einplanen?'))return;
+   state.appointments.push(...proposed);
+   doc.acceptedAt=new Date().toISOString();
+   doc.appointmentIds=proposed.map(x=>x.id);
+   await saveState();
+   byId('qAcceptDialog').close();quoteToAccept=null;
+   if(activeId===doc.id)activeId=null;
+   showSaved();
+   notify(proposed.length+' offene AK für '+doc.number+' eingeplant. Kein Auftrag ist erledigt.');
+  }catch(e){alert('Angebot kann nicht angenommen werden: '+e.message)}
+  finally{acceptBusy=false;btn.disabled=false}
+ }
+ function openForAppointment(appointmentId,occurrenceDate){
+  const a=(state.appointments||[]).find(x=>x.id===appointmentId);if(!a)return alert('Arbeitskarte nicht gefunden');
+  const occ=occurrenceDate||a.date;
+  const entry=(state.entries||[]).find(e=>e.appointmentId===a.id&&e.appointmentOccurrence===occ&&e.orderStatus==='done');
+  if(!entry)return alert('Erst muss der Mitarbeiter die Arbeit tatsächlich erledigen und als „Erledigt“ speichern.');
+  if((state.quotes||[]).some(q=>q.finalizedAt&&q.appointmentId===a.id&&isoDay(q.serviceDate)===occ))return alert('Diese Arbeitskarte wurde bereits endgültig abgerechnet.');
+  const quote=(state.quotes||[]).find(q=>q.id===a.quoteId&&q.acceptedAt);
+  clear();refreshCustomers();
+  if(quote){
+   for(const [k,v] of Object.entries(quote.formValues||{})){
+    if(k==='WindowItems'){windowItems=Array.isArray(v)?structuredClone(v):[];continue}
+    if(k==='Mode'){const r=document.querySelector('input[name="qMode"][value="'+v+'"]');if(r)r.checked=true;continue}
+    if(['Customer','Object','Appointment','Number','Kind','Visits','ManualNet','ServiceDate','ValidUntil'].includes(k))continue;
+    const node=byId('q'+k);if(node){if(node.type==='checkbox')node.checked=!!v;else node.value=v}
+   }
+   updateScope();renderWindowItems();
+  }
+  byId('qCustomer').value=a.customerId;
+  updateObjects();byId('qObject').value=a.objectId||'';updateAppointments();
+  byId('qAppointment').value=a.id;
+  byId('qScope').value=quote?.calculation?.scope||(/glas|fenster/i.test(a.service)?'windows':'rooms');updateScope();
+  byId('qService').value=quote?.service||a.service;
+  byId('qVisits').value='1';
+  byId('qManualNet').value=(a.plannedInvoiceNetCents!==undefined?(a.plannedInvoiceNetCents/100).toFixed(2):'0');
+  byId('qServiceDate').value=formatDate(occ);
+  byId('qValidUntil').value=new Date(Date.now()+14*864e5).toISOString().slice(0,10);
+  byId('qKind').value='invoice';updateNumber();
+  byId('qRecipientEmail').value=quote?.recipientEmail||(state.customers||[]).find(c=>c.id===a.customerId)?.email||'';
+  calculate();notify('Rechnung für '+(a.akNumber?'AK '+a.akNumber:'Arbeitskarte')+' vorbereitet – Betrag und Angaben prüfen.');
+  window.scrollTo(0,0);
+ }
  function showSaved(){
   const area=byId('qSavedList');area.replaceChildren();
   const items=[...(state.quotes||[])].filter(q=>q&&['quote','invoice'].includes(q.kind));
@@ -363,23 +466,30 @@
     if(activeId===item.id)activeId=null;
     await saveState();showSaved();
    };
-   if(!item.finalizedAt)actions.append(open);
+   if(!item.finalizedAt&&!item.acceptedAt)actions.append(open);
    actions.append(pdf);
+   if(item.kind==='quote'&&!item.acceptedAt){
+    const accept=document.createElement('button');accept.type='button';accept.className='secondary';accept.textContent='✅ Kunde hat angenommen · AK planen';accept.onclick=()=>openAcceptDialog(item);actions.append(accept);
+   }
+   if(item.acceptedAt){
+    const accepted=elStatus('✅ Angenommen · '+(item.appointmentIds||[]).length+' offene Arbeitskarten angelegt');
+    description.append(accepted);
+   }
    if(item.finalizedAt){
     const email=document.createElement('button');email.type='button';email.className='secondary';email.textContent='✉️ E-Mail mit PDF';email.onclick=()=>emailFinalInvoice(item,email);
     actions.append(email);
-   }else actions.append(del);
+   }else if(!item.acceptedAt)actions.append(del);
    line.append(description,actions);area.append(line);
   }
  }
  function clear(){
   activeId=null;windowItems=[];renderWindowItems();
   const radio=document.querySelector('input[name="qMode"][value="business"]');if(radio)radio.checked=true;
-  for(const k of ['Customer','Object','Appointment','RecipientEmail'])byId('q'+k).value='';
+  for(const k of ['Customer','Object','Appointment','RecipientEmail','PlanDate'])byId('q'+k).value='';
   byId('qScope').value='rooms';
   byId('qService').value='Unterhaltsreinigung';updateScope();
   byId('qKind').value='quote';byId('qManualNet').value='0';byId('qTaxMode').value=state.quoteSettings?.TaxMode||'small';
-  byId('qNotes').value='';byId('qServiceDate').value='';
+  byId('qNotes').value='';byId('qServiceDate').value='';byId('qPlanDate').value='';byId('qPlanStart').value='09:00';byId('qPlanEnd').value='11:00';byId('qPlanRhythm').value='7';
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
   for(const k of ['Wc','Kitchen','Heavy'])byId('q'+k).checked=false;
   byId('qVat').disabled=value('TaxMode')==='small';updateObjects();updateNumber();calculate();window.scrollTo(0,0);
@@ -389,7 +499,7 @@
   for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&(k==='TaxMode'||!node.value))node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
   // Öffentliche Kontaktdaten nur in wirklich leere Felder eintragen. Nie vorhandene Angaben überschreiben.
   for(const [k,v] of Object.entries(companyPublic)){const field=byId('q'+k);if(!field.value.trim())field.value=v}
-  byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
+  refreshPlanEmployees();byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();
  }
  function init(){
   for(const k of tracked){
@@ -417,7 +527,11 @@
   byId('qSave').onclick=()=>persist().catch(e=>alert('Kalkulation nicht gespeichert: '+e.message));
   byId('qPdf').onclick=makePdf;
   byId('qFinalize').onclick=finalizeInvoice;
+  byId('qAcceptConfirm').onclick=confirmAcceptedQuote;
+  byId('qAcceptCancel').onclick=()=>{byId('qAcceptDialog').close();quoteToAccept=null};
+  byId('qAcceptDialog').addEventListener('cancel',()=>{quoteToAccept=null});
   byId('qNew').onclick=clear;
+  byId('qPlanDate').addEventListener('change',()=>{if(value('Kind')==='quote'&&value('PlanDate'))byId('qServiceDate').value=formatDate(value('PlanDate'))});
   byId('qSavedSearch').addEventListener('input',showSaved);
   byId('qSavedType').addEventListener('change',showSaved);
   byId('qChooseDirectory').onclick=async()=>{
@@ -434,5 +548,5 @@
   updateScope();
  }
  init();
- window.MiCareQuoteUI={refresh,calculate,collect};
+ window.MiCareQuoteUI={refresh,calculate,collect,openForAppointment};
 })();
