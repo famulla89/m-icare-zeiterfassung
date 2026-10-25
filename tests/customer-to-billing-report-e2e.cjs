@@ -99,6 +99,25 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(done.customerId,created.customer.id);
   ok('Arbeitskarte als erledigt dokumentiert','Ist-Zeit gespeichert, Status erledigt');
 
+  // Inspect actual rendered brand pixels in BOTH user-triggered PDFs.
+  await page.evaluate(()=>{
+   window.__qaOfferInvoiceLogo=[];
+   const native=CanvasRenderingContext2D.prototype.drawImage;
+   CanvasRenderingContext2D.prototype.drawImage=function(img,...args){
+    const result=native.call(this,img,...args);
+    if(img instanceof HTMLImageElement && /\/logo\.svg(?:[?#]|$)/.test(img.currentSrc||img.src||'') &&
+       args[0]===70 && args[1]===31 && args[2]===350 && args[3]===154){
+     const px=this.getImageData(70,31,350,154).data;
+     let colored=0,hash=2166136261;
+     for(let i=0;i<px.length;i+=4){
+      if(px[i+3]>200&&(px[i]<190||px[i+1]<190||px[i+2]<190))colored++;
+      for(let n=0;n<3;n++){hash^=px[i+n];hash=Math.imul(hash,16777619)}
+     }
+     window.__qaOfferInvoiceLogo.push({colored,hash:hash>>>0});
+    }
+    return result;
+   };
+  });
   // Offer based on the completed AK, with SME tax mode and actual matching customer/date.
   await page.locator('#goHome').click();
   await page.locator('#home [data-jump="quoteCalculator"]').click();
@@ -140,6 +159,8 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const offerFile=await offerDownload;
   const offerBytes=fs.readFileSync(await offerFile.path());assert.equal(offerBytes.subarray(0,5).toString(),'%PDF-');
   fs.writeFileSync(path.join(out,'03_Kostenvoranschlag_AK_03-11-2026.pdf'),offerBytes);
+  const logoOffer=await page.evaluate(()=>window.__qaOfferInvoiceLogo.at(-1));
+  assert(logoOffer&&logoOffer.colored>200,'Kostenvoranschlag PDF must visibly contain the real M-iCare logo');
   ok('Kostenvoranschlag mit Arbeitskarte, Kleinunternehmer und PDF',offer.number+' / '+offer.gross+' EUR');
 
   // Invoice must remain a DRAFT; app has no legally final invoice or mail automation yet.
@@ -158,6 +179,10 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const invoiceFile=await invoiceDownload;
   const invoiceBytes=fs.readFileSync(await invoiceFile.path());assert.equal(invoiceBytes.subarray(0,5).toString(),'%PDF-');
   fs.writeFileSync(path.join(out,'04_Rechnungsentwurf_AK_03-11-2026.pdf'),invoiceBytes);
+  const logoInvoice=await page.evaluate(()=>window.__qaOfferInvoiceLogo.at(-1));
+  assert(logoInvoice&&logoInvoice.colored>200,'Rechnungsentwurf PDF must visibly contain the real M-iCare logo');
+  assert.deepEqual(logoOffer,logoInvoice,'Offer and invoice draft MUST use exactly the same original M-iCare logo at the same size and position');
+  ok('Identischer sichtbarer Firmen-Logobriefkopf in Angebot und Rechnungsentwurf',logoOffer.colored+' farbige Pixel, identischer Fingerabdruck');
   await page.waitForFunction(()=>state.quotes?.length===2);
   const invoice=await page.evaluate(()=>state.quotes.find(x=>x.kind==='invoice'));
   assert.equal(invoice.appointmentId,ak.id);assert.equal(invoice.tax,0);
@@ -165,6 +190,21 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(invoice.dueDate,'2026-11-17');
   ok('Rechnungsentwurf aus erledigter AK mit IBAN und PDF',invoice.number+' / '+invoice.gross+' EUR');
 
+  // Negative practical test: an empty (white) SVG must NEVER generate an apparently valid PDF.
+  const blankPage=await browser.newPage();
+  await blankPage.route('**/logo.svg',route=>route.fulfill({
+   status:200,contentType:'image/svg+xml',
+   body:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 440"><rect width="1000" height="440" fill="white"/></svg>'
+  }));
+  await blankPage.goto('http://127.0.0.1:'+server.address().port+'/index.html');
+  await blankPage.waitForFunction(()=>Boolean(window.MiCareQuote));
+  const rejectsInvisibleLogo=await blankPage.evaluate(async doc=>{
+   try{await MiCareQuote.pdf(doc);return false}
+   catch(e){return /Logo.*nicht sichtbar|Logo.*sichtbar|Logo/.test(String(e.message))}
+  },offer);
+  await blankPage.close();
+  assert(rejectsInvisibleLogo,'Kostenvoranschlag must refuse PDF export when an invisible logo is served');
+  ok('PDF-Export ohne sichtbares Firmenlogo blockiert');
   // Independent quote without any AK.
   await page.locator('#qNew').click();
   await page.locator('#qCustomer').selectOption(created.customer.id);
