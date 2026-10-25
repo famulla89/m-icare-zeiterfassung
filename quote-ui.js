@@ -233,9 +233,9 @@
   button.disabled=true;
   try{
    const pdf=await MiCareQuote.pdf(item);
-   const type=item.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf';
+   const type=item.kind==='quote'?'Kostenvoranschlag':item.finalizedAt?'Rechnung':'Rechnungsentwurf';
    const name='M-iCare_'+type+'_'+item.number.replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf';
-   await saveExport(name,pdf,item.kind==='quote'?'Kostenvoranschlaege':'Rechnungsentwuerfe');
+   await saveExport(name,pdf,item.kind==='quote'?'Kostenvoranschlaege':item.finalizedAt?'Rechnungen':'Rechnungsentwuerfe');
    notify(type+' '+item.number+' als PDF ausgegeben');
   }catch(e){alert('PDF konnte nicht erstellt werden: '+e.message)}
   finally{button.disabled=false}
@@ -342,16 +342,16 @@
    if(!search)return true;
    return [item.number,item.customerName,item.customerNumber,item.objectName,item.service,item.orderNumber,item.date,item.serviceDate].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(search));
   }).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b.number||'').localeCompare(String(a.number||'')));
-  const quotes=items.filter(x=>x.kind==='quote').length,invoices=items.filter(x=>x.kind==='invoice').length;
-  byId('qSavedTotals').textContent=items.length+' Dokument(e): '+quotes+' Kostenvoranschläge und '+invoices+' Rechnungsentwürfe · '+filtered.length+' angezeigt.';
+  const quotes=items.filter(x=>x.kind==='quote').length,invoices=items.filter(x=>x.kind==='invoice').length,finals=items.filter(x=>x.kind==='invoice'&&x.finalizedAt).length;
+  byId('qSavedTotals').textContent=items.length+' Dokument(e): '+quotes+' Kostenvoranschläge und '+invoices+' Rechnungen ('+finals+' endgültig, '+(invoices-finals)+' Entwürfe) · '+filtered.length+' angezeigt.';
   if(!filtered.length){area.textContent=items.length?'Keine Dokumente für den gewählten Filter.':'Noch keine Kostenvoranschläge oder Rechnungsentwürfe gespeichert.';return}
   for(const item of filtered){
    const line=document.createElement('div');line.className='quoteSavedItem';
    const description=document.createElement('div');description.className='docLine';
    const title=document.createElement('strong');
-   title.textContent=(item.kind==='quote'?'Kostenvoranschlag':'Rechnungsentwurf')+' · '+item.number+' · '+de(item.gross||0);
+   title.textContent=(item.kind==='quote'?'Kostenvoranschlag':item.finalizedAt?'Rechnung':'Rechnungsentwurf')+' · '+item.number+' · '+de(item.gross||0);
    const customer=document.createElement('div');customer.textContent=(item.customerNumber?'Kunde '+item.customerNumber+' · ':'')+(item.customerName||'Unbekannter Kunde');
-   const meta=document.createElement('div');meta.className='docMeta';meta.textContent='Datum: '+(item.date||'–')+' · '+(item.orderNumber||'ohne AK')+' · '+(item.service||'–');
+   const meta=document.createElement('div');meta.className='docMeta';meta.textContent='Datum: '+(item.date||'–')+' · '+(item.orderNumber||'ohne AK')+' · '+(item.service||'–')+(item.finalizedAt?' · ZAHLUNG OFFEN · E-Mail-Versand nicht bestätigt':'');
    description.append(title,customer,meta);
    const actions=document.createElement('div');actions.className='row docActions';
    const open=document.createElement('button');open.type='button';open.className='secondary';open.textContent='✏️ Bearbeiten';open.onclick=()=>loadQuote(item.id);
@@ -363,7 +363,13 @@
     if(activeId===item.id)activeId=null;
     await saveState();showSaved();
    };
-   actions.append(open,pdf,del);line.append(description,actions);area.append(line);
+   if(!item.finalizedAt)actions.append(open);
+   actions.append(pdf);
+   if(item.finalizedAt){
+    const email=document.createElement('button');email.type='button';email.className='secondary';email.textContent='✉️ E-Mail mit PDF';email.onclick=()=>emailFinalInvoice(item,email);
+    actions.append(email);
+   }else actions.append(del);
+   line.append(description,actions);area.append(line);
   }
  }
  function clear(){
