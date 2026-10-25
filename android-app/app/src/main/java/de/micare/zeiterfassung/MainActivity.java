@@ -1,6 +1,11 @@
 package de.micare.zeiterfassung;
 
 import android.app.Activity;
+import android.hardware.biometrics.BiometricPrompt;
+import android.hardware.biometrics.BiometricManager;
+import android.hardware.fingerprint.FingerprintManager;
+import android.os.Build;
+import android.os.CancellationSignal;
 import android.speech.RecognizerIntent;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -23,6 +28,8 @@ import androidx.webkit.WebViewAssetLoader;
 
 public class MainActivity extends Activity {
   private WebView web;
+  private boolean biometricPending=false;
+  private boolean lockWhenResumed=false;
   private ValueCallback<Uri[]> fileCallback;
   private static final int PICK_FILE=400;
   private static final int SAVE_FILE=401;
@@ -36,6 +43,40 @@ public class MainActivity extends Activity {
     web=new WebView(this);
     web.getSettings().setJavaScriptEnabled(true);
     web.addJavascriptInterface(new Object(){
+
+      @JavascriptInterface public boolean isAvailable(){
+        if(Build.VERSION.SDK_INT<28)return false;
+        try {
+          if(Build.VERSION.SDK_INT>=29){
+            BiometricManager mgr=(BiometricManager)getSystemService(BIOMETRIC_SERVICE);
+            return mgr!=null && mgr.canAuthenticate()==BiometricManager.BIOMETRIC_SUCCESS;
+          }
+          FingerprintManager mgr=(FingerprintManager)getSystemService(FINGERPRINT_SERVICE);
+          return mgr!=null && mgr.isHardwareDetected() && mgr.hasEnrolledFingerprints();
+        }catch(Exception ex){return false;}
+      }
+      @JavascriptInterface public void authenticate(String challenge){runOnUiThread(()->{
+        if(challenge==null||!challenge.matches("[A-Za-z0-9-]{20,80}"))return;
+        if(biometricPending)return;
+        if(Build.VERSION.SDK_INT<28){sendBiometricResult(challenge,false);return;}
+        try{
+          biometricPending=true;
+          BiometricPrompt prompt=new BiometricPrompt.Builder(MainActivity.this)
+            .setTitle("M-iCare entsperren")
+            .setSubtitle("Mit dem Fingerabdruck bzw. der Gerätebiometrie bestätigen")
+            .setNegativeButton("Mit Passwort anmelden",getMainExecutor(),(dialog,which)->{
+              biometricPending=false;sendBiometricResult(challenge,false);
+            }).build();
+          prompt.authenticate(new CancellationSignal(),getMainExecutor(),new BiometricPrompt.AuthenticationCallback(){
+            @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result){
+              biometricPending=false;sendBiometricResult(challenge,true);
+            }
+            @Override public void onAuthenticationError(int errorCode,CharSequence error){
+              biometricPending=false;sendBiometricResult(challenge,false);
+            }
+          });
+        }catch(Exception ex){biometricPending=false;sendBiometricResult(challenge,false);}
+      });}
       @JavascriptInterface public void speech(){runOnUiThread(()->{try{
         Intent intent=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -133,6 +174,20 @@ public class MainActivity extends Activity {
     if(request==PICK_FILE&&fileCallback!=null){
       fileCallback.onReceiveValue(result==RESULT_OK&&data!=null&&data.getData()!=null?new Uri[]{data.getData()}:null);
       fileCallback=null;
+    }
+  }
+  private void sendBiometricResult(String challenge,boolean success){
+    if(web!=null)web.evaluateJavascript("window.MiCareLogin&&window.MiCareLogin.biometricResult("+JSONObject.quote(challenge)+","+success+")",null);
+  }
+  @Override protected void onStop(){
+    super.onStop();
+    if(!biometricPending)lockWhenResumed=true;
+  }
+  @Override protected void onResume(){
+    super.onResume();
+    if(lockWhenResumed && web!=null){
+      lockWhenResumed=false;
+      web.evaluateJavascript("window.MiCareLogin&&window.MiCareLogin.lock()",null);
     }
   }
   private void reportExport(boolean success,String message){
