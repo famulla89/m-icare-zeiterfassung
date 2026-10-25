@@ -66,6 +66,7 @@ jobs:
           set -euo pipefail
           node tests/quote-calculator-smoke.cjs
           node --check login-gate.js
+          node tests/schedule-planner-smoke.cjs
           node tests/cloud-transfer-smoke.cjs
           node tests/app-core-smoke.cjs
           node tests/logic-fuzz-smoke.cjs
