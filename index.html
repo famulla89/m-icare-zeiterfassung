@@ -94,6 +94,15 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 .backbar button{flex:1;min-height:44px;white-space:nowrap}
 @media(max-width:640px){.backbar{top:0;padding:6px 5px;gap:7px}.backbar button{font-size:.91rem;padding:10px 6px}}
 @media print{.backbar{display:none!important}}
+/* Inline preview is produced by the SAME PDF canvas renderer, not a second imitation. */
+#quoteCalculator .qPdfPreviewPanel{margin:17px 0;padding:14px;background:#f2f7fc;border:1px solid #bed3e7;border-radius:13px}
+#quoteCalculator .qPdfPreviewPanel>summary{font-weight:750;font-size:1.05rem;color:#144c83;cursor:pointer;padding:4px 2px}
+#quoteCalculator .qPdfPreviewPaper{margin:12px auto 2px;width:100%;max-width:735px;background:#fff;border:1px solid #cbdae7;box-shadow:0 6px 25px #193e6224;overflow:hidden}
+#quoteCalculator #qPreviewImg{width:100%;height:auto;display:block;aspect-ratio:1240/1754;object-fit:contain}
+#quoteCalculator #qPreviewImg[hidden]{display:none!important}
+#quoteCalculator #qPreviewStatus{margin:12px 0;color:#395773;font-size:.92rem}
+#quoteCalculator .qPdfPreviewPanel button{min-height:42px}
+@media(max-width:640px){#quoteCalculator .qPdfPreviewPanel{margin:12px -6px;padding:9px}#quoteCalculator .qPdfPreviewPaper{box-shadow:none}#quoteCalculator #qJumpPreview{width:100%}}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -121,6 +130,7 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 
 <section class="screen" id="quoteCalculator">
  <h2>🧮 Kostenvoranschläge</h2>
+ <p><button type="button" id="qJumpPreview" class="secondary">👁 So sieht das fertige PDF aus</button></p>
  <p class="hint">Zuerst kalkulierst du das Angebot. Nach der Zusage planst du die einzelnen Arbeitskarten. Teil- und Schlussrechnungen findest du in „Rechnungen“.</p><p><button type="button" class="secondary" data-jump="billingScreen">🧾 Zur Rechnungsverwaltung</button></p>
  <div class="quoteBox">
   <h3>1 · Kunde & Auftrag</h3>
@@ -247,6 +257,13 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
   <label for="qNotes">Konditionen / Hinweise</label><textarea id="qNotes" maxlength="1200" rows="3" placeholder="Leistungsumfang, Zahlungsbedingungen, Ausnahmen…"></textarea>
   <div id="qCalculationMessage" class="hint" aria-live="polite"></div>
   <div class="quoteSummary" id="qSummary" role="status" aria-live="polite">Werte eingeben – die Kalkulation wird automatisch aktualisiert.</div>
+  <details id="qPdfPreviewPanel" class="qPdfPreviewPanel" open>
+   <summary>👁 Dokumentvorschau im Original-PDF-Layout</summary>
+   <p class="hint">Dieselbe erste Seite wie im endgültigen PDF: Logo, Briefkopf, Leistungen und Gesamtbetrag. Die Vorschau ist unverbindlich und wird nicht als Rechnung versendet. Bei mehrseitigen Dokumenten alle Seiten über „PDF erstellen“ kontrollieren.</p>
+   <div class="row actions"><button type="button" id="qPreviewNow" class="secondary">🔄 Vorschau aktualisieren</button></div>
+   <div id="qPreviewStatus" role="status" aria-live="polite" class="hint">Kunden- und Leistungsdaten eingeben, damit die Vorschau erscheint.</div>
+   <div class="qPdfPreviewPaper"><img id="qPreviewImg" alt="Erste Seite des Kostenvoranschlags beziehungsweise Rechnungsentwurfs mit dem originalen PDF-Layout" hidden></div>
+  </details>
   <div class="row actions"><button type="button" id="qSave">💾 Entwurf speichern</button><button type="button" id="qPdf" class="secondary">📄 PDF-Entwurf erstellen</button><button type="button" id="qFinalize" class="secondary">✅ Endgültige Rechnung erstellen</button><button type="button" id="qNew" class="secondary">+ Neue Kalkulation</button></div>
   <p class="hint">Rechnung: Du kannst zuerst einen <strong>Rechnungsentwurf</strong> prüfen. Eine <strong>endgültige Rechnung</strong> lässt sich danach ausschließlich für eine erledigte, eindeutig zugeordnete Arbeitskarte ausstellen. Die Nummer wird fest vergeben und der Inhalt gegen nachträgliche Bearbeitung geschützt. E-Mail-Versand erfolgt erst nach deiner Bestätigung in der E-Mail-App. Keine automatische Sendebestätigung und kein XRechnung/ZUGFeRD-Export.</p>
  </div>
