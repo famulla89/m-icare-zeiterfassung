@@ -65,6 +65,13 @@
 @media(max-width:600px){#quoteCalculator .quoteWindowPicker{grid-template-columns:1fr}}
 #quoteCalculator .quoteSavedItem{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:13px;border-bottom:1px solid #dbe7f2;flex-wrap:wrap}
 #quoteCalculator .quoteSavedItem button{padding:9px 13px;min-height:38px}
+#quoteCalculator .quoteSavedItem{align-items:flex-start}
+#quoteCalculator .quoteSavedItem .docLine{flex:1;min-width:240px;overflow-wrap:anywhere}
+#quoteCalculator .quoteSavedItem .docMeta{font-size:.88rem;color:#53677c;margin:4px 0}
+#quoteCalculator .quoteSavedItem .docActions{gap:6px;flex-wrap:wrap}
+#quoteCalculator #qSavedTotals{margin:12px 0}
+@media(max-width:650px){#quoteCalculator .quoteSavedItem .docActions{width:100%}}
+
 @media(max-width:650px){#quoteCalculator .quoteBox{padding:14px}#quoteCalculator .quoteSummary strong{font-size:1.3rem}}
 
 </style></head><body><div class="wrap">
@@ -174,7 +181,20 @@
   <div class="row actions"><button type="button" id="qSave">💾 Entwurf speichern</button><button type="button" id="qPdf" class="secondary">📄 PDF-Entwurf erstellen</button><button type="button" id="qNew" class="secondary">+ Neue Kalkulation</button></div>
   <p class="hint">Rechnung: Der PDF-Export ist ausdrücklich nur ein <strong>Rechnungsentwurf</strong>. Vor echter Rechnungsstellung müssen u. a. Steuernummer, Rechnungsnummer, Leistungsdatum, vollständige Adressen und gegebenenfalls E-Rechnungspflichten geprüft werden. Kein XRechnung/ZUGFeRD-Export.</p>
  </div>
- <div class="quoteBox"><h3>Gespeicherte Kostenvoranschläge & Entwürfe</h3><div id="qSavedList" class="hint">Noch keine Kalkulation gespeichert.</div></div>
+ <div class="quoteBox" id="qDocumentOverview"><h3>📚 Alle Kostenvoranschläge & Rechnungsentwürfe</h3>
+ <p class="hint">Hier findest du alle gespeicherten Dokumente inklusive Kunde, Datum, Arbeitskarte, Betrag und PDF. Dokumente bleiben auch nach dem Neustart erhalten. Rechnungen sind bis zur Einführung einer vollständigen Rechnungsverwaltung ausdrücklich nur Entwürfe.</p>
+ <div class="grid">
+  <div><label for="qSavedSearch">Suche nach Kunde, Dokumentnummer, Leistung oder AK</label><input id="qSavedSearch" type="search" placeholder="z. B. AK 13, Müller, KV-2026" maxlength="160"></div>
+  <div><label for="qSavedType">Dokumentart</label><select id="qSavedType"><option value="all">Alle Dokumente</option><option value="quote">Nur Kostenvoranschläge</option><option value="invoice">Nur Rechnungsentwürfe</option></select></div>
+ </div>
+ <div id="qSavedTotals" class="status" role="status" aria-live="polite">Noch keine Dokumente gespeichert.</div>
+ <div class="row actions">
+  <button type="button" class="secondary" id="qChooseDirectory">📁 Speicherordner am PC auswählen</button>
+  <button type="button" class="secondary" id="qExportBackup">💾 Alle Daten jetzt sichern</button>
+ </div>
+ <p class="hint" id="qFolderHint">Am PC einen Ordner auswählen, z. B. Dokumente/M-iCare. Dort werden Sicherungen automatisch abgelegt und PDFs nach dem Export gespeichert. Ohne Ordner landen PDFs im Download-Ordner.</p>
+ <div id="qSavedList" class="hint">Noch keine Kalkulation gespeichert.</div>
+ </div>
 </section>
 
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
