@@ -608,7 +608,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   if(!await billedCards.evaluate(n=>n.open))await billedCards.locator(':scope > summary').click();
   assert.equal(await billedCards.locator('.appt').count(),10);
   assert.equal(await billedCards.locator('.appt button').filter({hasText:/rechnung.*erstellen/i}).count(),0,'No AK can be billed twice after final; PDF downloads remain available');
-  assert((await billedCards.innerText()).includes('10 endgültig abgerechnet'));
+  assert((await page.locator('#acceptedOrdersList').innerText()).includes('10 endgültig abgerechnet'),'Order summary must count all ten invoiced work cards');
   ok('Nach Schlussrechnung sind alle zehn AK als abgerechnet markiert');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
   const requiredMasks={
