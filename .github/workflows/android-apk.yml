@@ -52,7 +52,7 @@ jobs:
       - name: Bundle current offline web app
         run: |
           mkdir -p android-app/app/src/main/assets
-          cp index.html cloud-transfer.js quote-calculator.js quote-ui.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+          cp index.html login-gate.js cloud-transfer.js quote-calculator.js quote-ui.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
@@ -71,6 +71,7 @@ jobs:
           grep -Fq "package: name='de.micare.zeiterfassung'" /tmp/micare-apk-badging.txt
           grep -Fq "application-label:'M-iCare'" /tmp/micare-apk-badging.txt
           unzip -p "$APK" assets/index.html | grep -Fq 'data-jump="quoteCalculator"'
+          unzip -l "$APK" | grep -Fq 'assets/login-gate.js'
           unzip -l "$APK" | grep -Fq 'assets/quote-calculator.js'
           unzip -l "$APK" | grep -Fq 'assets/quote-ui.js'
           unzip -l "$APK" | grep -Fq 'assets/report-print.js'
