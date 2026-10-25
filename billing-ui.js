@@ -49,7 +49,7 @@
    const performedWork=end?st.slots.map(slot=>{
     const entries=(data.entries||[]).filter(e=>e.appointmentId===slot.id&&(e.appointmentOccurrence||e.date)===slot.ak.date);
     const record=entries.at(-1)||{};
-    const actions=[...new Set(entries.flatMap(e=>[e.workDone,e.orderRemarks].map(v=>String(v||'').trim()).filter(Boolean)))];
+    const actions=[...new Set(entries.map(e=>String(e.workDone||'').trim()).filter(Boolean))];
     const description=actions.join(' · ')||String(slot.ak.workInstructions||'Leistung gemäß Arbeitskarte ausgeführt');
     return {
      appointmentId:slot.id,akNumber:String(slot.ak.akNumber||slot.index),
