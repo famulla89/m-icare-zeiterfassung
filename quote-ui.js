@@ -279,7 +279,7 @@
   byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
   if(Array.isArray(values.PlanWeekdays))document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=values.PlanWeekdays.map(Number).includes(Number(x.value)));
   togglePlanMode();
-  renderWindowItems();calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
+  renderWindowItems();showPartInvoiceInfo();calculate();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
  }
  async function exportSavedPdf(item,button){
   if(button.disabled)return;
@@ -310,6 +310,10 @@
   const completed=(state.entries||[]).some(e=>e.appointmentId===ak.id&&(e.appointmentOccurrence||e.date)===occurrence&&e.orderStatus==='done');
   if(!completed)throw Error('Arbeitskarte ist für das angegebene Leistungsdatum noch nicht als erledigt dokumentiert');
   if((doc.calculation?.visits||0)!==1)throw Error('Diese Version rechnet je endgültiger Rechnung genau einen erledigten Einsatz ab');
+  if(ak.quoteId&&Number.isInteger(ak.plannedInvoiceNetCents)){
+   const agreed=Math.round(Number(ak.plannedInvoiceNetCents)),actual=Math.round(Number(doc.net)*100);
+   if(actual!==agreed)throw Error('Teilrechnung weicht vom angenommenen Angebot ab: vereinbart '+(agreed/100).toFixed(2)+' EUR, berechnet '+(actual/100).toFixed(2)+' EUR. Bitte Angebot/Nachtrag prüfen, statt still einen anderen Betrag abzurechnen.');
+  }
   if((state.quotes||[]).some(x=>x.finalizedAt&&x.appointmentId===ak.id&&isoDay(x.serviceDate)===occurrence))
    throw Error('Für diese Arbeitskarte und dieses Leistungsdatum existiert bereits eine endgültige Rechnung');
   if(!doc.sellerName||!doc.sellerAddress||!doc.sellerTaxId||!doc.customerAddress||!doc.iban||!doc.dueDate)
@@ -528,6 +532,17 @@
   }catch(e){alert('Angebot kann nicht angenommen werden: '+e.message)}
   finally{acceptBusy=false;btn.disabled=false}
  }
+ function showPartInvoiceInfo(){
+  const panel=byId('qPartInvoiceInfo');
+  if(!panel)return;
+  const a=(state.appointments||[]).find(a=>a.id===value('Appointment'));
+  const part=value('Kind')==='invoice'&&a&&Number(a.quoteVisitCount)>1;
+  panel.classList.toggle('hidden',!part);
+  if(part){
+   const eur=(Number(a.plannedInvoiceNetCents||0)/100).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+   panel.textContent='🧾 Teilrechnung '+a.quoteVisit+' von '+a.quoteVisitCount+' · '+eur+' netto für diese erledigte Arbeitskarte · Bezug: '+(a.quoteNumber||'angenommenes Angebot')+'. Der gesamte Auftrag wird nicht erneut berechnet.';
+  }else panel.textContent='';
+ }
  function openForAppointment(appointmentId,occurrenceDate){
   const a=(state.appointments||[]).find(x=>x.id===appointmentId);if(!a)return alert('Arbeitskarte nicht gefunden');
   const occ=occurrenceDate||a.date;
@@ -556,7 +571,7 @@
   byId('qValidUntil').value=new Date(Date.now()+14*864e5).toISOString().slice(0,10);
   byId('qKind').value='invoice';updateNumber();
   byId('qRecipientEmail').value=quote?.recipientEmail||(state.customers||[]).find(c=>c.id===a.customerId)?.email||'';
-  calculate();notify('Rechnung für '+(a.akNumber?'AK '+a.akNumber:'Arbeitskarte')+' vorbereitet – Betrag und Angaben prüfen.');
+  showPartInvoiceInfo();calculate();notify((Number(a.quoteVisitCount)>1?'Teilrechnung '+a.quoteVisit+' von '+a.quoteVisitCount:'Rechnung')+' für '+(a.akNumber?'AK '+a.akNumber:'Arbeitskarte')+' vorbereitet – Betrag und Angaben prüfen.');
   window.scrollTo(0,0);
  }
  function showSaved(){
@@ -627,7 +642,7 @@
   for(const k of ['Customer','Object','Appointment','RecipientEmail','PlanDate'])byId('q'+k).value='';
   byId('qScope').value='rooms';
   byId('qService').value='Unterhaltsreinigung';updateScope();
-  byId('qKind').value='quote';byId('qManualNet').value='0';byId('qTaxMode').value=state.quoteSettings?.TaxMode||'small';
+  byId('qKind').value='quote';showPartInvoiceInfo();byId('qManualNet').value='0';byId('qTaxMode').value=state.quoteSettings?.TaxMode||'small';
   byId('qNotes').value='';byId('qServiceDate').value='';byId('qPlanDate').value='';byId('qPlanStart').value='09:00';byId('qPlanEnd').value='11:00';byId('qPlanRhythm').value='7';byId('qPlanMode').value='count';byId('qPlanEndDate').value='';byId('qPlanEveryWeeks').value='1';byId('qPlanReminderDays').value='30';document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=false);togglePlanMode();
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
   for(const k of ['Wc','Kitchen','Heavy'])byId('q'+k).checked=false;
@@ -650,7 +665,9 @@
   byId('qCustomer').addEventListener('change',()=>{byId('qObject').value='';byId('qRecipientEmail').value=(state.customers||[]).find(x=>x.id===value('Customer'))?.email||'';updateObjects();calculate()});
   byId('qObject').addEventListener('change',()=>{updateAppointments();calculate()});
   byId('qAppointment').addEventListener('change',selectAppointment);
+  byId('qAppointment').addEventListener('change',showPartInvoiceInfo);
   byId('qKind').addEventListener('change',updateNumber);
+  byId('qKind').addEventListener('change',showPartInvoiceInfo);
   byId('qTaxMode').addEventListener('change',()=>{byId('qVat').disabled=value('TaxMode')==='small';calculate()});
   byId('qVat').disabled=value('TaxMode')==='small';
   byId('qWindowPicker').addEventListener('click',e=>{
