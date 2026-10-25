@@ -180,6 +180,34 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert(standalone,'Independent quotation must exist without AK');
   assert.equal(standalone.gross,95);assert.equal(standalone.tax,0);
   ok('Freier Kostenvoranschlag ohne Arbeitskarte','95 EUR, ohne Umsatzsteuer');
+  // All saved documents: search by number/customer/AK, filter type and re-export existing PDF.
+  assert((await page.locator('#qSavedTotals').innerText()).includes('3 Dokument(e)'),'Overview must show all 3 documents');
+  assert.equal(await page.locator('.quoteSavedItem').count(),3);
+  await page.locator('#qSavedType').selectOption('invoice');
+  assert.equal(await page.locator('.quoteSavedItem').count(),1,'Invoice-only filter');
+  assert((await page.locator('#qSavedList').innerText()).includes(invoice.number));
+  const reprint=page.waitForEvent('download');
+  await page.locator('.quoteSavedItem button').filter({hasText:'PDF'}).first().click();
+  const savedPdf=await reprint;
+  const savedPdfBytes=fs.readFileSync(await savedPdf.path());
+  assert(savedPdfBytes.length>5000&&savedPdfBytes.subarray(0,5).toString()==='%PDF-','Saved invoice draft can be exported as PDF again');
+  await page.locator('#qSavedType').selectOption('all');
+  await page.locator('#qSavedSearch').fill(offer.number);
+  assert.equal(await page.locator('.quoteSavedItem').count(),1,'Search by document number');
+  assert((await page.locator('#qSavedList').innerText()).includes(offer.number));
+  await page.locator('#qSavedSearch').fill('keine-uebereinstimmung');
+  assert.equal(await page.locator('.quoteSavedItem').count(),0,'Empty search displays no items');
+  await page.locator('#qSavedSearch').fill('');
+  await page.locator('#qSavedSearch').fill('AK '+ak.akNumber);
+  assert.equal(await page.locator('.quoteSavedItem').count(),2,'Search by assigned AK finds offer and invoice');
+  await page.locator('#qSavedSearch').fill('');
+  await page.reload();
+  await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
+  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  assert.equal(await page.locator('.quoteSavedItem').count(),3,'Document overview survives restart');
+  assert((await page.locator('#qSavedTotals').innerText()).includes('2 Kostenvoranschläge und 1 Rechnungsentwürfe'),'Separate document counts preserved');
+  await page.screenshot({path:path.join(out,'04_Dokumentenuebersicht.png'),fullPage:true});
+  ok('Dokumentenübersicht mit Suche, Typfilter, PDF-Nachdruck und Neustart','3 gespeicherte Dokumente');
 
   // Reporting from the same actual UI-made data and dates.
   await page.locator('#goHome').click();
