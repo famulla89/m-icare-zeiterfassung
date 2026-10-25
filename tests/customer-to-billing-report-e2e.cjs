@@ -573,6 +573,26 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(finalDoc.net,900);
   assert.equal(finalDoc.invoiceType,'final');
   assert.equal(finalDoc.alreadyInvoicedNet,100);
+  const closingPdf=await page.evaluate(async doc=>{
+    let heading='';const original=CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText=function(text,...args){
+      if(String(text).startsWith('SCHLUSSRECHNUNG'))heading=String(text);
+      return original.call(this,text,...args);
+    };
+    try{const pdf=await MiCareQuote.pdf({...doc,finalizedAt:'2026-10-25T00:00:00Z'});
+      const b=new Uint8Array(await pdf.arrayBuffer());
+      return {heading,header:String.fromCharCode(...b.slice(0,5))};
+    }finally{CanvasRenderingContext2D.prototype.fillText=original}
+  },finalDoc);
+  assert.equal(closingPdf.heading,'SCHLUSSRECHNUNG','Final invoice PDF must be clearly labeled');
+  assert.equal(closingPdf.header,'%PDF-');
+  const beforeFinalPreview=await page.evaluate(()=>state.quotes.filter(q=>q.finalizedAt).length);
+  const previewDownload=page.waitForEvent('download');
+  await page.locator('#billPreview').click();
+  const draftPreview=await previewDownload;
+  const previewBytes=fs.readFileSync(await draftPreview.path());
+  assert.equal(previewBytes.subarray(0,5).toString(),'%PDF-');
+  assert.equal(await page.evaluate(()=>state.quotes.filter(q=>q.finalizedAt).length),beforeFinalPreview,'Preview must never finalize');
   await page.locator('#billFinalize').click();
   await page.waitForFunction(qId=>state.quotes.some(d=>d.finalizedAt&&d.invoiceType==='final'&&d.sourceQuoteId===qId),tenQuote.id);
   const ledger=await page.evaluate(qId=>{
@@ -581,6 +601,14 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   },tenQuote.id);
   assert.deepEqual(ledger,{billed:10,total:10,paid:100000,remaining:0});
   ok('10/10 AK: Schlussrechnung 900 EUR plus 100 EUR Teilrechnung, keine Überberechnung');
+  await page.evaluate(()=>{showScreen('appointmentsPanel');renderAppointments()});
+  await page.locator('#acceptedOrdersSearch').fill(tenQuote.number);
+  const billedCards=page.locator('#acceptedOrdersList details[data-quote-id="'+tenQuote.id+'"]');
+  if(!await billedCards.evaluate(n=>n.open))await billedCards.locator(':scope > summary').click();
+  assert.equal(await billedCards.locator('.appt').count(),10);
+  assert.equal(await billedCards.locator('button').filter({hasText:'Teilrechnung'}).count(),0,'No AK can be billed twice after final');
+  assert((await billedCards.innerText()).includes('10 endgültig abgerechnet'));
+  ok('Nach Schlussrechnung sind alle zehn AK als abgerechnet markiert');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
   const requiredMasks={
    home:['micareContractReminders'],
