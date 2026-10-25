@@ -41,7 +41,7 @@
    const allNet=cents(quote.net),allTax=cents(quote.tax);
    if(st.paidNetCents+totalNet>allNet)throw Error('Abrechnung übersteigt den vereinbarten Nettopreis');
    if(end&&st.paidNetCents+totalNet!==allNet)throw Error('Restbetrag weicht vom angenommenen Angebot ab; bitte AK-Preise prüfen');
-   const first=selected[0],last=selected.at(-1),today=new Date(),iso=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+   const first=selected[0],last=selected.at(-1),allDates=st.slots.map(s=>s.ak?.date||'').filter(Boolean).sort(),today=new Date(),iso=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
    const seller=profile||{},kind=end?'final':'partial';
    const prior=st.invoices.map(d=>d.number+' ('+euros(d.net)+' netto)').join('; ');
    // Die Schlussrechnung erhält den vollständigen Leistungsnachweis auch für bereits abgerechnete AK.
@@ -49,10 +49,12 @@
    const performedWork=end?st.slots.map(slot=>{
     const entries=(data.entries||[]).filter(e=>e.appointmentId===slot.id&&(e.appointmentOccurrence||e.date)===slot.ak.date);
     const record=entries.at(-1)||{};
+    const actions=[...new Set(entries.flatMap(e=>[e.workDone,e.orderRemarks].map(v=>String(v||'').trim()).filter(Boolean)))];
+    const description=actions.join(' · ')||String(slot.ak.workInstructions||'Leistung gemäß Arbeitskarte ausgeführt');
     return {
      appointmentId:slot.id,akNumber:String(slot.ak.akNumber||slot.index),
      date:slot.ak.date,service:String(slot.ak.service||quote.service||'Reinigungsleistung'),
-     workDone:String(record.workDone||slot.ak.workInstructions||'Leistung gemäß Arbeitskarte ausgeführt'),
+     workDone:description,
      employee:String(record.employee||slot.ak.employee||''),
      net:slot.netCents/100,priorInvoice:slot.invoice?.number||''
     };
@@ -66,7 +68,7 @@
     objectAddress:quote.objectAddress||'',appointmentId:first.id,coveredAppointmentIds:selected.map(s=>s.id),
     orderNumber:selected.map(s=>'AK '+(s.ak.akNumber||s.index)).join(', '),
     sourceQuoteId:quote.id,sourceQuoteNumber:quote.number,sourceVisitNumber:first.index,sourceVisitCount:st.total,
-    service:quote.service||'Reinigungsleistung',serviceDate:end&&selected.length>1?dateDE(first.ak.date)+' – '+dateDE(last.ak.date):dateDE(last.ak.date),
+    service:quote.service||'Reinigungsleistung',serviceDate:end&&allDates.length>1?dateDE(allDates[0])+' – '+dateDE(allDates.at(-1)):dateDE(last.ak.date),
     sellerName:String(seller.sellerName||quote.sellerName||''),sellerAddress:String(seller.sellerAddress||quote.sellerAddress||''),
     sellerTaxId:String(seller.sellerTaxId||quote.sellerTaxId||''),
     sellerEmail:String(seller.sellerEmail||quote.sellerEmail||''),sellerPhone:String(seller.sellerPhone||quote.sellerPhone||''),
