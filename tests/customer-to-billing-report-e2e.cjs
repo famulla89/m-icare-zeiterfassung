@@ -448,6 +448,54 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const part=await page.evaluate(()=>MiCareQuoteUI.calculate());
   assert.equal(part.net,100);assert.equal(part.tax,0);
   ok('Erledigte AK öffnet Rechnungsrechner mit korrekt anteiligem Preis 100 EUR');
+  // Exact business scenario: 10 scheduled services, 1,000 EUR agreed net, one 100 EUR partial invoice.
+  await page.locator('#qNew').click();
+  await page.locator('#qCustomer').selectOption(created.customer.id);
+  await page.locator('#qObject').selectOption(created.object.id);
+  await page.locator('#qScope').selectOption('windows');
+  await page.locator('#qService').fill('Glas- & Fensterreinigung');
+  await page.locator('#qWindowPicker [data-window="standard"]').click();
+  await page.locator('.quoteWindowRow input[type="number"]').first().fill('5');
+  await page.locator('#qVisits').fill('10');
+  await page.locator('#qManualNet').fill('1000');
+  await page.locator('#qPlanDate').fill('2027-02-02');
+  await page.locator('#qPlanEmployee').selectOption('Testkraft');
+  await page.locator('#qPlanStart').fill('08:00');
+  await page.locator('#qPlanEnd').fill('10:00');
+  await page.locator('#qPlanRhythm').selectOption('7');
+  await page.locator('#qSave').click();
+  await page.waitForFunction(()=>state.quotes.some(q=>q.kind==='quote'&&q.calculation?.visits===10&&q.net===1000));
+  const tenQuote=await page.evaluate(()=>state.quotes.find(q=>q.kind==='quote'&&q.calculation?.visits===10&&q.net===1000));
+  await page.locator('#qSavedSearch').fill(tenQuote.number);
+  await page.locator('.quoteSavedItem button').filter({hasText:'Kunde hat angenommen'}).click();
+  assert.equal(await page.locator('.qAcceptAkRow').count(),10);
+  await page.locator('#qAcceptConfirm').click();
+  await page.waitForFunction(id=>state.quotes.find(q=>q.id===id)?.appointmentIds?.length===10,tenQuote.id);
+  const firstTen=await page.evaluate(id=>{
+    const quote=state.quotes.find(q=>q.id===id);
+    return quote.appointmentIds.map(id=>state.appointments.find(a=>a.id===id));
+  },tenQuote.id);
+  assert.equal(firstTen.length,10);
+  assert(firstTen.every(a=>a.plannedInvoiceNetCents===10000),'Every 1/10 visit must be priced at 100 EUR');
+  assert.equal(await page.evaluate(id=>state.entries.some(e=>e.appointmentId===id),firstTen[0].id),false,'No invoice before work is done');
+  await page.evaluate(async id=>{
+    const a=state.appointments.find(a=>a.id===id);
+    state.entries.push({id:crypto.randomUUID(),appointmentId:id,appointmentOccurrence:a.date,customerId:a.customerId,employee:a.employee,service:a.service,date:a.date,endDate:a.date,start:a.start,end:a.end,breakMinutes:0,minutes:120,orderStatus:'done',workDone:'Fünf Testfenster gereinigt'});
+    await saveState();
+  },firstTen[0].id);
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#acceptedOrdersSearch').fill(tenQuote.number);
+  await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
+  await page.locator('#acceptedOrdersList button').filter({hasText:'Teilrechnung 1/10'}).click();
+  assert.equal(await page.locator('#qManualNet').inputValue(),'100.00');
+  assert((await page.locator('#qPartInvoiceInfo').innerText()).includes('Teilrechnung 1 von 10'));
+  const tenDoc=await page.evaluate(()=>MiCareQuoteUI.collect());
+  assert.equal(tenDoc.net,100);
+  assert.equal(tenDoc.sourceVisitNumber,1);
+  assert.equal(tenDoc.sourceVisitCount,10);
+  assert.equal(tenDoc.sourceQuoteNumber,tenQuote.number);
+  ok('10 Besuche 1.000 EUR: Rechnung 1/10 beträgt 100 EUR statt 1.000 EUR');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
   const requiredMasks={
    home:['micareContractReminders'],
