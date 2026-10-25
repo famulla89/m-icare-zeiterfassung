@@ -314,7 +314,7 @@
    const agreed=Math.round(Number(ak.plannedInvoiceNetCents)),actual=Math.round(Number(doc.net)*100);
    if(actual!==agreed)throw Error('Teilrechnung weicht vom angenommenen Angebot ab: vereinbart '+(agreed/100).toFixed(2)+' EUR, berechnet '+(actual/100).toFixed(2)+' EUR. Bitte Angebot/Nachtrag prüfen, statt still einen anderen Betrag abzurechnen.');
   }
-  if((state.quotes||[]).some(x=>x.finalizedAt&&x.appointmentId===ak.id&&isoDay(x.serviceDate)===occurrence))
+  if((state.quotes||[]).some(x=>x.finalizedAt&&(x.appointmentId===ak.id||Array.isArray(x.coveredAppointmentIds)&&x.coveredAppointmentIds.includes(ak.id))))
    throw Error('Für diese Arbeitskarte und dieses Leistungsdatum existiert bereits eine endgültige Rechnung');
   if(!doc.sellerName||!doc.sellerAddress||!doc.sellerTaxId||!doc.customerAddress||!doc.iban||!doc.dueDate)
    throw Error('Für die endgültige Rechnung fehlen Firmenname, vollständige Adressen, Steuernummer/USt-ID, IBAN oder Zahlungsziel');
@@ -548,7 +548,7 @@
   const occ=occurrenceDate||a.date;
   const entry=(state.entries||[]).find(e=>e.appointmentId===a.id&&e.appointmentOccurrence===occ&&e.orderStatus==='done');
   if(!entry)return alert('Erst muss der Mitarbeiter die Arbeit tatsächlich erledigen und als „Erledigt“ speichern.');
-  if((state.quotes||[]).some(q=>q.finalizedAt&&q.appointmentId===a.id&&isoDay(q.serviceDate)===occ))return alert('Diese Arbeitskarte wurde bereits endgültig abgerechnet.');
+  if((state.quotes||[]).some(q=>q.finalizedAt&&(q.appointmentId===a.id||Array.isArray(q.coveredAppointmentIds)&&q.coveredAppointmentIds.includes(a.id))))return alert('Diese Arbeitskarte wurde bereits endgültig abgerechnet.');
   const quote=(state.quotes||[]).find(q=>q.id===a.quoteId&&q.acceptedAt);
   clear();refreshCustomers();
   if(quote){
@@ -615,7 +615,7 @@
     ordersBtn.onclick=()=>{showScreen('appointmentsPanel');byId('acceptedOrdersSearch').value=item.number;renderAcceptedOrders();byId('acceptedOrdersPanel').scrollIntoView({behavior:'smooth',block:'start'})};
     actions.append(ordersBtn);
     const ids=item.appointmentIds||[],done=ids.filter(id=>(state.entries||[]).some(e=>e.appointmentId===id&&e.orderStatus==='done')).length;
-    const invoiced=ids.filter(id=>(state.quotes||[]).some(q=>q.finalizedAt&&q.appointmentId===id)).length;
+    const invoiced=ids.filter(id=>(state.quotes||[]).some(q=>q.finalizedAt&&(q.appointmentId===id||Array.isArray(q.coveredAppointmentIds)&&q.coveredAppointmentIds.includes(id)))).length;
     description.append(elStatus('✅ Angenommen · '+done+'/'+ids.length+' AK erledigt · '+invoiced+' Rechnung(en) erstellt'));
     if(ids.length){
      const plan=state.appointments.find(a=>a.id===ids[0]);
