@@ -9,6 +9,8 @@ on:
       - cloud-transfer.js
       - quote-calculator.js
       - quote-ui.js
+      - billing-ui.js
+      - tests/billing-core-smoke.cjs
       - login-gate.js
       - tests/auth-login-e2e.cjs
       - tests/auth-test-helper.cjs
@@ -47,6 +49,7 @@ jobs:
           node tests/schedule-planner-smoke.cjs
           node tests/auth-login-e2e.cjs
           node tests/quote-calculator-smoke.cjs
+          node tests/billing-core-smoke.cjs
           node tests/browser-e2e.cjs
           node tests/customer-to-billing-report-e2e.cjs
           node tests/weekday-contract-e2e.cjs
