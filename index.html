@@ -1076,9 +1076,8 @@ function renderContractReminders(){
  panel.replaceChildren();
  const heading=el('strong','🔔 Vertragsende & Kundenpflege');panel.append(heading);
  const today=isoDate();
- const due=(state.quotes||[]).filter(q=>q.kind==='quote'&&q.acceptedAt&&q.reminderDays!==-1&&!q.reminderDoneAt&&q.contractEnd)
-  .map(q=>({...q,remindAt:MiCareSchedulePlanner.addDays(q.contractEnd,-Number(q.reminderDays??30))}))
-  .filter(q=>q.remindAt<=today&&(!q.reminderSnoozedUntil||q.reminderSnoozedUntil<=today))
+ const due=(state.quotes||[]).filter(q=>q.kind==='quote'&&q.acceptedAt&&Number(q.reminderDays)!==-1&&!q.reminderDoneAt&&q.contractEnd)
+  .filter(q=>MiCareSchedulePlanner.addDays(q.contractEnd,-Number(q.reminderDays??30))<=today&&(!q.reminderSnoozedUntil||q.reminderSnoozedUntil<=today))
   .sort((a,b)=>a.contractEnd.localeCompare(b.contractEnd));
  if(!due.length){panel.append(el('p','Aktuell keine fälligen Erinnerungen. Angenommene Angebote werden hier zum gewählten Zeitpunkt vor Vertragsende angezeigt.'));return}
  const msg=el('p','⚠ '+due.length+' Auftrag/Aufträge benötigen eine Kunden-Nachfrage!');panel.append(msg);
