@@ -36,6 +36,9 @@
   if(a.objectId&&a.objectId!==value('Object')){byId('qObject').value=a.objectId;updateAppointments();byId('qAppointment').value=a.id}
   if(a.service){byId('qService').value=a.service;const service=a.service.toLocaleLowerCase('de-DE');const scope=/glas|fenster|wintergarten/.test(service)?'windows':/grundreinigung|unterhaltsreinigung|büroreinigung|gebäudereinigung|treppenhaus|praxis|bauendreinigung/.test(service)?'rooms':'other';byId('qScope').value=scope;updateScope()}
   if(a.date)byId('qServiceDate').value=formatDate(a.date);
+  // Ein einmalig geplanter AK-Termin darf nicht versehentlich mit dem Standardwert von 8 Einsätzen berechnet werden.
+  // Bei Daueraufträgen wird die Anzahl der abzurechnenden Einsätze weiterhin ausdrücklich gewählt.
+  if(!a.repeat||a.repeat==='once')byId('qVisits').value='1';
   // Dauerauftrag: Anzahl der abzurechnenden Einsätze bleibt frei wählbar.
   calculate();
  }
