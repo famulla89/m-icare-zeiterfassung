@@ -229,6 +229,19 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
  </div>
  <p class="hint" id="qFolderHint">Am PC einen Ordner auswählen, z. B. Dokumente/M-iCare. Dort werden Sicherungen automatisch abgelegt und PDFs nach dem Export gespeichert. Ohne Ordner landen PDFs im Download-Ordner.</p>
  <div id="qSavedList" class="hint">Noch keine Kalkulation gespeichert.</div>
+ <dialog id="qAcceptDialog" aria-labelledby="qAcceptTitle" style="border:1px solid #b7cbdc;border-radius:14px;max-width:550px;width:calc(100% - 28px);padding:22px">
+  <h3 id="qAcceptTitle">✅ Angebot annehmen – Arbeitskarten planen</h3>
+  <p id="qAcceptInfo" class="hint">Für jeden vereinbarten Einsatz wird eine offene Arbeitskarte erstellt. Es wird noch keine Arbeitszeit erfasst und keine Rechnung erstellt.</p>
+  <div class="grid">
+   <div><label for="qAcceptDate">Erster Einsatz</label><input id="qAcceptDate" type="date" required></div>
+   <div><label for="qAcceptEmployee">Zuständiger Mitarbeiter</label><select id="qAcceptEmployee" required></select></div>
+   <div><label for="qAcceptStart">Beginn</label><input id="qAcceptStart" type="time" value="09:00" required></div>
+   <div><label for="qAcceptEnd">Ende</label><input id="qAcceptEnd" type="time" value="11:00" required></div>
+   <div><label for="qAcceptRhythm">Terminabstand</label><select id="qAcceptRhythm"><option value="7">Wöchentlich</option><option value="1">Täglich</option><option value="14">Alle 2 Wochen</option><option value="0">Einzeltermin / Termine einzeln nachplanen</option></select></div>
+  </div>
+  <p class="hint">Der Angebotsbetrag umfasst alle im Angebot kalkulierten Einsätze. Die Abrechnung kann nach Erledigung jeder einzelnen AK anteilig erfolgen.</p>
+  <div class="row actions"><button type="button" id="qAcceptConfirm">Arbeitskarten verbindlich anlegen</button><button type="button" class="secondary" id="qAcceptCancel">Abbrechen</button></div>
+ </dialog>
  </div>
 </section>
 
