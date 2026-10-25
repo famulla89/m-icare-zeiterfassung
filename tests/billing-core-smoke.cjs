@@ -25,6 +25,7 @@ for(let i=2;i<=10;i++)complete('ak'+i);
 st=core.status(state,quote);assert.equal(st.complete,10);assert.equal(st.billed,1);assert.equal(st.unbilled.length,9);
 const final=core.prepare(state,quote,'ak2',{dueDate:'2026-12-31'});
 assert.equal(final.invoiceType,'final');assert.equal(final.net,900);
+assert.equal(final.serviceDate,'02.11.2026 – 10.11.2026','Schlussrechnung muss Zeitraum aller noch offenen AK nennen');
 assert.deepEqual(final.coveredAppointmentIds,quote.appointmentIds.slice(1));
 assert.equal(final.alreadyInvoicedNet,100);
 assert(final.notes.includes('Bisherige Teilrechnungen'));
