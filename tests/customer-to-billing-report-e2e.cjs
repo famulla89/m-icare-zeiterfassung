@@ -498,6 +498,34 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(tenDoc.sourceVisitCount,10);
   assert.equal(tenDoc.sourceQuoteNumber,tenQuote.number);
   ok('10 Besuche 1.000 EUR: Rechnung 1/10 beträgt 100 EUR statt 1.000 EUR');
+  // PDF must really render the partial-invoice heading and retain a readable PDF header.
+  const invoiceHeading=await page.evaluate(async doc=>{
+   let heading='';
+   const original=CanvasRenderingContext2D.prototype.fillText;
+   CanvasRenderingContext2D.prototype.fillText=function(txt,...args){
+    if(String(txt).startsWith('TEILRECHNUNG'))heading=String(txt);
+    return original.call(this,txt,...args);
+   };
+   try{
+    const pdf=await MiCareQuote.pdf({...doc,finalizedAt:'2026-10-25T00:00:00Z'});
+    const bytes=new Uint8Array(await pdf.arrayBuffer());
+    return {heading,pdfHeader:String.fromCharCode(...bytes.slice(0,5))};
+   }finally{CanvasRenderingContext2D.prototype.fillText=original}
+  },tenDoc);
+  assert.equal(invoiceHeading.heading,'TEILRECHNUNG');
+  assert.equal(invoiceHeading.pdfHeader,'%PDF-');
+  const tenDownload=page.waitForEvent('download');
+  await page.locator('#qFinalize').click();
+  const finalTenPdf=await tenDownload;
+  assert.equal(fs.readFileSync(await finalTenPdf.path()).subarray(0,5).toString(),'%PDF-');
+  await page.waitForFunction(id=>state.quotes.some(x=>x.kind==='invoice'&&x.finalizedAt&&x.appointmentId===id),firstTen[0].id);
+  const finalTen=await page.evaluate(id=>state.quotes.find(x=>x.kind==='invoice'&&x.finalizedAt&&x.appointmentId===id),firstTen[0].id);
+  assert.equal(finalTen.net,100);
+  assert.equal(finalTen.sourceVisitNumber,1);
+  assert.equal(finalTen.sourceVisitCount,10);
+  assert.equal(finalTen.sourceQuoteNumber,tenQuote.number);
+  assert.equal(await page.evaluate(id=>state.quotes.filter(q=>q.finalizedAt&&q.appointmentId===id).length,firstTen[0].id),1);
+  ok('TEILRECHNUNG 1/10 als endgültiges PDF mit 100 EUR erstellt, genau einmal gespeichert');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
   const requiredMasks={
    home:['micareContractReminders'],
