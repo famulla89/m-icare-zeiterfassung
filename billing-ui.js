@@ -125,6 +125,7 @@
   const a=(state.appointments||[]).find(a=>a.id===id);
   if(!a||!a.quoteId){showScreen('billingScreen');return alert('Eine Rechnung benötigt einen angenommenen Auftrag.');}
   showScreen('billingScreen');
+  if(typeof currentScreen!=='undefined'&&currentScreen!=='billingScreen')return;
   if(occurrence&&occurrence!==a.date)return alert('Abweichenden Leistungstermin bitte erst in der AK prüfen.');
   prepare(a.quoteId,id);
  }
@@ -200,5 +201,13 @@
  function close(){pending=null;$('billEditor').classList.add('hidden')}
  $('billSearch').addEventListener('input',render);
  $('billPreview').onclick=preview;$('billFinalize').onclick=finalize;$('billCancel').onclick=close;
+ // Historische Rechnungsentwürfe bleiben lesbar, neue Rechnungen gehören nur in die eigene Maske.
+ const legacy=make('details');legacy.id='qLegacyBilling';legacy.className='quoteBox';
+ const heading=make('summary','⚙ Frühere Rechnungsentwürfe / erweiterte Altfunktionen');heading.style.cssText='cursor:pointer;font-weight:700';legacy.append(heading);
+ legacy.append(make('p','Für neue Rechnungen bitte die separate Rechnungsmaske benutzen. Diese Altansicht dient nur der Kompatibilität mit bisherigen Entwürfen.'));
+ const switchField=$('qKind');if(switchField?.parentElement)legacy.append(switchField.parentElement);
+ if($('qPartInvoiceInfo'))legacy.append($('qPartInvoiceInfo'));
+ if($('qFinalize'))legacy.append($('qFinalize'));
+ const overview=$('qDocumentOverview');if(overview)overview.before(legacy);
  root.MiCareBilling={render,openForAppointment,prepare,core};
 })(typeof globalThis!=='undefined'?globalThis:this);
