@@ -373,7 +373,9 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.waitForFunction(num=>state.entries.length>num,beforeEntry);
   let entryStatus=await page.evaluate(id=>state.entries.find(e=>e.appointmentId===id)?.orderStatus,scheduled[0].id);
   assert.equal(entryStatus,'progress');
-  await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';renderAppointments()});
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   assert((await page.locator('#selectedDayList').innerText()).includes('In Bearbeitung'));
   assert(!(await page.locator('#selectedDayList').innerText()).includes('Rechnung erstellen'));
   ok('Mitarbeiter dokumentiert Zwischenstand: AK bleibt in Bearbeitung, keine Rechnung');
@@ -384,7 +386,9 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#correctionEditor').selectOption('Testkraft');
   await page.locator('#saveBtn').click();
   await page.waitForFunction(id=>state.entries.some(e=>e.appointmentId===id&&e.orderStatus==='done'),scheduled[0].id);
-  await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';renderAppointments()});
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   const doneText=await page.locator('#selectedDayList').innerText();
   assert(doneText.includes('Erledigt')&&doneText.includes('Rechnung erstellen'));
   await page.screenshot({path:path.join(out,'10_Kalender_Erledigt_Rechnung.png'),fullPage:true});
