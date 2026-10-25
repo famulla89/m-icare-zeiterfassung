@@ -10,6 +10,7 @@ on:
       - quote-calculator.js
       - quote-ui.js
       - tests/browser-e2e.cjs
+      - tests/customer-to-billing-report-e2e.cjs
       - tests/quote-calculator-smoke.cjs
       - .github/workflows/browser-e2e.yml
   pull_request:
@@ -36,6 +37,7 @@ jobs:
         run: |
           node tests/quote-calculator-smoke.cjs
           node tests/browser-e2e.cjs
+          node tests/customer-to-billing-report-e2e.cjs
 
       - name: Publish synthetic AK report examples for PDF/CSV review
         if: always()
