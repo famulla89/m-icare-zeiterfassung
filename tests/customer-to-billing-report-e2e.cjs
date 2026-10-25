@@ -528,7 +528,9 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const tenDownload=page.waitForEvent('download');
   await page.locator('#qFinalize').click();
   const finalTenPdf=await tenDownload;
-  assert.equal(fs.readFileSync(await finalTenPdf.path()).subarray(0,5).toString(),'%PDF-');
+  const partPdfBytes=fs.readFileSync(await finalTenPdf.path());
+  assert.equal(partPdfBytes.subarray(0,5).toString(),'%PDF-');
+  fs.writeFileSync(path.join(out,'12_Teilrechnung_1_von_10_mit_Logo.pdf'),partPdfBytes);
   await page.waitForFunction(id=>state.quotes.some(x=>x.kind==='invoice'&&x.finalizedAt&&x.appointmentId===id),firstTen[0].id);
   const finalTen=await page.evaluate(id=>state.quotes.find(x=>x.kind==='invoice'&&x.finalizedAt&&x.appointmentId===id),firstTen[0].id);
   assert.equal(finalTen.net,100);
