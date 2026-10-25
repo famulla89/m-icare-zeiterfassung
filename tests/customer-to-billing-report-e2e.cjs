@@ -102,6 +102,17 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   // Offer based on the completed AK, with SME tax mode and actual matching customer/date.
   await page.locator('#goHome').click();
   await page.locator('#home [data-jump="quoteCalculator"]').click();
+  assert.equal(await page.locator('#qSellerName').inputValue(),'M-iCare Gebäudereinigung','Public company name defaults into empty form');
+  assert.equal(await page.locator('#qSellerAddress').inputValue(),'Lippestraße 9, 58097 Hagen','Public company address defaults into empty form');
+  assert.equal(await page.locator('#qSellerEmail').inputValue(),'info@m-icare-gebaeudereinigung.de','Public contact email defaults into empty form');
+  assert.equal(await page.locator('#qSellerPhone').inputValue(),'0162 8564663','Public phone defaults into empty form');
+  assert.equal(await page.locator('#qSellerTax').inputValue(),'','No fictitious tax number may be inserted');
+  assert.equal(await page.locator('#qIban').inputValue(),'','No fictitious bank account may be inserted');
+  await page.locator('#qSellerAddress').fill('Individuell hinterlegte Firmenadresse');
+  await page.locator('#qIban').fill('DE89370400440532013000');
+  await page.locator('#qApplyPublicCompany').click();
+  assert.equal(await page.locator('#qSellerAddress').inputValue(),'Lippestraße 9, 58097 Hagen','Explicit button applies public address');
+  assert.equal(await page.locator('#qIban').inputValue(),'DE89370400440532013000','Preset does not change bank details');
   await page.locator('#qCustomer').selectOption(created.customer.id);
   await page.locator('#qObject').selectOption(created.object.id);
   await page.locator('#qAppointment').selectOption(ak.id);
