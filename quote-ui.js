@@ -472,8 +472,20 @@
     const accept=document.createElement('button');accept.type='button';accept.className='secondary';accept.textContent='✅ Kunde hat angenommen · AK planen';accept.onclick=()=>openAcceptDialog(item);actions.append(accept);
    }
    if(item.acceptedAt){
-    const accepted=elStatus('✅ Angenommen · '+(item.appointmentIds||[]).length+' offene Arbeitskarten angelegt');
-    description.append(accepted);
+    const ids=item.appointmentIds||[],done=ids.filter(id=>(state.entries||[]).some(e=>e.appointmentId===id&&e.orderStatus==='done')).length;
+    const invoiced=ids.filter(id=>(state.quotes||[]).some(q=>q.finalizedAt&&q.appointmentId===id)).length;
+    description.append(elStatus('✅ Angenommen · '+done+'/'+ids.length+' AK erledigt · '+invoiced+' Rechnung(en) erstellt'));
+    if(ids.length){
+     const plan=state.appointments.find(a=>a.id===ids[0]);
+     if(plan){
+      const calendar=document.createElement('button');calendar.type='button';calendar.className='secondary';calendar.textContent='📅 Arbeitskarten im Kalender';
+      calendar.onclick=()=>{
+       calendarMonth=plan.date.slice(0,7);chosenDay=plan.date;
+       document.getElementById('appointmentCalendarPanel').open=true;showScreen('appointmentsPanel');renderAppointments();
+      };
+      actions.append(calendar);
+     }
+    }
    }
    if(item.finalizedAt){
     const email=document.createElement('button');email.type='button';email.className='secondary';email.textContent='✉️ E-Mail mit PDF';email.onclick=()=>emailFinalInvoice(item,email);
