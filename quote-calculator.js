@@ -168,7 +168,7 @@
    if(recognizableLogoPixels<200)
     throw Error('Das M-iCare-Logo wurde nicht sichtbar ins PDF übernommen. Export abgebrochen.');
    c.fillStyle=blue;c.font='bold 37px Arial';
-   c.fillText(d.kind==='quote'?'KOSTENVORANSCHLAG':d.finalizedAt?'RECHNUNG':'RECHNUNGSENTWURF',455,91);
+   c.fillText(d.kind==='quote'?'KOSTENVORANSCHLAG':Number(d.sourceVisitCount)>1?(d.finalizedAt?'TEILRECHNUNG':'TEILRECHNUNGSENTWURF'):(d.finalizedAt?'RECHNUNG':'RECHNUNGSENTWURF'),455,91);
    c.fillStyle=muted;c.font='20px Arial';c.fillText((d.finalizedAt?'Seite ':'Entwurf zur Prüfung  ·  Seite ')+(pageIndex+1)+' von '+pageCount,458,133);
    c.strokeStyle='#c7d8e9';c.lineWidth=2;c.beginPath();c.moveTo(70,199);c.lineTo(1170,199);c.stroke();
    let y=244;
@@ -194,7 +194,7 @@
     write('Leistungszeitraum: '+(formatPdfDate(d.serviceDate)||'bitte ergänzen'),70,y,1050);y+=42;
     write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;
     if(d.kind==='invoice'&&d.sourceQuoteNumber){
-     y+=write('Zum angenommenen Angebot: '+d.sourceQuoteNumber+(d.sourceVisitCount?' · Einsatz '+d.sourceVisitNumber+' von '+d.sourceVisitCount:''),70,y,1090,'20px Arial');
+     y+=write('Angebot: '+d.sourceQuoteNumber+(Number(d.sourceVisitCount)>1?' · Teilrechnung '+d.sourceVisitNumber+' von '+d.sourceVisitCount:' · vollständig abgerechneter Einsatz'),70,y,1090,'20px Arial');
     }
     if(d.kind==='quote'&&d.formValues?.PlanDate){
      const plan=d.formValues;
