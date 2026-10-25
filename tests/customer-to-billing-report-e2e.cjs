@@ -480,7 +480,9 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(await page.evaluate(id=>state.entries.some(e=>e.appointmentId===id),firstTen[0].id),false,'No invoice before work is done');
   await page.evaluate(async id=>{
     const a=state.appointments.find(a=>a.id===id);
-    state.entries.push({id:crypto.randomUUID(),appointmentId:id,appointmentOccurrence:a.date,customerId:a.customerId,employee:a.employee,service:a.service,date:a.date,endDate:a.date,start:a.start,end:a.end,breakMinutes:0,minutes:120,orderStatus:'done',workDone:'Fünf Testfenster gereinigt'});
+    const previous=state.entries.find(e=>e.orderStatus==='done');
+    const record={...(previous||{}),id:crypto.randomUUID(),appointmentId:id,appointmentOccurrence:a.date,customerId:a.customerId,objectId:a.objectId,employee:a.employee,service:a.service,date:a.date,endDate:a.date,start:a.start,end:a.end,breakMinutes:0,minutes:120,orderStatus:'done',workDone:'Fünf Testfenster gereinigt'};
+    state.entries.push(record);
     await saveState();
   },firstTen[0].id);
   await page.locator('#goHome').click();
