@@ -1,4 +1,5 @@
 'use strict';
+const {firstRun,unlock}=require('./auth-test-helper.cjs');
 /* Umfassende synthetische PDF-Regression für ALLE PDF-Exportfunktionen. */
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
 const assert=require('node:assert/strict');
@@ -36,6 +37,7 @@ let activeBrowser=null;
  const jsErrors=[];page.on('pageerror',e=>jsErrors.push(String(e)));
  page.on('dialog',async d=>d.accept());
  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
+ await firstRun(page);
  await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
  await page.evaluate(()=>{
   window.__qaLogoDraws=[];
