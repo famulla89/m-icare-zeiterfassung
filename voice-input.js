@@ -42,7 +42,7 @@
  function phone(s){
   const raw=String(s??'').trim();
   if(!raw)return '';
-  const international=/^\s*(plus|\+)\b/i.test(raw);
+  const international=/^\s*(?:plus\b|\+)/i.test(raw);
   const cleaned=raw.replace(/^\s*(plus|\+)\s*/i,'').replace(/[-()/]/g,' ');
   const result=toDigitSequence(cleaned);
   return result!==null&&result.length>=3&&result.length<=20?(international?'+':'')+result:null;
