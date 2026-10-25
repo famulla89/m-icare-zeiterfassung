@@ -181,6 +181,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(standalone.gross,95);assert.equal(standalone.tax,0);
   ok('Freier Kostenvoranschlag ohne Arbeitskarte','95 EUR, ohne Umsatzsteuer');
   // All saved documents: search by number/customer/AK, filter type and re-export existing PDF.
+  await page.waitForFunction(()=>document.querySelector('#qSavedTotals')?.textContent?.includes('3 Dokument(e)'),null,{timeout:15000});
   const overviewTotals=await page.locator('#qSavedTotals').innerText();
   assert(overviewTotals.includes('3 Dokument(e)'),'Overview must show all 3 documents; got '+overviewTotals+'; quotes='+JSON.stringify(await page.evaluate(()=>state.quotes.map(q=>q.number))));
   assert.equal(await page.locator('.quoteSavedItem').count(),3);
