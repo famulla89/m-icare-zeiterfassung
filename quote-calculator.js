@@ -155,6 +155,18 @@
    c.fillStyle=blue;c.fillRect(0,0,W,12);
    // Briefkopf: echtes Logo im Original-Seitenverhältnis, immer sichtbar oben links.
    c.drawImage(brandLogo,70,31,350,154);
+   // Sichtbarkeitskontrolle: Ein technisch geladenes SVG kann trotzdem leer gerendert sein.
+   // Für Kostenvoranschlag UND Rechnungsentwurf prüfen wir echte farbige Logo-Pixel.
+   // Das Rechteck liegt ausschließlich innerhalb des Markenlogos (nicht im blauen PDF-Balken).
+   const logoPixels=c.getImageData(70,31,350,154).data;
+   let recognizableLogoPixels=0;
+   for(let p=0;p<logoPixels.length;p+=4){
+    if(logoPixels[p+3]>200&&
+       (logoPixels[p]<190||logoPixels[p+1]<190||logoPixels[p+2]<190))
+      recognizableLogoPixels++;
+   }
+   if(recognizableLogoPixels<200)
+    throw Error('Das M-iCare-Logo wurde nicht sichtbar ins PDF übernommen. Export abgebrochen.');
    c.fillStyle=blue;c.font='bold 37px Arial';
    c.fillText(d.kind==='quote'?'KOSTENVORANSCHLAG':'RECHNUNGSENTWURF',455,91);
    c.fillStyle=muted;c.font='20px Arial';c.fillText('Entwurf zur Prüfung  ·  Seite '+(pageIndex+1)+' von '+pageCount,458,133);
