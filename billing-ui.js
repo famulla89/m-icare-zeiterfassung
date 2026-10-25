@@ -189,11 +189,13 @@
    // Noch einmal prüfen, falls die Daten zwischen Bestätigung und PDF-Erstellung geändert wurden.
    const currentDoc=current();if(JSON.stringify(currentDoc.coveredAppointmentIds)!==JSON.stringify(doc.coveredAppointmentIds)||cents(currentDoc.net)!==cents(doc.net))throw Error('Auftrag zwischenzeitlich geändert. Vorgang abgebrochen.');
    if((state.quotes||[]).some(x=>x.number===doc.number))throw Error('Rechnungsnummer bereits vergeben');
+   const previousSettings={...(state.quoteSettings||{})};
    state.quotes.push(doc);
-   try{await saveState()}catch(e){state.quotes=state.quotes.filter(x=>x.id!==doc.id);throw e}
-   state.quoteSettings={...(state.quoteSettings||{}),SellerName:doc.sellerName,SellerAddress:doc.sellerAddress,SellerTax:doc.sellerTaxId,SellerEmail:doc.sellerEmail,SellerPhone:doc.sellerPhone,Iban:doc.iban};
+   state.quoteSettings={...previousSettings,SellerName:doc.sellerName,SellerAddress:doc.sellerAddress,SellerTax:doc.sellerTaxId,SellerEmail:doc.sellerEmail,SellerPhone:doc.sellerPhone,Iban:doc.iban};
+   try{await saveState()}catch(e){state.quotes=state.quotes.filter(x=>x.id!==doc.id);state.quoteSettings=previousSettings;throw e}
    pending=null;$('billEditor').classList.add('hidden');render();
-   await saveExport('M-iCare_Rechnung_'+doc.number+'.pdf',pdf,'Rechnungen');
+   try{await saveExport('M-iCare_Rechnung_'+doc.number+'.pdf',pdf,'Rechnungen')}
+   catch(e){alert('Rechnung '+doc.number+' wurde gespeichert, aber der PDF-Download schlug fehl: '+e.message+'. PDF später in der Rechnungsübersicht erneut ausgeben.');return}
    notify('Rechnung '+doc.number+' erstellt; E-Mail wird NICHT automatisch versendet.');
   }catch(e){alert('Rechnung konnte nicht erstellt werden: '+e.message)}
   finally{busy=false;$('billFinalize').disabled=false}
