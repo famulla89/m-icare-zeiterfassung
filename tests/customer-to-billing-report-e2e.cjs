@@ -340,6 +340,10 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(await page.locator('#qAcceptDate').inputValue(),'2026-11-10');
   assert.equal(await page.locator('#qAcceptStart').inputValue(),'10:00');
   assert.equal(await page.locator('#qAcceptEmployee').inputValue(),'Testkraft');
+  assert.equal(await page.locator('.qAcceptAkRow').count(),5,'Acceptance dialog lists all 5 future work cards');
+  assert((await page.locator('#qAcceptWorkInstructions').inputValue()).includes('Fenster'),'Offer work scope prefilled');
+  await page.locator('#qAcceptWorkInstructions').fill('Fenster von innen und außen, Rahmen reinigen, Zugang über Hausmeister.');
+  await page.locator('.qAcceptAkRow').nth(1).locator('[data-field="start"]').fill('11:00');
   await page.locator('#qAcceptConfirm').click();
   await page.waitForFunction(id=>state.quotes.find(d=>d.id===id)?.appointmentIds?.length===5,contract.id);
   const scheduled=await page.evaluate(id=>{
@@ -350,7 +354,18 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert(scheduled.every(a=>a.status==='open'&&a.repeat==='once'));
   assert(scheduled.every(a=>a.quoteId===contract.id));
   assert.deepEqual(scheduled.map(a=>a.plannedInvoiceNetCents),[10000,10000,10000,10000,10000]);
+  assert.equal(scheduled[1].start,'11:00','Second AK time customized in acceptance dialog');
+  assert(scheduled.every(a=>a.workInstructions.includes('Hausmeister')),'Scope and instructions copied from offer');
+  assert(await page.locator('#acceptedOrdersPanel').isVisible(),'Accepted orders dashboard opens automatically');
+  assert((await page.locator('#acceptedOrdersList').innerText()).includes(contract.number));
+  assert((await page.locator('#acceptedOrdersList').innerText()).includes('5 Arbeitskarten'));
+  await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
+  assert.equal(await page.locator('#acceptedOrdersList').locator('.appt').count(),5);
+  assert((await page.locator('#acceptedOrdersList').innerText()).includes('Offen'));
+  ok('Annahme-Dialog erzeugt fünf individuell bearbeitbare AK und zeigt sie in eigener Auftragsübersicht');
   assert.equal((await page.evaluate(()=>state.entries.length)),1,'Accepting a quote MUST NOT mark work as done or create worktime entries');
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="quoteCalculator"]').click();
   await page.locator('#qSavedSearch').fill(contract.number);
   await page.waitForFunction(()=>document.querySelector('#qSavedList')?.textContent?.includes('Angenommen') && !document.querySelector('#qSavedList')?.textContent?.includes('Kunde hat angenommen'));
   assert.equal(await page.locator('#qSavedList button').filter({hasText:'Kunde hat angenommen'}).count(),0,'Already accepted quote cannot create duplicates');
