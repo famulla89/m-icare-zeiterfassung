@@ -193,6 +193,12 @@
     write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+formatPdfDate(d.date),700,y,470,'23px Arial');y+=45;
     write('Leistungszeitraum: '+(formatPdfDate(d.serviceDate)||'bitte ergänzen'),70,y,1050);y+=42;
     write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;
+    if(d.kind==='quote'&&d.formValues?.PlanDate){
+     const plan=d.formValues;
+     const cadence=plan.PlanRhythm==='1'?'täglich':plan.PlanRhythm==='14'?'alle 2 Wochen':'wöchentlich';
+     y+=write('Wunschtermin: '+formatPdfDate(plan.PlanDate)+' · '+(plan.PlanStart||'–')+'–'+(plan.PlanEnd||'–')+' Uhr',70,y,1090,'20px Arial');
+     if(Number(d.calculation?.visits)>1)y+=write('Geplant: '+d.calculation.visits+' Einsätze, '+cadence+' · verbindlich erst nach Annahme',70,y,1090,'20px Arial');
+    }
     y+=write(d.service,70,y,1080,'bold 25px Arial');
    }else{
     write('Nr.: '+d.number+'  ·  '+d.customerName,70,y,1080,'bold 25px Arial');
