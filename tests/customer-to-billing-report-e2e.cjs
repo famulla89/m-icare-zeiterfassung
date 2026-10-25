@@ -352,6 +352,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.deepEqual(scheduled.map(a=>a.plannedInvoiceNetCents),[10000,10000,10000,10000,10000]);
   assert.equal((await page.evaluate(()=>state.entries.length)),1,'Accepting a quote MUST NOT mark work as done or create worktime entries');
   await page.locator('#qSavedSearch').fill(contract.number);
+  await page.waitForFunction(()=>document.querySelector('#qSavedList')?.textContent?.includes('Angenommen') && !document.querySelector('#qSavedList')?.textContent?.includes('Kunde hat angenommen'));
   assert.equal(await page.locator('#qSavedList button').filter({hasText:'Kunde hat angenommen'}).count(),0,'Already accepted quote cannot create duplicates');
   await page.locator('#qSavedSearch').fill('');
   ok('Kundenannahme erzeugt fünf OFFENE AK am Wunschtermin, mit je 100 EUR');
