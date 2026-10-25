@@ -544,9 +544,11 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   ok('TEILRECHNUNG 1/10 als endgültiges PDF mit 100 EUR erstellt, genau einmal gespeichert');
   await page.evaluate(()=>{showScreen('appointmentsPanel');renderAppointments()});
   await page.locator('#acceptedOrdersSearch').fill(tenQuote.number);
-  await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
-  assert.equal(await page.locator('#acceptedOrdersList .appt').first().locator('button').filter({hasText:'Teilrechnung 1/10 erstellen'}).count(),0,'A paid AK must not offer another invoice');
-  const billedRow=await page.locator('#acceptedOrdersList .appt').first().innerText();
+  const tenOrderDetails=page.locator('#acceptedOrdersList details[data-quote-id="'+tenQuote.id+'"]');
+  assert.equal(await tenOrderDetails.count(),1,'Accepted contract found after filtering');
+  if(!await tenOrderDetails.evaluate(node=>node.open))await tenOrderDetails.locator(':scope > summary').click();
+  assert.equal(await tenOrderDetails.locator('.appt').first().locator('button').filter({hasText:'Teilrechnung 1/10 erstellen'}).count(),0,'A paid AK must not offer another invoice');
+  const billedRow=await tenOrderDetails.locator('.appt').first().innerText();
   assert(billedRow.includes('Rechnung erstellt'),'Already billed AK must clearly show its invoice status');
   ok('Abgerechnete Arbeitskarte bietet keine zweite Teilrechnung an');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
