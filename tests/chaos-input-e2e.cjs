@@ -146,7 +146,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#qHours').fill('2');
   await page.locator('#qManualNet').fill('99');
   await page.locator('#qSave').click();
-  await page.waitForFunction(()=>state.quotes.length===2);
+  await page.waitForFunction(()=>document.querySelector('#qSavedTotals')?.textContent?.includes('2 Dokument(e)'),null,{timeout:15000});
   check('Sonderzeichen und HTML im Text brechen UI nicht',await page.locator('img[src="x"]').count()===0);
   await page.reload();
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
