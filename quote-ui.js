@@ -443,7 +443,7 @@
    const read=field=>row.querySelector('[data-field="'+field+'"]').value;
    const date=read('date'),start=read('start'),end=read('end'),employee=read('employee');
    MiCareSchedulePlanner.parse(date);
-   if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)||start>=end)throw Error('AK '+(i+1)+': Uhrzeiten ungültig');
+   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||start>=end)throw Error('AK '+(i+1)+': Uhrzeiten ungültig');
    if(!state.employees.includes(employee))throw Error('AK '+(i+1)+': Mitarbeiter ungültig');
    const key=date+'|'+start+'|'+end+'|'+employee;
    if(unique.has(key))throw Error('AK '+(i+1)+': gleicher Mitarbeiter, Datum und Uhrzeit bereits vorhanden');
@@ -596,6 +596,9 @@
     const accept=document.createElement('button');accept.type='button';accept.className='secondary';accept.textContent='✅ Kunde hat angenommen · AK planen';accept.onclick=()=>openAcceptDialog(item);actions.append(accept);
    }
    if(item.acceptedAt){
+    const ordersBtn=document.createElement('button');ordersBtn.type='button';ordersBtn.className='secondary';ordersBtn.textContent='📋 Angenommenen Auftrag öffnen';
+    ordersBtn.onclick=()=>{showScreen('appointmentsPanel');byId('acceptedOrdersSearch').value=item.number;renderAcceptedOrders();byId('acceptedOrdersPanel').scrollIntoView({behavior:'smooth',block:'start'})};
+    actions.append(ordersBtn);
     const ids=item.appointmentIds||[],done=ids.filter(id=>(state.entries||[]).some(e=>e.appointmentId===id&&e.orderStatus==='done')).length;
     const invoiced=ids.filter(id=>(state.quotes||[]).some(q=>q.finalizedAt&&q.appointmentId===id)).length;
     description.append(elStatus('✅ Angenommen · '+done+'/'+ids.length+' AK erledigt · '+invoiced+' Rechnung(en) erstellt'));
