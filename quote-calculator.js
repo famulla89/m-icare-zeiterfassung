@@ -168,8 +168,8 @@
    if(recognizableLogoPixels<200)
     throw Error('Das M-iCare-Logo wurde nicht sichtbar ins PDF übernommen. Export abgebrochen.');
    c.fillStyle=blue;c.font='bold 37px Arial';
-   c.fillText(d.kind==='quote'?'KOSTENVORANSCHLAG':'RECHNUNGSENTWURF',455,91);
-   c.fillStyle=muted;c.font='20px Arial';c.fillText('Entwurf zur Prüfung  ·  Seite '+(pageIndex+1)+' von '+pageCount,458,133);
+   c.fillText(d.kind==='quote'?'KOSTENVORANSCHLAG':d.finalizedAt?'RECHNUNG':'RECHNUNGSENTWURF',455,91);
+   c.fillStyle=muted;c.font='20px Arial';c.fillText((d.finalizedAt?'Seite ':'Entwurf zur Prüfung  ·  Seite ')+(pageIndex+1)+' von '+pageCount,458,133);
    c.strokeStyle='#c7d8e9';c.lineWidth=2;c.beginPath();c.moveTo(70,199);c.lineTo(1170,199);c.stroke();
    let y=244;
    function write(text,left,top,width,font='22px Arial',color=dark){
@@ -225,8 +225,8 @@
     }
     y+=write(d.notes||'Leistungsumfang und Konditionen vor Versand überprüfen.',70,y+12,1075,'20px Arial');
    }
-   c.fillStyle=muted;c.font='19px Arial';c.fillText('Entwurf – nicht automatisch versendet · '+new Date().toLocaleDateString('de-DE'),70,H-65);
-   if(d.kind==='invoice'){
+   c.fillStyle=muted;c.font='19px Arial';c.fillText((d.finalizedAt?'Rechnung – Versand nicht automatisch bestätigt':'Entwurf – nicht automatisch versendet')+' · '+new Date().toLocaleDateString('de-DE'),70,H-65);
+   if(d.kind==='invoice'&&!d.finalizedAt){
     c.save();c.translate(285,1480);c.rotate(-Math.PI/11);
     c.fillStyle='rgba(170,25,25,.16)';c.font='bold 115px Arial';c.fillText('ENTWURF',0,0);c.restore();
    }
