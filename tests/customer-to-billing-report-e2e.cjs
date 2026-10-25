@@ -416,6 +416,28 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   const part=await page.evaluate(()=>MiCareQuoteUI.calculate());
   assert.equal(part.net,100);assert.equal(part.tax,0);
   ok('Erledigte AK öffnet Rechnungsrechner mit korrekt anteiligem Preis 100 EUR');
+  // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
+  const requiredMasks={
+   home:['micareContractReminders'],
+   customersPanel:['selectedCustomer','selectedObject','editCustomerName','editCustomerEmail','saveCustomerChanges'],
+   customerOverviewScreen:['customerSearch'],
+   appointmentsPanel:['acceptedOrdersPanel','acceptedOrdersSearch','acceptedOrdersFilter','appointmentCalendarPanel','appointmentForm','appointmentsList'],
+   quoteCalculator:['qCustomer','qObject','qAppointment','qPlanDate','qPlanEmployee','qPlanStart','qPlanEnd','qAcceptDialog','qAcceptPlanRows','qAcceptWorkInstructions','qSavedList'],
+   plannedWorkScreen:['plannedListItems'],
+   dailyWorkOverview:['dailyOverviewDate','dailyOverviewAppointments'],
+   entryForm:['date','start','end','orderStatus','workDone'],
+   history:['orderOverviewList','historyMonth'],
+   reportingScreen:['reportHome','reportHomeStats'],
+   backupSection:['importJson','loadCustomersFile','exportCustomersJson'],
+   management:['newEmployee']
+  };
+  for(const [screen,fields] of Object.entries(requiredMasks)){
+   await page.evaluate(s=>showScreen(s),screen);
+   assert(await page.locator('#'+screen).isVisible(),'Screen '+screen+' must be visible');
+   const missed=await page.evaluate(fields=>fields.filter(id=>!document.getElementById(id)),fields);
+   assert.deepEqual(missed,[],'Missing required inputs on '+screen);
+  }
+  ok('Alle 12 Hauptmasken öffnen ohne fehlende kritische Eingabefelder oder JavaScriptfehler');
   assert.deepEqual(errors,[],'No unhandled browser JavaScript errors');
   fs.writeFileSync(path.join(out,'QA-ERGEBNIS.json'),JSON.stringify({created:new Date().toISOString(),customer:created.customer.publicNumber,object:created.object.publicNumber,ak:ak.akNumber,date:ak.date,offer:offer.number,invoiceDraft:invoice.number,tests:checkpoints,dialogs},null,2));
   console.log('WORKFLOW ALL PASS: '+checkpoints.length+' checkpoints');
