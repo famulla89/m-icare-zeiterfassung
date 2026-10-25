@@ -1,4 +1,5 @@
 'use strict';
+const {firstRun,unlock}=require('./auth-test-helper.cjs');
 /* Realistic chaos/regression: garbage fields, duplicate clicks, XSS text, invalid JSON and corrupted links. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http');
 const {chromium}=require('playwright');
@@ -22,6 +23,7 @@ const server=http.createServer((req,res)=>{
  async function count(){return page.evaluate(()=>({customers:state.customers.length,objects:state.objects.length,appointments:state.appointments.length,entries:state.entries.length,quotes:(state.quotes||[]).length}))}
  try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
+ await firstRun(page);
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
   await page.evaluate(async()=>{
    state={version:2,employees:['QA Mitarbeiter'],customers:[],objects:[],appointments:[],entries:[],quotes:[],quoteSettings:{TaxMode:'small'},changeHistory:[],appointmentTrash:[],lastSave:null,lastBackup:null};
@@ -149,6 +151,7 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>document.querySelector('#qSavedTotals')?.textContent?.includes('2 Dokument(e)'),null,{timeout:15000});
   check('Sonderzeichen und HTML im Text brechen UI nicht',await page.locator('img[src="x"]').count()===0);
   await page.reload();
+  await unlock(page);
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
   const recovered=await count();
   check('Daten nach Neustart intakt',recovered.customers===1&&recovered.appointments===2&&recovered.quotes===2,JSON.stringify(recovered));
