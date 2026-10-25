@@ -381,7 +381,8 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#akEditEnd').fill('14:00');
   await page.locator('#akEditInstructions').fill('Fünf Testfenster; Rahmen reinigen und Schlüssel beim Hausmeister abholen.');
   await page.locator('#akEditSave').click();
-  await page.waitForFunction(id=>state.appointments.find(a=>a.id===id)?.start==='12:00',scheduled[1].id);
+  await page.waitForFunction(id=>!document.getElementById('akEditDialog').open&&state.appointments.find(a=>a.id===id)?.start==='12:00',scheduled[1].id);
+  await page.waitForFunction(async id=>(await read('app')).appointments.some(a=>a.id===id&&a.start==='12:00'),scheduled[1].id);
   assert.equal(await page.evaluate(id=>state.appointments.find(a=>a.id===id)?.end,scheduled[1].id),'14:00');
   assert((await page.evaluate(id=>state.appointments.find(a=>a.id===id)?.workInstructions,scheduled[1].id)).includes('Hausmeister'));
   await page.reload();await unlock(page);
