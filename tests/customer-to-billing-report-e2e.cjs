@@ -653,6 +653,13 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   // Mobile navigation and microphone / old customer address compatibility.
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>showScreen('customersPanel'));
+  // Explizit den alten JSON-Datenbestand ohne eigene Hausnummern-Felder nachbilden.
+  await page.evaluate(ids=>{
+    const c=state.customers.find(c=>c.id===ids.customer);
+    const o=state.objects.find(o=>o.id===ids.object);
+    c.address='Beispielweg 4';delete c.street;delete c.houseNumber;
+    o.address='Objektweg 8';delete o.street;delete o.houseNumber;
+  },{customer:created.customer.id,object:created.object.id});
   await page.locator('#selectedCustomer').selectOption(created.customer.id);
   await page.locator('#selectedObject').selectOption(created.object.id);
   assert.equal(await page.locator('#editCustomerAddress').inputValue(),'Beispielweg','Old street is split without losing text');
