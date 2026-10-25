@@ -53,6 +53,33 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   assert(encryptionProbe.same&&!encryptionProbe.hasPlaintext,'Installed Electron renderer can encrypt and decrypt without exposing customer names');
   assert.equal(encryptionProbe.owner,'qa-windows@gmail.com');
   console.log('NATIVE WINDOWS CLOUD CRYPTO PASS');
+  // Real installed Electron app: in-app AK editor must work without unsupported prompt().
+  await page.evaluate(async()=>{
+   const original=state.appointments.find(a=>a.id==='test-appointment-1');
+   const a={...structuredClone(original),id:'qa-windows-modal-ak',akNumber:991,date:'2026-12-09',start:'09:00',end:'11:00',employee:'Anna Test',repeat:'once',exceptions:{},workInstructions:'Ursprüngliche Fensterreinigung'};
+   state.appointments.push(a);await saveState();
+   showScreen('appointmentsPanel');
+   editAppointmentFromCalendar({appointment:a,originalDate:a.date,date:a.date,start:a.start,end:a.end});
+  });
+  assert(await page.locator('#akEditDialog').isVisible(),'Electron AK editor uses supported modal, not window.prompt');
+  await page.locator('#akEditStart').fill('10:00');
+  await page.locator('#akEditEnd').fill('12:00');
+  await page.locator('#akEditInstructions').fill('Fensterrahmen und Glas reinigen, Schlüssel beim Hausmeister');
+  await page.locator('#akEditSave').click();
+  await page.waitForFunction(()=>!document.getElementById('akEditDialog').open);
+  const savedAk=await page.evaluate(async()=>{
+   const stateOnDisk=await read('app');
+   return stateOnDisk.appointments.find(a=>a.id==='qa-windows-modal-ak');
+  });
+  assert.equal(savedAk.start,'10:00');
+  assert.equal(savedAk.end,'12:00');
+  assert(savedAk.workInstructions.includes('Hausmeister'));
+  await page.reload();
+  await unlock(page);
+  await page.waitForFunction(()=>state.appointments.some(a=>a.id==='qa-windows-modal-ak'&&a.start==='10:00'));
+  assert.equal(await page.evaluate(()=>state.appointments.find(a=>a.id==='qa-windows-modal-ak').end),'12:00');
+  await page.evaluate(async()=>{state.appointments=state.appointments.filter(a=>a.id!=='qa-windows-modal-ak');await saveState()});
+  console.log('NATIVE WINDOWS AK EDIT PASS: Electron modal, valid time, instructions and persisted after app restart');
 
   const ak=await page.evaluate(()=>akLabel(state.appointments.find(a=>a.id==='test-appointment-1')));
   assert(/^AK \d+$/.test(ak));
