@@ -53,7 +53,7 @@
     objectAddress:quote.objectAddress||'',appointmentId:first.id,coveredAppointmentIds:selected.map(s=>s.id),
     orderNumber:selected.map(s=>'AK '+(s.ak.akNumber||s.index)).join(', '),
     sourceQuoteId:quote.id,sourceQuoteNumber:quote.number,sourceVisitNumber:first.index,sourceVisitCount:st.total,
-    service:quote.service||'Reinigungsleistung',serviceDate:dateDE(last.ak.date),
+    service:quote.service||'Reinigungsleistung',serviceDate:end&&selected.length>1?dateDE(first.ak.date)+' – '+dateDE(last.ak.date):dateDE(last.ak.date),
     sellerName:String(seller.sellerName||quote.sellerName||''),sellerAddress:String(seller.sellerAddress||quote.sellerAddress||''),
     sellerTaxId:String(seller.sellerTaxId||quote.sellerTaxId||''),
     sellerEmail:String(seller.sellerEmail||quote.sellerEmail||''),sellerPhone:String(seller.sellerPhone||quote.sellerPhone||''),
