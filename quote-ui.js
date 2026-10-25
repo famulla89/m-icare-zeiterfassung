@@ -452,7 +452,7 @@
    state.appointments.push(...proposed);
    doc.acceptedAt=new Date().toISOString();
    doc.appointmentIds=proposed.map(x=>x.id);
-   doc.contractEnd=proposed.at(-1).date;
+   doc.contractEnd=doc.formValues?.PlanMode==='range'?doc.formValues.PlanEndDate:proposed.at(-1).date;
    doc.reminderDays=Number(doc.formValues?.PlanReminderDays??30);
    doc.reminderDoneAt='';
    await saveState();
@@ -604,6 +604,7 @@
   byId('qAcceptDialog').addEventListener('cancel',()=>{quoteToAccept=null});
   byId('qNew').onclick=clear;
   byId('qPlanPreviewButton').onclick=previewPlan;
+  for(const key of ['PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanEndDate','PlanEveryWeeks','PlanReminderDays','PlanRhythm'])byId('q'+key).addEventListener('change',previewPlan);
   byId('qPlanMode').addEventListener('change',previewPlan);
   document.querySelectorAll('#qPlanWeekdays input').forEach(el=>el.addEventListener('change',previewPlan));
   byId('qPlanOpenCalendar').onclick=()=>{const day=value('PlanDate');if(day){calendarMonth=day.slice(0,7);chosenDay=day}document.getElementById('appointmentCalendarPanel').open=true;showScreen('appointmentsPanel');renderAppointments()};
@@ -624,5 +625,5 @@
   updateScope();
  }
  init();
- window.MiCareQuoteUI={refresh,calculate,collect,openForAppointment};
+ window.MiCareQuoteUI={refresh,calculate,collect,openForAppointment,loadQuote};
 })();
