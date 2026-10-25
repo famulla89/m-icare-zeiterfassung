@@ -1,10 +1,31 @@
 name: M-iCare Android APK
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/android-apk.yml'
+      - 'index.html'
+      - 'login-gate.js'
+      - 'schedule-planner.js'
+      - 'quote-calculator.js'
+      - 'quote-ui.js'
+      - 'billing-ui.js'
+      - 'voice-input.js'
+      - 'report-print.js'
+      - 'logo.svg'
   push:
     paths:
       - 'android-app/**'
       - 'index.html'
+      - 'login-gate.js'
+      - 'schedule-planner.js'
+      - 'cloud-transfer.js'
+      - 'quote-calculator.js'
+      - 'tests/quote-calculator-smoke.cjs'
+      - 'quote-ui.js'
+      - 'billing-ui.js'
+      - 'voice-input.js'
+      - 'report-print.js'
       - 'sw.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
@@ -39,10 +60,38 @@ jobs:
       - name: Bundle current offline web app
         run: |
           mkdir -p android-app/app/src/main/assets
-          cp index.html sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+          cp index.html login-gate.js schedule-planner.js cloud-transfer.js quote-calculator.js quote-ui.js billing-ui.js voice-input.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
+      - name: Verify calculator, cloud backup and normal M-iCare app identifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/quote-calculator-smoke.cjs
+          node --check login-gate.js
+          node --check billing-ui.js
+          node tests/billing-core-smoke.cjs
+          node tests/voice-input-smoke.cjs
+          node tests/schedule-planner-smoke.cjs
+          node tests/cloud-transfer-smoke.cjs
+          node tests/app-core-smoke.cjs
+          node tests/logic-fuzz-smoke.cjs
+          node tests/reporting-smoke.cjs
+          APK=android-app/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_SDK_ROOT/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/micare-apk-badging.txt
+          grep -Fq "package: name='de.micare.zeiterfassung'" /tmp/micare-apk-badging.txt
+          grep -Fq "application-label:'M-iCare'" /tmp/micare-apk-badging.txt
+          unzip -p "$APK" assets/index.html | grep -Fq 'data-jump="quoteCalculator"'
+          unzip -l "$APK" | grep -Fq 'assets/login-gate.js'
+          unzip -l "$APK" | grep -Fq 'assets/quote-calculator.js'
+          unzip -l "$APK" | grep -Fq 'assets/quote-ui.js'
+          unzip -l "$APK" | grep -Fq 'assets/billing-ui.js'
+          unzip -l "$APK" | grep -Fq 'assets/voice-input.js'
+          unzip -l "$APK" | grep -Fq 'assets/report-print.js'
+          unzip -l "$APK" | grep -Fq 'assets/cloud-transfer.js'
+          echo 'PASS: normal M-iCare package, calculator UI, offers and cloud-transfer bundled'
       - uses: actions/upload-artifact@v4
         with:
           name: M-iCare-Android-Test-APK

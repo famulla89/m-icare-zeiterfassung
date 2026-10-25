@@ -1,0 +1,73 @@
+name: M-iCare komplette PDF- und Logik-Regression
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/full-pdf-regression-qa-20261025
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'report-print.js'
+      - 'tests/pdf-all-exports-e2e.cjs'
+      - 'tests/logic-fuzz-smoke.cjs'
+      - '.github/workflows/pdf-complete-qa.yml'
+jobs:
+  full-pdf-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install PDF renderer and browser test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+          npm install --no-save --no-audit --no-fund playwright
+          npx playwright install --with-deps chromium
+      - name: Check syntax of all delivered JavaScript
+        run: |
+          node --check cloud-transfer.js
+          node --check quote-calculator.js
+          node --check quote-ui.js
+          node --check billing-ui.js
+          node --check voice-input.js
+          node tests/voice-input-smoke.cjs
+          node tests/billing-core-smoke.cjs
+          node --check report-print.js
+          node --check tests/pdf-all-exports-e2e.cjs
+          node --check tests/logic-fuzz-smoke.cjs
+      - name: Run critical application and 600-case business-logic tests
+        run: |
+          node tests/app-core-smoke.cjs
+          node tests/order-correction-smoke.cjs
+          node tests/reporting-smoke.cjs
+          node tests/cloud-transfer-smoke.cjs
+          node tests/quote-calculator-smoke.cjs
+          node tests/logic-fuzz-smoke.cjs
+      - name: Generate and audit 18 actual PDF exports
+        run: node tests/pdf-all-exports-e2e.cjs
+      - name: Check all PDFs with independent Poppler renderer
+        run: |
+          set -euo pipefail
+          test "$(find test-output/pdf -maxdepth 1 -name '*.pdf' | wc -l)" -eq 18
+          for f in test-output/pdf/*.pdf; do
+            pdfinfo "$f" | grep -q '^Pages:'
+            pages="$(pdfinfo "$f" | awk '/^Pages:/ {print $2}')"
+            test "$pages" -ge 1
+            pdftoppm -scale-to 1100 -png "$f" "${f%.pdf}-page"
+            rendered="$(find test-output/pdf -maxdepth 1 -name "$(basename "${f%.pdf}")-page-*.png" | wc -l)"
+            test "$rendered" -eq "$pages" || { echo "FEHLER: $f hat $pages Seiten, aber $rendered gerenderte Bilder"; exit 1; }
+            while IFS= read -r preview; do test -s "$preview"; done < <(find test-output/pdf -maxdepth 1 -name "$(basename "${f%.pdf}")-page-*.png")
+          done
+      - name: Publish inspectable PDFs + every-page previews and QA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M-iCare-Alle-PDFs-QA-18-Ausdrucke
+          path: test-output/pdf/
+          if-no-files-found: warn
+          retention-days: 30

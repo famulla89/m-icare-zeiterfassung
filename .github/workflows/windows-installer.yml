@@ -1,14 +1,38 @@
 name: M-iCare Windows Installer
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/windows-installer.yml'
+      - 'index.html'
+      - 'login-gate.js'
+      - 'schedule-planner.js'
+      - 'quote-calculator.js'
+      - 'quote-ui.js'
+      - 'billing-ui.js'
+      - 'voice-input.js'
+      - 'report-print.js'
+      - 'logo.svg'
   push:
     paths:
       - 'windows-app/**'
       - 'index.html'
+      - 'login-gate.js'
+      - 'schedule-planner.js'
+      - 'cloud-transfer.js'
+      - 'quote-calculator.js'
+      - 'quote-ui.js'
+      - 'billing-ui.js'
+      - 'voice-input.js'
+      - 'report-print.js'
+      - 'tests/quote-calculator-smoke.cjs'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'logo.svg'
       - '.github/workflows/windows-installer.yml'
+      - 'tests/windows-installer-smoke.ps1'
+      - 'tests/windows-electron-e2e.cjs'
+      - 'tests/cloud-transfer-smoke.cjs'
 jobs:
   windows:
     runs-on: windows-latest
@@ -23,7 +47,21 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force windows-app/web | Out-Null
-          Copy-Item index.html,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
+          Copy-Item index.html,login-gate.js,schedule-planner.js,cloud-transfer.js,quote-calculator.js,quote-ui.js,billing-ui.js,voice-input.js,report-print.js,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
+      - name: Validate business rules and correction flows on Windows
+        shell: pwsh
+        run: |
+          node tests/app-core-smoke.cjs
+          node tests/order-correction-smoke.cjs
+          node tests/reporting-smoke.cjs
+          node tests/cloud-transfer-smoke.cjs
+          node tests/quote-calculator-smoke.cjs
+          node tests/billing-core-smoke.cjs
+          node tests/voice-input-smoke.cjs
+          node --check login-gate.js
+          node tests/schedule-planner-smoke.cjs
+          node tests/logic-fuzz-smoke.cjs
+          node --check tests/browser-e2e.cjs
       - name: Install dependencies
         working-directory: windows-app
         run: npm install --no-fund
@@ -44,6 +82,18 @@ jobs:
             $signature = Get-AuthenticodeSignature $_.FullName
             "Installer: $($_.Name); Signature status: $($signature.Status); Signer: $($signature.SignerCertificate.Subject)" | Add-Content windows-app/dist/SIGNATURE_STATUS.txt
           }
+      - name: Validate packaged app and silently install Windows EXE on isolated runner
+        shell: pwsh
+        run: ./tests/windows-installer-smoke.ps1
+      - name: Test installed Electron app with Playwright (Windows)
+        shell: pwsh
+        run: |
+          Push-Location windows-app
+          try {
+            npm install --no-save --no-audit --no-fund playwright
+            if ($LASTEXITCODE -ne 0) { throw 'Playwright installation failed' }
+          } finally { Pop-Location }
+          node tests/windows-electron-e2e.cjs
       - uses: actions/upload-artifact@v4
         with:
           name: M-iCare-Windows-Setup-UNSIGNED-TEST

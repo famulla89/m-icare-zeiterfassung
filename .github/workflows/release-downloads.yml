@@ -1,0 +1,40 @@
+name: M-iCare 1.9.0 Test-Downloads (direkte ZIP- und Installationslinks)
+on:
+  push:
+    branches:
+      - feature/full-pdf-regression-qa-20261025
+    paths:
+      - .github/workflows/release-downloads.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-test-downloads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download green Windows and Android 1.9.0 build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-files /tmp/android /tmp/windows
+          gh run download 40219232663 --repo "${{ github.repository }}" --name M-iCare-Android-Test-APK --dir /tmp/android
+          gh run download 40219232794 --repo "${{ github.repository }}" --name M-iCare-Windows-Setup-UNSIGNED-TEST --dir /tmp/windows
+          test -s /tmp/android/app-debug.apk
+          test -s /tmp/windows/M-iCare-Setup-1.9.0.exe
+          cp /tmp/android/app-debug.apk release-files/M-iCare-1.9.0-Android-TEST.apk
+          cp /tmp/windows/M-iCare-Setup-1.9.0.exe release-files/M-iCare-Setup-1.9.0.exe
+          ( cd /tmp/android && zip -j "$GITHUB_WORKSPACE/release-files/M-iCare-1.9.0-Android-TEST.zip" app-debug.apk )
+          ( cd /tmp/windows && zip -j "$GITHUB_WORKSPACE/release-files/M-iCare-1.9.0-Windows-TEST.zip" M-iCare-Setup-1.9.0.exe )
+          ( cd release-files && sha256sum *.apk *.exe > SHA256SUMS.txt )
+          ls -lh release-files
+      - name: Publish direct public pre-release downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v1.9.0-TEST-20261025" release-files/* \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "M-iCare 1.9.0 TEST – Android und Windows" \
+            --prerelease \
+            --notes "Testversion aus dem Prüfzwei(g) für eigene Kundentests. Android APK und Windows EXE jeweils auch als ZIP direkt herunterladen (GitHub-Releases, keine Anmeldung nötig). Bestehende Daten vor der Installation als JSON sichern. Nicht digital signiert; Kundendaten, Rechnungsversand und Synchronisation vor Produktiveinsatz prüfen."

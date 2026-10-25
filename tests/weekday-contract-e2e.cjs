@@ -1,0 +1,98 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const {chromium}=require('playwright'),{firstRun}=require('./auth-test-helper.cjs');
+const root=path.resolve(__dirname,'..');
+const server=http.createServer((req,res)=>{
+ const url=new URL(req.url,'http://127.0.0.1');
+ const p=path.resolve(root,'.'+decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname));
+ if(p!==root&&!p.startsWith(root+path.sep))return res.writeHead(403).end();
+ fs.readFile(p,(err,data)=>err?res.writeHead(404).end():res.writeHead(200,{'Content-Type':({'.js':'text/javascript','.svg':'image/svg+xml','.html':'text/html'})[path.extname(p)]||'application/octet-stream'}).end(data));
+});
+(async()=>{
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:1280,height:1000},acceptDownloads:true});
+ page.setDefaultTimeout(20000);
+ page.on('dialog',d=>d.accept());
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ try{
+  await page.goto('http://127.0.0.1:'+server.address().port+'/');
+  await firstRun(page);
+  await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
+  await page.evaluate(async()=>{
+   state={version:2,employees:['Testkraft'],entries:[],customers:[{id:'test-c',name:'Testkunde',publicNumber:'1',address:'Teststr. 1',zip:'58095',city:'Hagen',email:'kunde@example.invalid'}],objects:[{id:'test-o',customerId:'test-c',name:'Büro',publicNumber:'1.1'}],appointments:[],appointmentTrash:[],quotes:[],quoteSettings:{TaxMode:'small'},changeHistory:[]};
+   await saveState();updateCustomerSelects();MiCareQuoteUI.refresh();
+  });
+  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.locator('#qCustomer').selectOption('test-c');
+  await page.locator('#qObject').selectOption('test-o');
+  await page.locator('#qScope').selectOption('windows');
+  await page.locator('#qWindowPicker [data-window="standard"]').click();
+  await page.locator('.quoteWindowRow input[type="number"]').first().fill('5');
+  await page.locator('#qService').fill('Fensterreinigung');
+  await page.locator('#qManualNet').fill('900');
+  await page.locator('#qPlanMode').selectOption('range');
+  await page.locator('#qPlanDate').fill('2026-11-03');
+  await page.locator('#qPlanEndDate').fill('2026-12-31');
+  await page.locator('#qPlanEmployee').selectOption('Testkraft');
+  await page.locator('#qPlanStart').fill('09:00');
+  await page.locator('#qPlanEnd').fill('11:00');
+  await page.locator('#qPlanEveryWeeks').selectOption('1');
+  await page.locator('#qPlanReminderDays').selectOption('30');
+  await page.locator('#qPlanWeekdays input[value="2"]').check();
+  await page.locator('#qPlanWeekdays input[value="3"]').check();
+  await page.locator('#qPlanPreviewButton').click();
+  assert.equal(await page.locator('#qVisits').inputValue(),'18');
+  assert((await page.locator('#qPlanPreview').innerText()).includes('30.12.2026'));
+  await page.locator('#qSave').click();
+  await page.waitForFunction(()=>state.quotes.some(q=>q.kind==='quote'&&q.calculation.visits===18));
+  const quote=await page.evaluate(()=>state.quotes.find(q=>q.kind==='quote'&&q.calculation.visits===18));
+  assert.deepEqual(quote.formValues.PlanWeekdays,[2,3]);
+  assert.equal(await page.evaluate(()=>state.appointments.length),0,'Draft must not create AK');
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.evaluate(()=>{calendarMonth='2026-12';chosenDay='2026-12-30';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
+  let overview=await page.locator('#selectedDayList').innerText();
+  assert(overview.includes('ANGEBOTSENTWURF')&&overview.includes('noch KEINE Arbeitskarte'));
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.locator('#qSavedSearch').fill(quote.number);
+  await page.locator('.quoteSavedItem button').filter({hasText:'Kunde hat angenommen'}).click();
+  assert((await page.locator('#qAcceptScheduleSummary').innerText()).includes('Di, Mi'));
+  await page.locator('#qAcceptConfirm').click();
+  await page.waitForFunction(id=>state.quotes.find(q=>q.id===id)?.appointmentIds?.length===18,quote.id);
+  const result=await page.evaluate(id=>{
+   const q=state.quotes.find(x=>x.id===id);
+   return {end:q.contractEnd,lead:q.reminderDays,items:q.appointmentIds.map(a=>state.appointments.find(x=>x.id===a))};
+  },quote.id);
+  assert.equal(result.end,'2026-12-31');
+  assert.equal(result.lead,30);
+  assert.equal(result.items.length,18);
+  assert.equal(result.items[0].date,'2026-11-03');
+  assert.equal(result.items.at(-1).date,'2026-12-30');
+  assert(result.items.every(a=>a.status==='open'&&a.plannedInvoiceNetCents===5000));
+  await page.locator('#goHome').click();
+  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.evaluate(()=>{calendarMonth='2026-12';chosenDay='2026-12-30';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
+  overview=await page.locator('#selectedDayList').innerText();
+  assert(overview.includes('AK ')&&overview.includes('Offen')&&!overview.includes('ANGEBOTSENTWURF'));
+  await page.evaluate(id=>{
+   const q=state.quotes.find(q=>q.id===id);
+   q.contractEnd=MiCareSchedulePlanner.addDays(isoDate(),14);
+   q.reminderDays=30;renderContractReminders();
+  },quote.id);
+  await page.locator('#goHome').click();
+  assert((await page.locator('#micareContractReminders').innerText()).includes(quote.number));
+  await page.locator('#micareContractReminders button').filter({hasText:'Kunde kontaktiert'}).click();
+  await page.waitForFunction(id=>Boolean(state.quotes.find(q=>q.id===id)?.reminderDoneAt),quote.id);
+  await page.waitForFunction(number=>!document.getElementById('micareContractReminders').textContent.includes(number),quote.number);
+  await page.reload();
+  const {unlock}=require('./auth-test-helper.cjs');
+  await unlock(page);
+  await page.waitForFunction(number=>!document.getElementById('micareContractReminders').textContent.includes(number),quote.number);
+  assert(await page.evaluate(id=>Boolean(state.quotes.find(q=>q.id===id)?.reminderDoneAt),quote.id),'Acknowledgement must survive restart');
+  assert.deepEqual(errors,[]);
+  console.log('WEEKDAY CONTRACT PASS: 18 Tue/Wed proposal dates, preview ghost calendar, 18 open AK on acceptance, 30-day renewal reminder and acknowledgement');
+ }catch(e){console.error('WEEKDAY CONTRACT FAILED',e);process.exitCode=1}
+ finally{await browser.close();server.close()}
+})().catch(e=>{console.error(e);server.close();process.exitCode=1});
