@@ -99,13 +99,13 @@ let activeBrowser=null;
  const newDocument=await page.evaluate(()=>{
   const data=MiCareQuote.compute({scope:'windows',mode:'business',serviceName:'Fensterreinigung',
    area:200,visits:1,hours:2,sqmPerHour:100,hourly:20,nonwage:20,overhead:15,productivity:90,
-   material:2,km:8,perKm:0.7,margin:25,minNet:0,vat:19,manualNet:0,
+   material:2,km:8,perKm:0.7,margin:25,minNet:0,vat:0,manualNet:0,
    windowItems:[{label:'Standardfenster',qty:10,each:1.5,rate:8,sides:2,soil:1.3,frame:true,ladder:true,lift:false}]});
   const d={id:'synthetic-qa-offer',kind:'quote',number:'KV-QA-2026-001',date:'2026-10-25',
    customerName:'Nordstern Büroservice GmbH',customerAddress:'Musterweg 1, 58095 Hagen',
    sellerName:'M-iCare Testfirma',sellerAddress:'Teststraße 2, 58095 Hagen',sellerTaxId:'QA-123',
    sellerEmail:'synthetisch@example.invalid',service:'Glas- & Fensterreinigung',serviceDate:'2026-10-19',validUntil:'2026-11-23',
-   rows:data.rows,net:data.net,tax:data.tax,gross:data.gross,vat:data.vat};
+   rows:data.rows,net:data.net,tax:data.tax,gross:data.gross,vat:data.vat,taxMode:'small'};
   return d;
  });
  await page.evaluate(d=>{window.__qaQuoteDoc=d},newDocument);
@@ -116,7 +116,7 @@ let activeBrowser=null;
   window.__qaQuoteDoc.kind='quote';window.__qaQuoteDoc.validUntil='2026-11-23';
   const items=Array.from({length:8},(_,i)=>({id:String(i),label:'Fensterart '+(i+1),qty:1,each:i+1,rate:7,sides:2,soil:1,frame:false,ladder:false,lift:false}));
   const data=MiCareQuote.compute({scope:'windows',area:200,visits:1,hours:2,sqmPerHour:100,hourly:20,nonwage:20,overhead:15,productivity:90,material:3,km:5,perKm:0.70,margin:25,minNet:0,vat:19,manualNet:0,windowItems:items});
-  Object.assign(window.__qaQuoteDoc,{rows:data.rows,net:data.net,tax:data.tax,gross:data.gross,vat:data.vat});
+  Object.assign(window.__qaQuoteDoc,{rows:data.rows,net:data.net,tax:data.tax,gross:data.gross,vat:data.vat,taxMode:'regular'});
  });
  await fromBlob('12_Kostenvoranschlag_8_Fensterpositionen_Mehrseitig.pdf',"MiCareQuote.pdf(window.__qaQuoteDoc)",{expectPagesMin:2});
  // 5. Alle druckbaren Reporting-Reiter: Browser-Druck-PDF statt Webseiten-Screenshot.
