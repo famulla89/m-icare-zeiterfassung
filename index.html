@@ -163,8 +163,11 @@
    <div><label for="qSellerAddress">Firmenanschrift</label><input id="qSellerAddress" maxlength="300" placeholder="Straße, PLZ Ort"></div>
    <div><label for="qSellerTax">Steuernummer / USt-IdNr.</label><input id="qSellerTax" maxlength="80" placeholder="Für Rechnung erforderlich"></div>
    <div><label for="qSellerEmail">Kontakt-E-Mail</label><input id="qSellerEmail" maxlength="160" placeholder="kontakt@firma.de"></div>
+   <div><label for="qSellerPhone">Kontakttelefon (optional)</label><input id="qSellerPhone" type="tel" maxlength="50" placeholder="0162 …"></div>
    <div><label for="qIban">IBAN (nur auf Rechnungsentwurf)</label><input id="qIban" maxlength="60" placeholder="DE…"></div>
   </div>
+  <p class="hint">Firmendaten aus öffentlichen Einträgen: Lippestraße 9, 58097 Hagen. Falls sich der Firmensitz geändert hat, bitte vor dem Versand prüfen. Steuernummer und IBAN werden niemals aus dem Internet übernommen.</p>
+  <p><button type="button" class="secondary" id="qApplyPublicCompany">🏢 Öffentliche M-iCare-Kontaktdaten übernehmen</button></p>
   <label for="qNotes">Konditionen / Hinweise</label><textarea id="qNotes" maxlength="1200" rows="3" placeholder="Leistungsumfang, Zahlungsbedingungen, Ausnahmen…"></textarea>
   <div id="qCalculationMessage" class="hint" aria-live="polite"></div>
   <div class="quoteSummary" id="qSummary" role="status" aria-live="polite">Werte eingeben – die Kalkulation wird automatisch aktualisiert.</div>
