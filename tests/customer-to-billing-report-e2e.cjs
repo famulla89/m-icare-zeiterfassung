@@ -633,6 +633,59 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
    assert.deepEqual(missed,[],'Missing required inputs on '+screen);
   }
   ok('Alle 12 Hauptmasken öffnen ohne fehlende kritische Eingabefelder oder JavaScriptfehler');
+  // Mobile navigation and microphone / old customer address compatibility.
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>showScreen('customersPanel'));
+  await page.locator('#selectedCustomer').selectOption(created.customer.id);
+  await page.locator('#selectedObject').selectOption(created.object.id);
+  assert.equal(await page.locator('#editCustomerAddress').inputValue(),'Beispielweg','Old street is split without losing text');
+  assert.equal(await page.locator('#editCustomerHouseNumber').inputValue(),'4','Existing customer house number preserved');
+  assert.equal(await page.locator('#newObjectAddress').inputValue(),'Objektweg','Existing branch street is split');
+  assert.equal(await page.locator('#newObjectHouseNumber').inputValue(),'8','Existing branch house number preserved');
+  assert(await page.locator('#editCustomerZip').locator('xpath=..').locator('button[data-voice="editCustomerZip"]').isVisible(),'Customer ZIP mic is visible');
+  assert(await page.locator('#newObjectZip').locator('xpath=..').locator('button[data-voice="newObjectZip"]').isVisible(),'Branch ZIP mic is visible');
+  assert(await page.locator('#editCustomerCity').locator('xpath=..').locator('button[data-voice="editCustomerCity"]').isVisible(),'Town mic is visible');
+  assert(await page.locator('#editCustomerPhone').locator('xpath=..').locator('button[data-voice="editCustomerPhone"]').isVisible(),'Phone mic is visible');
+  await page.evaluate(()=>{
+    applySpeechResult('editCustomerZip','fünf acht null neun sieben');
+    applySpeechResult('newObjectZip','5 8 0 9 7');
+    applySpeechResult('editCustomerHouseNumber','neun a');
+    applySpeechResult('newObjectHouseNumber','zwölf a');
+    applySpeechResult('editCustomerMobile','null eins sieben sechs zwei drei vier');
+  });
+  assert.equal(await page.locator('#editCustomerZip').inputValue(),'58097');
+  assert.equal(await page.locator('#newObjectZip').inputValue(),'58097');
+  assert.equal(await page.locator('#editCustomerHouseNumber').inputValue(),'9a');
+  assert.equal(await page.locator('#newObjectHouseNumber').inputValue(),'12a');
+  assert.equal(await page.locator('#editCustomerMobile').inputValue(),'0176234');
+  await page.evaluate(()=>applySpeechResult('editCustomerZip','vier fünf'));
+  assert.equal(await page.locator('#editCustomerZip').inputValue(),'58097','Unclear ZIP dictation must not corrupt valid value');
+  await page.locator('#saveCustomerChanges').click();
+  await page.waitForFunction(id=>{
+    const c=state.customers.find(c=>c.id===id);
+    return c?.houseNumber==='9a'&&c?.street==='Beispielweg'&&c?.address==='Beispielweg 9a'&&c?.zip==='58097';
+  },created.customer.id);
+  const objectAddress=await page.evaluate(id=>{
+    const o=state.objects.find(o=>o.id===id);
+    return {street:o.street,houseNumber:o.houseNumber,address:o.address,zip:o.zip};
+  },created.object.id);
+  assert.deepEqual(objectAddress,{street:'Objektweg',houseNumber:'12a',address:'Objektweg 12a',zip:'58097'});
+  await page.evaluate(()=>window.scrollTo(0,1200));
+  await page.waitForTimeout(80);
+  const navigation=await page.evaluate(()=>{
+    const r=document.getElementById('backbar').getBoundingClientRect();
+    return {top:r.top,bottom:r.bottom,afterHeader:document.querySelector('.wrap > header').nextElementSibling.id==='backbar'};
+  });
+  assert(navigation.afterHeader,'Back/Home navigation must sit directly below the header');
+  assert(navigation.top>=-1&&navigation.top<20,'Mobile Back/Home must stay sticky near top, got '+JSON.stringify(navigation));
+  await page.locator('#goHome').click();
+  assert(await page.locator('#home').isVisible(),'Startseite button returns home');
+  assert(await page.locator('#backbar').isHidden(),'Navigation bar hides on home');
+  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#goBack').click();
+  assert(await page.locator('#home').isVisible(),'Back button returns to previous screen');
+  await page.setViewportSize({width:1400,height:980});
+  ok('Mobile Zurück/Startseite oben fixiert; PLZ 58097, getrennte Hausnummer, Spracheingabe und Altadressen getestet');
   assert.deepEqual(errors,[],'No unhandled browser JavaScript errors');
   fs.writeFileSync(path.join(out,'QA-ERGEBNIS.json'),JSON.stringify({created:new Date().toISOString(),customer:created.customer.publicNumber,object:created.object.publicNumber,ak:ak.akNumber,date:ak.date,offer:offer.number,invoiceDraft:invoice.number,tests:checkpoints,dialogs},null,2));
   console.log('WORKFLOW ALL PASS: '+checkpoints.length+' checkpoints');
