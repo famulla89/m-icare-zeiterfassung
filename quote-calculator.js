@@ -82,16 +82,16 @@
   const serviceTitle=scope==='rooms'?'Raum- und Bodenreinigung':scope==='combined'?'Raum- und Bodenreinigung':scope==='windows'?'Anfahrt, Rüstzeit und Material':String(v.serviceName||'Sonstige Dienstleistung').trim().slice(0,120)||'Sonstige Dienstleistung';
   const rows=[];
   if(scope!=='windows'){
-   rows.push({title:serviceTitle+' · '+visits+' Einsatz/Einsätze',quantity:1,unit:'Pauschale',total:euro(recommendNet-windowsNet-liftRental)});
+   rows.push({title:serviceTitle+' · '+visits+(visits===1?' Einsatz':' Einsätze'),quantity:1,unit:'Pauschale',total:euro(recommendNet-windowsNet-liftRental)});
   }
   if(windowWork){
    for(const w of windowItems)rows.push({
-    title:w.label+' · '+w.qty+' × '+w.each+' m² · '+(w.sides===2?'beidseitig':'einseitig')+(w.frame?' · Rahmen/Falz':'')+(w.ladder?' · Leiter':'')+(w.lift?' · Hebebühne':'')+' · '+visits+' Einsatz/Einsätze',
+    title:w.label+' · '+w.qty+' × '+w.each+' m² · '+(w.sides===2?'beidseitig':'einseitig')+(w.frame?' · Rahmen/Falz':'')+(w.ladder?' · Leiter':'')+(w.lift?' · Hebebühne':'')+' · '+visits+(visits===1?' Einsatz':' Einsätze'),
     quantity:1,unit:'Pauschale',total:euro(w.total*visits)
    });
   }
   if(scope==='windows'&&recommendNet>windowsNet+liftRental){
-   rows.push({title:'Anfahrt, Rüstzeit, Material und Gemeinkosten · '+visits+' Einsatz/Einsätze',quantity:1,unit:'Pauschale',total:euro(recommendNet-windowsNet-liftRental)});
+   rows.push({title:'Anfahrt, Rüstzeit, Material und Gemeinkosten · '+visits+(visits===1?' Einsatz':' Einsätze'),quantity:1,unit:'Pauschale',total:euro(recommendNet-windowsNet-liftRental)});
   }
   if(liftRental>0)rows.push({title:'Hebebühne – separate Miete / Aufwand',quantity:1,unit:'Pauschale',total:liftRental});
   if(rows.length===0)throw Error('Keine berechenbare Leistung');
