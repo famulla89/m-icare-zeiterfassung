@@ -1191,12 +1191,16 @@ function renderCalendar(){
   const line=el('div','📅 '+akLabel(x.appointment)+' · '+x.start+'–'+x.end+' · '+customerDisplay(c)+' · '+(state.objects.find(o=>o.id===x.appointment.objectId)?.name||'')+' · '+x.appointment.service+' · '+(done?'✓ Erledigt':entry?'In Bearbeitung':'Offen'));
   line.className='appt';
   const actions=el('div','');actions.className='row';actions.style.marginTop='6px';
-  const edit=el('button','✏️ AK bearbeiten');edit.type='button';edit.className='secondary smallbtn';edit.onclick=()=>editAppointmentFromCalendar(x);actions.append(edit);
-  const work=el('button',entry?'📝 Arbeitszeit bearbeiten':'📝 Arbeit dokumentieren');work.type='button';work.className='secondary smallbtn';work.onclick=()=>completeAppointment(x);actions.append(work);
+  if(!done){const edit=el('button','✏️ AK bearbeiten');edit.type='button';edit.className='secondary smallbtn';edit.onclick=()=>editAppointmentFromCalendar(x);actions.append(edit)}
+  const work=el('button',done?'📝 Dokumentation korrigieren':entry?'📝 Arbeitszeit bearbeiten':'📝 Arbeit dokumentieren');work.type='button';work.className='secondary smallbtn';work.onclick=()=>completeAppointment(x);actions.append(work);
   if(done){
-   const invoice=el('button','🧾 Rechnung erstellen');invoice.type='button';invoice.className='secondary smallbtn';
-   invoice.onclick=()=>{showScreen('quoteCalculator');window.MiCareQuoteUI?.openForAppointment(x.appointment.id,x.originalDate)};
-   actions.append(invoice);
+   const billed=(state.quotes||[]).some(q=>q.kind==='invoice'&&q.finalizedAt&&q.appointmentId===x.appointment.id);
+   if(billed){actions.append(el('span','🧾 Bereits endgültig abgerechnet'))}
+   else{
+    const invoice=el('button','🧾 Rechnung erstellen');invoice.type='button';invoice.className='secondary smallbtn';
+    invoice.onclick=()=>{showScreen('quoteCalculator');window.MiCareQuoteUI?.openForAppointment(x.appointment.id,x.originalDate)};
+    actions.append(invoice);
+   }
   }
   line.append(actions);area.append(line);
  }
