@@ -1,4 +1,5 @@
 'use strict';
+const {firstRun,unlock}=require('./auth-test-helper.cjs');
 // Full realistic UI path: create customer/object, plan AK, complete, quote, invoice draft, standalone quote, reporting.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
@@ -23,6 +24,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
  page.on('dialog',async d=>{dialogs.push(d.message());await d.accept()});
  try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
+ await firstRun(page);
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
   await page.evaluate(async()=>{
    state={version:1,employees:['Testkraft'],entries:[],customers:[],objects:[],appointments:[],appointmentTrash:[],changeHistory:[],quotes:[],quoteSettings:{TaxMode:'small'},lastSave:null,lastBackup:null};
@@ -54,6 +56,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   ok('Kunde und Geschäftsstelle per Bedienoberfläche angelegt','Kunde '+created.customer.publicNumber+' / Objekt '+created.object.publicNumber);
 
   await page.reload();
+  await unlock(page);
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
   await page.waitForFunction(()=>state.customers.length===1&&state.objects.length===1);
   ok('Kunden- und Objektdaten nach Neustart persistent');
@@ -244,6 +247,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(await page.locator('.quoteSavedItem').count(),2,'Search by assigned AK finds offer and invoice');
   await page.locator('#qSavedSearch').fill('');
   await page.reload();
+  await unlock(page);
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
   await page.locator('#home [data-jump="quoteCalculator"]').click();
   assert.equal(await page.locator('.quoteSavedItem').count(),3,'Document overview survives restart');
