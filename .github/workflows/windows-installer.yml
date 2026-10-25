@@ -40,6 +40,7 @@ jobs:
           node tests/reporting-smoke.cjs
           node tests/cloud-transfer-smoke.cjs
           node tests/quote-calculator-smoke.cjs
+          node tests/logic-fuzz-smoke.cjs
           node --check tests/browser-e2e.cjs
       - name: Install dependencies
         working-directory: windows-app
