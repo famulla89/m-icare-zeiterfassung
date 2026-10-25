@@ -128,6 +128,32 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testdata'
   assert(exports.excelSizes.every(size=>size>100)&&exports.excelSignatures.every(sig=>sig[0]===80&&sig[1]===75),'Windows customer/appointment/work Excel exports');
   assert(exports.backupCount===fixture.entries.length&&exports.backupAkCount===fixture.appointments.length,'Windows backup retains AK data');
 
+  // Exercise the real Windows folder bridge and verify files exist on disk after save.
+  assert(await page.evaluate(()=>Boolean(window.MiCareDesktopFiles)),'Packaged Electron preload must expose safe desktop filesystem bridge');
+  const folderQa=path.join(process.env.RUNNER_TEMP||'.','micare-selected-folder-qa');
+  fs.mkdirSync(folderQa,{recursive:true});
+  await app.evaluate(({dialog},folder)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[folder]})},folderQa);
+  await page.evaluate(()=>chooseFolder());
+  await page.waitForFunction(()=>desktopBackupFolder.length>0);
+  const selected=await page.evaluate(()=>desktopBackupFolder);
+  assert.equal(path.resolve(selected),path.resolve(folderQa));
+  const backupPath=path.join(folderQa,'Backups','M-iCare_Aktueller_Stand.json');
+  assert(fs.existsSync(backupPath),'Windows folder must contain automatic JSON full backup');
+  const backupContents=JSON.parse(fs.readFileSync(backupPath,'utf8'));
+  assert.equal(backupContents.customers.length,fixture.customers.length,'Native backup must contain customers');
+  assert.equal(backupContents.appointments.length,fixture.appointments.length,'Native backup must contain AKs');
+  const pdfData=await page.evaluate(async()=>{
+   const file=createOrderStatusPdf('2026-10','');
+   return saveExport('M-iCare_AK_Windows-Folder-QA.pdf',file,'Reporting');
+  });
+  assert.equal(pdfData,true,'Native PDF save must report folder success');
+  const exported=path.join(folderQa,'Reporting','M-iCare_AK_Windows-Folder-QA.pdf');
+  assert(fs.existsSync(exported),'Native PDF must exist under selected folder/Reporting');
+  assert.equal(fs.readFileSync(exported).subarray(0,5).toString(),'%PDF-','Native PDF signature');
+  assert(fs.existsSync(path.join(folderQa,'Kostenvoranschlaege','Kostenvoranschlaege_Uebersicht.json')));
+  assert(fs.existsSync(path.join(folderQa,'Rechnungsentwuerfe','Rechnungsentwuerfe_Uebersicht.json')));
+  console.log('NATIVE WINDOWS FOLDER PASS: folder chosen, automatic complete backup and separate document indexes, PDF persisted');
+
   assert(!pageerrors.length,'Windows renderer JavaScript errors: '+pageerrors.join('; '));
   console.log('NATIVE WINDOWS ELECTRON E2E PASS: offline protocol, AK search, completed correction, reason, no duplicates, quality reports');
  } finally {await app.close();}
