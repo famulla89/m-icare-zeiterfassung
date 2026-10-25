@@ -127,6 +127,7 @@
  function createDocument(d){validateDocument(d);return structuredClone(d)}
  async function pdf(d){
   validateDocument(d);
+  if(d.taxMode==='small'&&(d.vat!==0||d.tax!==0))throw Error('Kleinunternehmer-Rechnung darf keine Umsatzsteuer ausweisen');
   if(typeof document==='undefined')throw Error('PDF benötigt Browsergrafik');
   const W=1240,H=1754,blue='#124e8a',dark='#152b42',muted='#516478',jpgs=[];
   const euros=n=>Number(n).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
@@ -199,7 +200,11 @@
    if(pageIndex===pageCount-1){
     y+=25;c.strokeStyle='#bdcde0';c.beginPath();c.moveTo(70,y);c.lineTo(1170,y);c.stroke();y+=50;
     write('Netto',710,y,230);write(euros(d.net),1000,y,180,'bold 24px Arial');y+=49;
-    write('USt. '+d.vat+' %',710,y,240);write(euros(d.tax),1000,y,180,'bold 24px Arial');y+=62;
+    if(d.taxMode==='small'){
+     y+=write('Umsatzsteuerfrei gemäß § 19 UStG (Kleinunternehmerregelung).',70,y,1050,'20px Arial');
+    }else{
+     write('USt. '+d.vat+' %',710,y,240);write(euros(d.tax),1000,y,180,'bold 24px Arial');y+=62;
+    }
     c.fillStyle=blue;c.fillRect(700,y-40,470,70);write('Gesamt',720,y+5,250,'bold 29px Arial','#fff');write(euros(d.gross),970,y+5,185,'bold 29px Arial','#fff');y+=100;
     if(d.kind==='quote')y+=write('Angebot gültig bis: '+(formatPdfDate(d.validUntil)||'bitte ergänzen'),70,y,1030);
     else{
