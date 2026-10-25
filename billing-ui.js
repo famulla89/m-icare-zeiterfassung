@@ -44,6 +44,19 @@
    const first=selected[0],last=selected.at(-1),today=new Date(),iso=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
    const seller=profile||{},kind=end?'final':'partial';
    const prior=st.invoices.map(d=>d.number+' ('+euros(d.net)+' netto)').join('; ');
+   // Die Schlussrechnung erhält den vollständigen Leistungsnachweis auch für bereits abgerechnete AK.
+   // Geld wird nur für die offenen AK berechnet.
+   const performedWork=end?st.slots.map(slot=>{
+    const entries=(data.entries||[]).filter(e=>e.appointmentId===slot.id&&(e.appointmentOccurrence||e.date)===slot.ak.date);
+    const record=entries.at(-1)||{};
+    return {
+     appointmentId:slot.id,akNumber:String(slot.ak.akNumber||slot.index),
+     date:slot.ak.date,service:String(slot.ak.service||quote.service||'Reinigungsleistung'),
+     workDone:String(record.workDone||slot.ak.workInstructions||'Leistung gemäß Arbeitskarte ausgeführt'),
+     employee:String(record.employee||slot.ak.employee||''),
+     net:slot.netCents/100,priorInvoice:slot.invoice?.number||''
+    };
+   }):[];
    const notes=end?(st.invoices.length?'Schlussabrechnung zum Angebot '+quote.number+'. Bisherige Teilrechnungen: '+prior+'. Diese Rechnung enthält ausschließlich die noch nicht berechneten Leistungen.':'Schlussabrechnung zum Angebot '+quote.number+' über sämtliche erledigten Leistungen.'):'Teilrechnung für AK '+(first.ak.akNumber||first.index)+' von '+st.total+'. Weitere Arbeitskarten werden erst nach Erledigung separat berechnet.';
    const fields={
     id:root.crypto?.randomUUID?.()||'bill-'+Date.now(),kind:'invoice',invoiceType:kind,
@@ -63,7 +76,7 @@
     rows:[{title:end?'Restleistungen / Schlussrechnung zum Auftrag':('AK '+(first.ak.akNumber||first.index)+' – '+(quote.service||'Reinigung')),
      quantity:selected.length,unit:'Einsatz',price:totalNet/100/selected.length,total:totalNet/100}],
     calculation:{visits:1},formValues:{},
-    precedingInvoiceNumbers:st.invoices.map(d=>d.number),orderNetTotal:allNet/100,alreadyInvoicedNet:st.paidNetCents/100
+    performedWork,precedingInvoiceNumbers:st.invoices.map(d=>d.number),orderNetTotal:allNet/100,alreadyInvoicedNet:st.paidNetCents/100
    };
    return fields;
   },
