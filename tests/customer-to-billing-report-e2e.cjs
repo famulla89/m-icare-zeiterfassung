@@ -573,6 +573,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(finalDoc.net,900);
   assert.equal(finalDoc.invoiceType,'final');
   assert.equal(finalDoc.alreadyInvoicedNet,100);
+  assert(finalDoc.serviceDate.includes(' – '),'Schlussrechnung nennt den Leistungszeitraum über mehrere AK');
   const closingPdf=await page.evaluate(async doc=>{
     let heading='';const original=CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText=function(text,...args){
