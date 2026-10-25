@@ -9,6 +9,9 @@ on:
       - cloud-transfer.js
       - quote-calculator.js
       - quote-ui.js
+      - login-gate.js
+      - tests/auth-login-e2e.cjs
+      - tests/auth-test-helper.cjs
       - tests/browser-e2e.cjs
       - tests/customer-to-billing-report-e2e.cjs
       - tests/chaos-input-e2e.cjs
@@ -17,6 +20,9 @@ on:
   pull_request:
     paths:
       - index.html
+      - login-gate.js
+      - tests/auth-login-e2e.cjs
+      - tests/auth-test-helper.cjs
       - tests/browser-e2e.cjs
       - .github/workflows/browser-e2e.yml
 jobs:
@@ -36,6 +42,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test customer, worktime, planned correction, reporting, PDF, backup
         run: |
+          node tests/auth-login-e2e.cjs
           node tests/quote-calculator-smoke.cjs
           node tests/browser-e2e.cjs
           node tests/customer-to-billing-report-e2e.cjs
