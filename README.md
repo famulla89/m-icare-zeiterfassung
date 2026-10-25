@@ -1,6 +1,20 @@
-# M-iCare Zeiterfassung – Testversion 1.8.0
+# M-iCare Zeiterfassung – Testversion 1.9.0
 
-## Auftragsplanung mit Wochentagen und Kunden-Erinnerung (Testversion 1.8.0)
+## Angenommene Angebote und Arbeitskarten – Version 1.9.0
+
+- Im **Angebots- & Rechnungsrechner** das Angebot wie gewohnt speichern. Ohne Kundenannahme wird nichts verbindlich gebucht.
+- Mit **„Kunde hat angenommen · AK planen“** öffnet sich ein Dialog mit der konkreten **AK-Liste**. Für jede zukünftige Arbeitskarte werden Datum, geplante Start-/Endzeit und verantwortlicher Mitarbeiter angezeigt und vor dem Anlegen anpassbar. Der kalkulierte Leistungsumfang und die Positionen sowie Angebotsnotizen füllen die editierbare **Arbeitsanweisung für Mitarbeiter**.
+- Der Nutzer bestätigt **„Arbeitskarten verbindlich anlegen“**. Erst jetzt speichert M-iCare eine offene AK für jeden angenommenen Termin, mit Original-Angebotsnummer, Leistung, Kunden- und Objektzuordnung, Mitarbeiter, Arbeitsanweisung und centgenauem Anteil des Angebotsbetrags. Kein Mitarbeiter erhält dadurch geleistete Arbeitszeit oder den Status „Erledigt“.
+- Direkt danach erscheint **Aufträge & Reinigungstermine → Angenommene Aufträge**. Die Aufträge sind nach Kunde und Angebotsnummer durchsuchbar und nach Bearbeitungsstand filterbar. Jeder Auftrag zeigt den Gesamtstatus; die aufklappbaren AKs erlauben **AK bearbeiten**, **Arbeit dokumentieren** und erst nach Abschluss **Rechnung erstellen**.
+- Auf dem PDF-Angebotsarchiv gibt es außerdem **„Angenommenen Auftrag öffnen“** als direkte Verknüpfung.
+- Für die Zeiterfassung wird der ursprüngliche Auftragstext oberhalb der Mitarbeiter-Eingabemaske eingeblendet. Tatsächliche Zeiten und durchgeführte Arbeiten werden getrennt erfasst, um Angebot und Ist-Leistung nicht zu verwechseln.
+- Ein zweiter Annahmeversuch wird unterbunden; bereits angenommene Angebote bleiben geschützt. Vor der Annahme erkennt der Dialog Konflikte mit vorhandenen Terminen und zwischen neu geplanten AKs.
+- **Regression:** Kundenanlage, mehrere Geschäftsstellen, acht/fünf/18 Termine, Angebot, pro-AK-Vorschau mit editierbarer Uhrzeit, AK-Status, Kalendersicht, Rechnung, E-Mail mit PDF, Datensicherung, Reporting, 12 Hauptmasken mit Pflichtfeldern sowie Windows/Android-Installationspakete.
+
+**Hinweis:** Die Freigabe in PR #39 bleibt ein Teststand. Vor produktivem Rechnungsversand und geräteübergreifender Benutzung bitte Rechnungsnummern-Vergabe, steuerliche Angaben, Signierung, Kunden-Datenschutz und Datensynchronisierung gesondert absichern.
+
+
+## Auftragsplanung mit Wochentagen und Kunden-Erinnerung (Testversion 1.9.0)
 
 **Beispiel:** Ein Kunde bucht vom 03.11. bis 31.12.2026 jeweils dienstags und mittwochs eine Fensterreinigung. Im Angebots- und Rechnungsrechner „Zeitraum mit festen Wochentagen“ auswählen, Anfang/Ende, **Di** und **Mi**, Mitarbeiter und Uhrzeiten eintragen. M-iCare berechnet 18 Einsätze. Bei 900 € netto entstehen nach Annahme 18 offene AK zu je 50 € netto.
 
