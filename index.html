@@ -158,7 +158,7 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
   </details>
   <div class="quoteModes" role="group" aria-label="Betriebsmodus"><label><input type="radio" name="qMode" value="business" checked> 🧑‍🔧 Betrieb / Personal</label><label><input type="radio" name="qMode" value="solo"> 👤 Solo</label></div>
   <div class="grid">
-   <div><label for="qVisits">Reinigungseinsätze im Abrechnungszeitraum</label><input id="qVisits" type="number" min="1" max="52" step="1" value="1"></div>
+   <div><label for="qVisits">Reinigungseinsätze im Abrechnungszeitraum</label><input id="qVisits" type="number" min="1" max="104" step="1" value="1"></div>
    <div><label for="qHours">Arbeitsstunden pro Einsatz (z. B. 2 oder 0,5 – NICHT Minuten; 0 = Raumfläche automatisch)</label><input id="qHours" type="number" min="0" step="0.25" value="0"></div>
    <div class="qRoomsOnly"><label for="qSqmHour">Raum-/Bodenfläche m² pro Stunde (nur wenn Stunden=0)</label><input id="qSqmHour" type="number" min="1" step="1" value="100"></div>
    <div><label for="qHourly">Bruttostundenlohn €</label><input id="qHourly" type="number" min="0" step="0.5" value="20"></div>
@@ -1085,6 +1085,11 @@ function renderContractReminders(){
   const item=el('div','');item.style.borderTop='1px solid #d1deea';item.style.padding='9px 0';
   item.append(el('strong',quote.customerName+' · '+quote.number));
   item.append(el('div','Auftragsende: '+formatDate(quote.contractEnd)+' · Kontakt aufnehmen wegen Folgeauftrag'));
+  const c=(state.customers||[]).find(c=>c.id===quote.customerId);
+  if(c){
+   const contact=[c.phone||'',c.mobile||'',c.email||''].filter(Boolean).join(' · ');
+   if(contact)item.append(el('div','☎ '+contact));
+  }
   const actions=el('div','');actions.className='row';actions.style.marginTop='5px';
   const done=el('button','✓ Kunde kontaktiert');done.type='button';done.className='secondary smallbtn';
   done.onclick=async()=>{quote.reminderDoneAt=new Date().toISOString();await saveState();renderContractReminders()};
