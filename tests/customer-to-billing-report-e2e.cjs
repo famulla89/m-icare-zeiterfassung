@@ -369,6 +369,8 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
   assert.equal(await page.locator('#acceptedOrdersList').locator('.appt').count(),5);
   assert((await page.locator('#acceptedOrdersList').innerText()).includes('Offen'));
+  await page.evaluate(()=>renderAppointments());
+  assert.equal(await page.locator('#acceptedOrdersList details[data-quote-id][open]').count(),1,'An expanded order must remain expanded after a calendar refresh');
   // Both large panels must be closable and reopenable.
   await page.locator('#acceptedOrdersPanel > summary').click();
   assert.equal(await page.locator('#acceptedOrdersPanel').evaluate(e=>e.open),false);
@@ -540,6 +542,13 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(finalTen.sourceQuoteNumber,tenQuote.number);
   assert.equal(await page.evaluate(id=>state.quotes.filter(q=>q.finalizedAt&&q.appointmentId===id).length,firstTen[0].id),1);
   ok('TEILRECHNUNG 1/10 als endgültiges PDF mit 100 EUR erstellt, genau einmal gespeichert');
+  await page.evaluate(()=>{showScreen('appointmentsPanel');renderAppointments()});
+  await page.locator('#acceptedOrdersSearch').fill(tenQuote.number);
+  await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
+  assert.equal(await page.locator('#acceptedOrdersList .appt').first().locator('button').filter({hasText:'Teilrechnung 1/10 erstellen'}).count(),0,'A paid AK must not offer another invoice');
+  const billedRow=await page.locator('#acceptedOrdersList .appt').first().innerText();
+  assert(billedRow.includes('Rechnung erstellt'),'Already billed AK must clearly show its invoice status');
+  ok('Abgerechnete Arbeitskarte bietet keine zweite Teilrechnung an');
   // UI MASK REGRESSION: Main work areas must load without missing fields or exceptions.
   const requiredMasks={
    home:['micareContractReminders'],
