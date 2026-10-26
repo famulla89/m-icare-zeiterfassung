@@ -93,8 +93,10 @@ public class MainActivity extends Activity {
             try{
               if(connection.getResponseCode()!=200)throw new java.io.IOException("HTTP "+connection.getResponseCode());
               try(java.io.InputStream stream=connection.getInputStream()){
-                byte[] bytes=stream.readNBytes(250000);
-                result=new String(bytes,StandardCharsets.UTF_8);
+                java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
+                byte[] buffer=new byte[8192];int count;
+                while((count=stream.read(buffer))!=-1){if(output.size()+count>250000)throw new java.io.IOException("Suchantwort zu groß");output.write(buffer,0,count);}
+                result=output.toString("UTF-8");
               }
             }finally{connection.disconnect();}
             String json=result;
