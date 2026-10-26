@@ -480,6 +480,7 @@ tbody tr:nth-child(even){background:#f8fbfe}
 </section>
 <section class="screen" id="customersPanel"><h2>Kundenverwaltung</h2><p class="hint">Wähle einen bestehenden Kunden oder lege einen neuen an. Kundendaten, Reinigungsobjekt und Schlüssel sind in einer gemeinsamen Maske.</p>
 <div class="objectPanel"><div class="row actions"><div id="customerSelectionBlock" style="flex:1;min-width:230px"><label for="selectedCustomer">Kunde auswählen</label><select id="selectedCustomer"></select><p id="newCustomerNotice" class="hint hidden">Neuer Kunde: Bitte die Felder ausfüllen und speichern. Es ist kein bestehender Kunde ausgewählt.</p></div><button type="button" id="newCustomerMode" class="secondary customerModeButton">+ Neuen Kunden anlegen</button></div>
+<div class="objectPanel" id="googleCompanySearch"><h3>🔎 Firma über Google Maps suchen</h3><p class="hint">Firma suchen, Treffer auswählen und verfügbare Stammdaten übernehmen. Ein Google-Maps-API-Schlüssel mit aktivierter Places API (New) ist erforderlich. Die Suche funktioniert nur online; alle Felder bleiben offline manuell ausfüllbar. Es wird kein Schlüssel gespeichert.</p><div class="grid"><div><label for="googlePlacesKey">Google Maps API-Schlüssel (nur für diese Sitzung)</label><input type="password" id="googlePlacesKey" autocomplete="off" placeholder="API-Schlüssel eingeben"></div><div><label for="googlePlacesTarget">Daten übernehmen für</label><select id="googlePlacesTarget"><option value="customer">Neuer Kunde / Kundenanschrift</option><option value="object">Geschäftsstelle / Objektanschrift</option></select></div></div><div class="row" style="margin:12px 0"><button type="button" id="googlePlacesStart" class="secondary">Google-Firmensuche starten</button></div><div id="googlePlacesSearchHost"></div><p class="hint" id="googlePlacesMessage" role="status" aria-live="polite">Manuelle Eingabe ist jederzeit möglich.</p><p class="hint">Firmendaten nach Übernahme prüfen. Eine E-Mail-Adresse stellt Google Places normalerweise nicht bereit. Erst „Kunde und Objekt speichern“ speichert die Daten in M-iCare.</p></div>
 <h3 id="customerFormTitle">Kunden- und Objektdaten bearbeiten</h3><div class="status" id="customerNumberPanel" style="margin:12px 0">Kundennummer und Objektnummer werden automatisch vergeben.</div><h3 style="margin-top:20px">1. Kundendaten</h3><div class="row" id="objectPickerRow"><div style="flex:1;min-width:230px"><label for="selectedObject">Geschäftsstelle / Objekt auswählen</label><select id="selectedObject"></select></div><button type="button" id="newObjectMode" class="secondary customerModeButton">+ Geschäftsstelle hinzufügen</button></div>
 <div class="grid"><div><label for="editCustomerName">Firmenname / Kundenname</label><div class="microw"><input id="editCustomerName" maxlength="100" required><button class="secondary mic" type="button" data-voice="editCustomerName" aria-label="Kundenname diktieren">🎤</button></div></div><div><label for="editCustomerAddress">Kundenstraße</label><div class="microw"><input id="editCustomerAddress" maxlength="180" autocomplete="street-address" placeholder="z. B. Lippestraße"><button class="secondary mic" type="button" data-voice="editCustomerAddress" aria-label="Kundenstraße diktieren">🎤</button></div></div><div><label for="editCustomerHouseNumber">Hausnummer des Kunden</label><div class="microw"><input id="editCustomerHouseNumber" maxlength="16" placeholder="z. B. 9a" inputmode="text"><button class="secondary mic" type="button" data-voice="editCustomerHouseNumber" aria-label="Hausnummer des Kunden diktieren">🎤</button></div></div>
 <div><label for="editCustomerZip">Kunden-PLZ</label><input id="editCustomerZip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" title="Bitte genau fünf Ziffern eingeben" placeholder="z. B. 44135"></div><div><label for="editCustomerCity">Kundenort</label><input id="editCustomerCity" maxlength="100" placeholder="z. B. Dortmund"></div></div><h3 style="margin-top:22px">Kontaktinformationen des Kunden</h3><div class="grid">
@@ -2019,7 +2020,88 @@ for(const field of ['date','endDate','start','end']){const picker=$(field+'Picke
 document.querySelectorAll('[data-picker]').forEach(b=>b.addEventListener('click',()=>openPicker(b.dataset.picker)));
 $('saveCustomerChanges').onclick=saveCustomerChanges;$('selectedObject').onchange=()=>{if(!confirmDiscardChanges())return;newObjectMode=false;fillObjectEditor();captureCurrentScreen()};$('newObjectMode').onclick=()=>{if(!newObjectMode&&!state.customers.some(c=>c.id===$('selectedCustomer').value&&!c.archived))return alert('Bitte zuerst einen Kunden auswählen');if(!confirmDiscardChanges())return;newObjectMode=!newObjectMode;updateObjectPicker();fillObjectEditor();captureCurrentScreen();if(newObjectMode){$('newObjectName').focus();notify('Neue Geschäftsstelle: Namen und Adresse eintragen, dann speichern')}};$('newCustomerMode').onclick=()=>{if(!confirmDiscardChanges())return;if(!newCustomerMode){lastSelectedCustomer=$('selectedCustomer').value;newCustomerMode=true;newObjectMode=false;$('selectedCustomer').value=''}else{newCustomerMode=false;newObjectMode=false;$('selectedCustomer').disabled=false;$('selectedCustomer').value=lastSelectedCustomer;renderCustomers()}fillCustomerEditor();captureCurrentScreen();if(newCustomerMode)$('editCustomerName').focus()};$('customerSearch').oninput=renderAllCustomers;$('customerStateFilter').onchange=renderAllCustomers;$('allCustomersPdf').onclick=exportAllCustomersPdf;$('appointmentForm').onsubmit=addAppointment;$('appointmentRepeat').onchange=toggleAppointmentInterval;$('appointmentEmployeeFilter').onchange=renderAppointments;$('appointmentConflictFilter').onchange=renderAppointments;$('appointmentCustomer').onchange=()=>{updateAppointmentObjects();captureCurrentScreen()};$('appointmentsSort').onchange=renderAppointments;$('appointmentsFilter').onchange=renderAppointments;$('appointmentStatus').onchange=renderAppointments;$('appointmentMonth').onchange=renderAppointments;$('appointmentYear').onchange=renderAppointments;$('selectedCustomer').onchange=()=>{newCustomerMode=false;newObjectMode=false;renderCustomers();captureCurrentScreen()};$('customerChoice').onchange=()=>{const c=state.customers.find(x=>x.id===$('customerChoice').value);if(c)$('object').value=c.name;updateEntryObjects()};$('deleteCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c)return;const entries=state.entries.filter(e=>e.customerId===c.id||(!e.customerId&&e.object?.trim().toLowerCase()===c.name.toLowerCase()));const appointments=state.appointments.filter(a=>a.customerId===c.id);if(entries.length||appointments.length){$('linkedCustomerMessage').textContent='Dieser Kunde hat '+entries.length+' Arbeitszeiteinträge und '+appointments.length+' Terminserien. Diese Daten bleiben erhalten.';const dlg=$('linkedCustomerDialog');$('linkedCustomerNo').onclick=()=>dlg.close();$('linkedCustomerArchive').onclick=async()=>{dlg.close();c.archived=true;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde archiviert – Einträge bleiben erhalten')};dlg.showModal();return}const count=state.objects.filter(o=>o.customerId===c.id).length;if(!confirm('ACHTUNG: Soll der Kunde „'+c.name+'“ mit '+count+' Geschäftsstelle(n) wirklich endgültig gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.'))return;state.customers=state.customers.filter(x=>x.id!==c.id);state.objects=state.objects.filter(o=>o.customerId!==c.id);newCustomerMode=false;newObjectMode=false;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde endgültig gelöscht')};$('archiveCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c||!confirm('Kunden archivieren?'))return;c.archived=true;await saveState();renderCustomers();notify('Kunde archiviert')};
 $('calPrev').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m-2,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};$('calNext').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};
-for(let i=1;i<=12;i++){let o=el('option',new Date(2026,i-1,1).toLocaleDateString('de-DE',{month:'long'}));o.value=String(i).padStart(2,'0');$('appointmentMonth').append(o)}$('appointmentPdf').onclick=()=>{const rows=appointmentRows();const title=$('appointmentStatus').value==='done'?'Geleistete Einsätze':'Geplante Termine';const w=window.open('','_blank');if(!w)return alert('Popup blockiert. Bitte Popups zulassen');const safe=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));w.document.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>M-iCare Terminübersicht</title><style>body{font:14px Arial;margin:30px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #bbb;padding:8px;text-align:left}h1{color:#145284}</style></head><body><h1>'+title+'</h1><p>Gefilterte Übersicht · '+rows.length+' Einträge</p><table><tr><th>Datum</th><th>Uhrzeit</th><th>Kunde / ID</th><th>Objekt / ID</th><th>Leistung</th></tr>'+rows.map(x=>'<tr><td>'+safe(formatDate(x.date))+'</td><td>'+safe(x.start+'–'+x.end)+'</td><td>'+safe(customerDisplay(state.customers.find(c=>c.id===x.customerId)))+'</td><td>'+safe(objectDisplay(state.objects.find(o=>o.id===x.appointment?.objectId)))+'</td><td>'+safe(x.service)+'</td></tr>').join('')+'</table><p>Drucken → Als PDF speichern</p></body></html>');w.document.close();w.focus();w.print()};
+for(let i=1;i<=12;i++){let o=el('option',new Date(2026,i-1,1).toLocaleDateString('de-DE',{month:'long'}));o.value=String(i).padStart(2,'0');$('appointmentMonth').append(o)}$('appointmentPdf').onclick=()=>{const rows=appointmentRows();const title=$('appointmentStatus').value==='done'?'Geleistete Einsätze':'Geplante Termine';const w=window.open('','_blank');if(!w)return alert('Popup blockiert. Bitte Popups zulassen');const safe=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));w.document.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>M-iCare Terminübersicht</title><style>body{font:14px Arial;margin:30px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #bbb;padding:8px;text-align:left}h1{color:#145284}</style></head><body><h1>'+title+'</h1><p>Gefilterte Übersicht · '+rows.length+' Einträge</p><table><tr><th>Datum</th><th>Uhrzeit</th><th>Kunde / ID</th><th>Objekt / ID</th><th>Leistung</th></tr>'+rows.map(x=>'<tr><td>'+safe(formatDate(x.date))+'</td><td>'+safe(x.start+'–'+x.end)+'</td><td>'+safe(customerDisplay(state.customers.find(c=>c.id===x.customerId)))+'</td><td>'+safe(objectDisplay(state.objects.find(o=>o.id===x.appointment?.objectId)))+'</td><td>'+safe(x.service)+'</td></tr>').join('')+'</table><p>Drucken → Als PDF speichern</p><script>
+/* Optional Places lookup: manual and offline customer entry never depends on Google. */
+(function(){
+'use strict';
+let loading=false,ready=false;
+const byId=id=>document.getElementById(id);
+const info=message=>{const n=byId('googlePlacesMessage');if(n)n.textContent=message;};
+const setField=(id,value)=>{const el=byId(id);if(!el||!value)return;el.value=String(value).slice(0,el.maxLength>0?el.maxLength:1000);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));};
+function addressParts(parts){
+ const find=type=>{const c=(parts||[]).find(x=>(x.types||[]).includes(type));return c?(c.longText||c.long_name||''):'';};
+ const street=find('route'),number=find('street_number'),zip=find('postal_code');
+ const city=find('locality')||find('postal_town')||find('administrative_area_level_3');
+ return {street,number,zip,city};
+}
+function existingCustomer(name){
+ const options=Array.from(byId('selectedCustomer')?.options||[]);
+ return options.find(x=>x.value&&x.textContent.trim().toLocaleLowerCase('de').includes(name.trim().toLocaleLowerCase('de')));
+}
+async function onSelection(e){
+ try {
+ const prediction=e.placePrediction;
+ if(!prediction)return info('Kein Google-Treffer ausgewählt.');
+ info('Firmendetails werden geladen …');
+ const place=prediction.toPlace();
+ await place.fetchFields({fields:['displayName','addressComponents','formattedAddress','nationalPhoneNumber','websiteURI']});
+ const name=place.displayName||'',addr=addressParts(place.addressComponents);
+ const target=byId('googlePlacesTarget').value;
+ if(target==='customer'){
+  const duplicate=existingCustomer(name);
+  if(duplicate&&!confirm('Ähnlicher Kunde ist bereits vorhanden: '+duplicate.textContent+'. Trotzdem Daten in die Maske übernehmen?')){info('Übernahme abgebrochen. Bitte bestehenden Kunden auswählen.');return;}
+  if(byId('selectedCustomer')?.value&&!confirm('Aktuell ist ein vorhandener Kunde ausgewählt. Die angezeigten Felder überschreiben (noch nicht speichern)?'))return;
+  if(!byId('selectedCustomer')?.value && byId('newCustomerMode'))byId('newCustomerMode').click();
+  setField('editCustomerName',name);
+  setField('editCustomerAddress',addr.street);
+  setField('editCustomerHouseNumber',addr.number);
+  setField('editCustomerZip',addr.zip);
+  setField('editCustomerCity',addr.city);
+  setField('editCustomerPhone',place.nationalPhoneNumber||'');
+ }else{
+  if(!byId('selectedCustomer')?.value){info('Bitte zuerst einen bestehenden Kunden auswählen und dann eine Geschäftsstelle hinzufügen.');return;}
+  if(!confirm('Objektfelder mit dem ausgewählten Standort überschreiben (noch nicht speichern)?'))return;
+  setField('newObjectName',name);
+  setField('newObjectAddress',addr.street);
+  setField('newObjectHouseNumber',addr.number);
+  setField('newObjectZip',addr.zip);
+  setField('newObjectCity',addr.city);
+ }
+ info('Google-Treffer übernommen: '+name+'. Bitte Adresse, Telefon und fehlende Daten kontrollieren und anschließend manuell speichern.'+(place.websiteURI?' Webseite: '+place.websiteURI:''));
+ }catch(err){info('Google-Daten konnten nicht geladen werden: '+(err?.message||'Unbekannter Fehler')+'. Manuelle Eingabe bleibt möglich.');}
+}
+async function mount(){
+ try{
+ const {PlaceAutocompleteElement}=await google.maps.importLibrary('places');
+ const el=new PlaceAutocompleteElement();
+ el.setAttribute('included-region-codes','de');
+ el.setAttribute('placeholder','Firmenname oder Adresse suchen');
+ el.style.width='100%';
+ el.addEventListener('gmp-select',onSelection);
+ byId('googlePlacesSearchHost').replaceChildren(el);
+ ready=true;info('Google-Firmensuche ist bereit. Suche eine Firma und wähle einen Vorschlag.');
+ }catch(err){loading=false;info('Google Places ist nicht verfügbar: '+(err?.message||'Fehler')+'. Du kannst weiter manuell eingeben.');}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+ byId('googlePlacesStart')?.addEventListener('click',()=>{
+  if(ready){byId('googlePlacesSearchHost')?.querySelector('gmp-place-autocomplete')?.focus();return;}
+  if(loading)return;
+  if(!navigator.onLine){info('Kein Internet. Bitte die Daten wie gewohnt manuell eingeben.');return;}
+  const key=byId('googlePlacesKey')?.value.trim();
+  if(!key){info('Bitte zunächst einen gültigen Google Maps API-Schlüssel eingeben.');return;}
+  loading=true;info('Google Places wird geladen …');
+  window.micarePlacesLoaded=()=>{mount();};
+  window.gm_authFailure=()=>{loading=false;info('Google hat den API-Schlüssel abgelehnt. Bitte API-Freigabe, Abrechnung und Einschränkungen prüfen.');};
+  const script=document.createElement('script');
+  script.async=true;
+  script.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&loading=async&libraries=places&callback=micarePlacesLoaded&v=weekly&language=de&region=DE';
+  script.onerror=()=>{loading=false;info('Google Maps konnte nicht geladen werden. Manuelle Eingabe bleibt möglich.');};
+  document.head.appendChild(script);
+ });
+ window.addEventListener('offline',()=>info('Offline: Firmen-Suche nicht verfügbar. Manuelle Eingabe ist weiterhin möglich.'));
+});
+})();
+</script></body></html>');w.document.close();w.focus();w.print()};
 setupExtraVoiceButtons();document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['home','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history', 'quoteCalculator','billingScreen','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
 let screenDirty=false;
 const editableFields=new Set(['editCustomerName','editCustomerAddress','editCustomerHouseNumber','editCustomerZip','editCustomerCity','newObjectName','newObjectAddress','newObjectHouseNumber','newObjectZip','newObjectCity','keyHolder','keyLocation','employee','service','object','date','endDate','start','end','breakMinutes','notes','linkedAppointment','orderStatus','workDone','orderRemarks','appointmentDate','appointmentStart','appointmentEnd','appointmentRepeat','appointmentInterval','appointmentUntil','newEmployee','editCustomerPhone','editCustomerMobile','editCustomerEmail','customerChoice','entryObjectChoice','deviationReason','deviationNote','correctionReason','correctionNote','appointmentCustomer','appointmentObject','appointmentEmployee','appointmentService','newCustomerName','newCustomerAddress']);
