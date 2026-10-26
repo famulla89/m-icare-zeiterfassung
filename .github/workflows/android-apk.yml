@@ -87,7 +87,7 @@ jobs:
           grep -Fq "application-label:'M-iCare'" /tmp/micare-apk-badging.txt
           unzip -p "$APK" assets/index.html | grep -Fq 'data-jump="quoteCalculator"'
           unzip -p "$APK" assets/index.html | cmp - index.html
-          unzip -p "$APK" assets/index.html | grep -Fq 'Gebäudereinigung · Version 1.9.9'
+          unzip -p "$APK" assets/index.html | grep -Fq 'Gebäudereinigung · Version 1.9.10'
           unzip -p "$APK" assets/index.html | grep -Fq '<script src="./google-company-search.js"></script>'
           unzip -l "$APK" | grep -Fq 'assets/login-gate.js'
           unzip -l "$APK" | grep -Fq 'assets/google-company-search.js'
@@ -101,10 +101,10 @@ jobs:
       - name: Give APK a unique recognizable filename
         shell: bash
         run: |
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.9-Android.apk
-          test -s M-iCare-NEU-1.9.9-Android.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.10-Android.apk
+          test -s M-iCare-NEU-1.9.10-Android.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: M-iCare-NEU-1.9.9-Android
-          path: M-iCare-NEU-1.9.9-Android.apk
+          name: M-iCare-NEU-1.9.10-Android
+          path: M-iCare-NEU-1.9.10-Android.apk
           retention-days: 30
