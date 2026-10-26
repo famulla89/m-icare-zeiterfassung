@@ -60,12 +60,22 @@ async function mount(){
  }catch(err){loading=false;info('Google Places ist nicht verfügbar: '+(err?.message||'Fehler')+'. Du kannst weiter manuell eingeben.');}
 }
 document.addEventListener('DOMContentLoaded',()=>{
+ byId('googleCompanyQuery')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();byId('googlePlacesStart')?.click();}});
  byId('googlePlacesStart')?.addEventListener('click',()=>{
   if(ready){byId('googlePlacesSearchHost')?.querySelector('gmp-place-autocomplete')?.focus();return;}
   if(loading)return;
   if(!navigator.onLine){info('Kein Internet. Bitte die Daten wie gewohnt manuell eingeben.');return;}
+  const query=byId('googleCompanyQuery')?.value.trim();
+  if(!query){info('Bitte zuerst einen Firmennamen oder eine Adresse eingeben.');byId('googleCompanyQuery')?.focus();return;}
   const key=byId('googlePlacesKey')?.value.trim();
-  if(!key){info('Bitte zunächst einen gültigen Google Maps API-Schlüssel eingeben.');return;}
+  if(!key){
+   const url='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query);
+   info('Google Maps wird geöffnet. Wähle dort die Firma aus und übertrage die Daten anschließend manuell. Für automatische Übernahme kannst du die optionale Anbindung einrichten.');
+   const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Google Maps öffnen';
+   const host=byId('googlePlacesSearchHost');host.replaceChildren(link);
+   link.click();
+   return;
+  }
   loading=true;info('Google Places wird geladen …');
   window.micarePlacesLoaded=()=>{mount();};
   window.gm_authFailure=()=>{loading=false;info('Google hat den API-Schlüssel abgelehnt. Bitte API-Freigabe, Abrechnung und Einschränkungen prüfen.');};
