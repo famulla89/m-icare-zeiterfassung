@@ -150,7 +150,12 @@ document.addEventListener('DOMContentLoaded',()=>{
       const fields=object?['newObjectAddress','newObjectHouseNumber','newObjectZip','newObjectCity']:['editCustomerAddress','editCustomerHouseNumber','editCustomerZip','editCustomerCity'];
       if(!object&&!byId('selectedCustomer')?.value&&byId('newCustomerMode'))byId('newCustomerMode').click();
       [street,number,zip,city].forEach((v,i)=>setField(fields[i],v));
-      info('Adresse aus OpenStreetMap übernommen. Bitte vor dem Speichern kontrollieren. Fehlende Adressteile kannst du selbst ergänzen.');
+      // Photon liefert einen Orts-/POI-Namen, aber in der Regel keine Telefonnummer.
+      // Bei reinen Straßen-/Hausnummer-Treffern nicht den Straßennamen als Firmennamen einsetzen.
+      const isAddressOnly=!p.name||p.osm_key==='highway'||p.type==='street'||p.type==='house';
+      const placeName=isAddressOnly?'':String(p.name).trim();
+      if(placeName)setField(object?'newObjectName':'editCustomerName',placeName);
+      info('Adresse'+(placeName?' und Name':'')+' aus OpenStreetMap übernommen. Telefonnummern liefert diese Adresssuche normalerweise nicht; bitte bei Bedarf manuell ergänzen und die Angaben vor dem Speichern prüfen.');
      });
      host.append(button);
     }
