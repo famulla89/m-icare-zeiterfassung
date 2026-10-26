@@ -199,6 +199,7 @@ tbody tr:nth-child(even){background:#f8fbfe}
     <input id="micareConfirmPass" type="password" minlength="10" maxlength="200" autocomplete="new-password">
     <p class="authFoot">Das Konto gilt nur auf diesem Gerät. Merke dir dein Passwort und sichere regelmäßig deine Kundendaten. Ohne Passwort gibt es keinen automatischen Online-Reset.</p>
    </div>
+   <label style="display:flex;gap:8px;align-items:start;margin:10px 0"><input type="checkbox" id="micareTrustDevice" style="width:auto;margin-top:4px" checked><span>Auf diesem Gerät angemeldet bleiben (keine Passwortabfrage beim nächsten Start). Nur auf meinem privaten, gesperrten Gerät aktivieren.</span></label>
    <button id="micareLoginSubmit" type="submit">Anmelden / Konto anlegen</button>
    <button id="micareBioLogin" type="button" class="secondary" hidden>🔒 Mit Fingerabdruck anmelden</button>
   </form>
@@ -482,7 +483,7 @@ tbody tr:nth-child(even){background:#f8fbfe}
 <div class="objectPanel"><div class="row actions"><div id="customerSelectionBlock" style="flex:1;min-width:230px"><label for="selectedCustomer">Kunde auswählen</label><select id="selectedCustomer"></select><p id="newCustomerNotice" class="hint hidden">Neuer Kunde: Bitte die Felder ausfüllen und speichern. Es ist kein bestehender Kunde ausgewählt.</p></div><button type="button" id="newCustomerMode" class="secondary customerModeButton">+ Neuen Kunden anlegen</button></div>
 <div class="objectPanel" id="googleCompanySearch">
 <h3>🔎 Firma suchen</h3>
-<p class="hint">Firma oder Ort eingeben. Ohne eingerichtete Google-Anbindung öffnen wir die Treffer in Google Maps. Anschließend kannst du die Kundendaten manuell eintragen. Die automatische Datenübernahme ist mit einer Google-Places-Anbindung möglich.</p>
+<p class="hint">Firma oder Ort eingeben: Treffer erscheinen direkt in M-iCare. Bereits gespeicherte Kunden kannst du ohne Internet suchen. Für öffentliche Google-Firmeneinträge muss einmalig die Google-Places-Anbindung eingerichtet sein.</p>
 <div class="row" style="align-items:end">
 <div style="flex:3;min-width:195px"><label for="googleCompanyQuery">Firmenname oder Adresse</label><input id="googleCompanyQuery" type="search" placeholder="z. B. REWE Hagen" autocomplete="off"></div>
 <div style="flex:1;min-width:140px"><label for="googlePlacesTarget">Übernehmen für</label><select id="googlePlacesTarget"><option value="customer">Kunde</option><option value="object">Geschäftsstelle</option></select></div>
@@ -494,7 +495,7 @@ tbody tr:nth-child(even){background:#f8fbfe}
 <p class="hint">Nur für die automatische Übernahme der Treffer in M-iCare. Erfordert einen eigenen Google-Maps-API-Schlüssel, aktivierte Places API und Abrechnung. Der Schlüssel wird nicht gespeichert.</p>
 <label for="googlePlacesKey">Google Maps API-Schlüssel (optional, nur für diese Sitzung)</label>
 <input type="password" id="googlePlacesKey" autocomplete="off" placeholder="API-Schlüssel">
-<p class="hint">Ohne Schlüssel öffnet die Suche Google Maps im Browser und es erfolgt keine automatische Übernahme.</p>
+<p class="hint">Ohne Google-Schlüssel zeigen wir die bereits in M-iCare gespeicherten Kunden und Geschäftsstellen. Es wird keine externe App geöffnet.</p>
 </details>
 </div>
 <h3 id="customerFormTitle">Kunden- und Objektdaten bearbeiten</h3><div class="status" id="customerNumberPanel" style="margin:12px 0">Kundennummer und Objektnummer werden automatisch vergeben.</div><h3 style="margin-top:20px">1. Kundendaten</h3><div class="row" id="objectPickerRow"><div style="flex:1;min-width:230px"><label for="selectedObject">Geschäftsstelle / Objekt auswählen</label><select id="selectedObject"></select></div><button type="button" id="newObjectMode" class="secondary customerModeButton">+ Geschäftsstelle hinzufügen</button></div>
