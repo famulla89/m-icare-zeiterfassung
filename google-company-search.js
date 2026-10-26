@@ -69,11 +69,34 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!query){info('Bitte zuerst einen Firmennamen oder eine Adresse eingeben.');byId('googleCompanyQuery')?.focus();return;}
   const key=byId('googlePlacesKey')?.value.trim();
   if(!key){
-   const url='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query);
-   info('Google Maps wird geöffnet. Wähle dort die Firma aus und übertrage die Daten anschließend manuell. Für automatische Übernahme kannst du die optionale Anbindung einrichten.');
-   const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Google Maps öffnen';
-   const host=byId('googlePlacesSearchHost');host.replaceChildren(link);
-   link.click();
+   const host=byId('googlePlacesSearchHost');
+   host.replaceChildren();
+   const queryLower=query.toLocaleLowerCase('de');
+   const customers=(typeof state!=='undefined'&&Array.isArray(state.customers))?state.customers:[];
+   const objects=(typeof state!=='undefined'&&Array.isArray(state.objects))?state.objects:[];
+   const rows=[
+    ...customers.filter(c=>[c.name,c.city,c.address,c.publicNumber].some(v=>String(v||'').toLocaleLowerCase('de').includes(queryLower))).map(c=>({name:c.name,subtitle:[c.address,c.houseNumber,c.zip,c.city].filter(Boolean).join(' '),customer:c})),
+    ...objects.filter(o=>[o.name,o.city,o.address,o.publicNumber].some(v=>String(v||'').toLocaleLowerCase('de').includes(queryLower))).map(o=>({name:o.name,subtitle:[o.address,o.houseNumber,o.zip,o.city].filter(Boolean).join(' '),object:o}))
+   ].slice(0,30);
+   for(const item of rows){
+    const button=document.createElement('button');
+    button.type='button';button.className='secondary';button.style.cssText='display:block;width:100%;text-align:left;margin:6px 0;white-space:normal';
+    button.textContent=(item.object?'📍 ':'🏢 ')+item.name+' · '+item.subtitle;
+    button.addEventListener('click',()=>{
+     if(item.customer){
+      const sel=byId('selectedCustomer');
+      if(sel){sel.value=item.customer.id;sel.dispatchEvent(new Event('change',{bubbles:true}));}
+      info('Gespeicherten Kunden ausgewählt: '+item.name+'. Bitte Daten prüfen.');
+     }else{
+      const obj=item.object;
+      setField('newObjectName',obj.name);setField('newObjectAddress',obj.address);
+      setField('newObjectHouseNumber',obj.houseNumber);setField('newObjectZip',obj.zip);setField('newObjectCity',obj.city);
+      info('Gespeicherte Geschäftsstelle in die Felder übernommen: '+item.name+'. Bitte prüfen.');
+     }
+    });
+    host.appendChild(button);
+   }
+   info(rows.length?rows.length+' gespeicherte Treffer in M-iCare. Für zusätzliche öffentliche Firmen muss Google Places einmalig eingerichtet werden.':'Keine gespeicherten Firmen gefunden. Öffentliche Google-Firmentreffer benötigen die einmalige Google-Places-Anbindung. Du kannst die Daten auch manuell eingeben.');
    return;
   }
   loading=true;info('Google Places wird geladen …');
