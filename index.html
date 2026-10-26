@@ -552,7 +552,8 @@ tbody tr:nth-child(even){background:#f8fbfe}
 <div class="footer">M-iCare Gebäudereinigung · Version 1.9.4 · Offline-Nutzung · Auf diesem Gerät gespeicherte Daten</div>
 </div><div id="toast" class="hidden" role="status"></div>
 <dialog id="linkedCustomerDialog" aria-labelledby="linkedCustomerTitle" style="border:1px solid #cbd9e8;border-radius:14px;padding:24px;max-width:460px;width:calc(100% - 32px);box-shadow:0 10px 45px #0004"><h3 id="linkedCustomerTitle">Kunde hat bereits Einträge</h3><p id="linkedCustomerMessage"></p><p>Endgültiges Löschen ist gesperrt. Möchtest du den Kunden stattdessen archivieren?</p><div class="row" style="justify-content:flex-end;margin-top:20px"><button type="button" class="secondary" id="linkedCustomerNo">Nein, abbrechen</button><button type="button" id="linkedCustomerArchive">Ja, archivieren</button></div></dialog><script src="./cloud-transfer.js"></script><script src="./report-print.js"></script><script src="./schedule-planner.js"></script>
-<script src="./voice-input.js"></script><script src="./quote-calculator.js"></script><script src="./quote-ui.js" defer></script><script src="./billing-ui.js" defer></script><script>
+<script src="./voice-input.js"></script><script src="./quote-calculator.js"></script><script src="./quote-ui.js" defer></script><script src="./billing-ui.js" defer></script><script src="./google-company-search.js"></script>
+<script>
 'use strict';
 const $=id=>document.getElementById(id);
 const SERVICES=['Gebäudereinigung','Unterhaltsreinigung','Büroreinigung','Glas- & Fensterreinigung','Grundreinigung','Bauendreinigung','Haus- & Wohnungsreinigung','Treppenhaus- & Aufgangsreinigung','Praxis- & Ladenreinigung','Kita- & Schulreinigung','Hausmeisterservice','Sonderreinigungen'];
@@ -2265,5 +2266,5 @@ document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.d
 window.addEventListener('beforeunload',e=>{if(screenDirty){e.preventDefault();e.returnValue=''}});
 document.body.classList.add('ready');
 init();captureCurrentScreen();
-</script><script src="./google-company-search.js"></script>
+</script>
 </body></html>
