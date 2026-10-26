@@ -6,6 +6,7 @@ on:
       - '.github/workflows/windows-installer.yml'
       - 'index.html'
       - 'login-gate.js'
+      - 'google-company-search.js'
       - 'schedule-planner.js'
       - 'quote-calculator.js'
       - 'quote-ui.js'
@@ -47,7 +48,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force windows-app/web | Out-Null
-          Copy-Item index.html,login-gate.js,schedule-planner.js,cloud-transfer.js,quote-calculator.js,quote-ui.js,billing-ui.js,voice-input.js,report-print.js,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
+          Copy-Item index.html,login-gate.js,google-company-search.js,schedule-planner.js,cloud-transfer.js,quote-calculator.js,quote-ui.js,billing-ui.js,voice-input.js,report-print.js,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
       - name: Validate business rules and correction flows on Windows
         shell: pwsh
         run: |
