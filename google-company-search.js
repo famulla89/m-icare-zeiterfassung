@@ -47,22 +47,37 @@ async function onSelection(e){
  info('Google-Treffer übernommen: '+name+'. Bitte Adresse, Telefon und fehlende Daten kontrollieren und anschließend manuell speichern.'+(place.websiteURI?' Webseite: '+place.websiteURI:''));
  }catch(err){info('Google-Daten konnten nicht geladen werden: '+(err?.message||'Unbekannter Fehler')+'. Manuelle Eingabe bleibt möglich.');}
 }
-async function mount(){
+async function mount(query){
  try{
- const {PlaceAutocompleteElement}=await google.maps.importLibrary('places');
- const el=new PlaceAutocompleteElement();
- el.setAttribute('included-region-codes','de');
- el.setAttribute('placeholder','Firmenname oder Adresse suchen');
- el.style.width='100%';
- el.addEventListener('gmp-select',onSelection);
- byId('googlePlacesSearchHost').replaceChildren(el);
- ready=true;info('Google-Firmensuche ist bereit. Suche eine Firma und wähle einen Vorschlag.');
- }catch(err){loading=false;info('Google Places ist nicht verfügbar: '+(err?.message||'Fehler')+'. Du kannst weiter manuell eingeben.');}
+  const {AutocompleteSuggestion}=await google.maps.importLibrary('places');
+  ready=true;loading=false;
+  await searchGoogle(query);
+ }catch(err){loading=false;info('Google Places ist nicht verfügbar: '+(err?.message||'Fehler')+'. Du kannst weiterhin manuell eingeben.');}
 }
+async function searchGoogle(query){
+ const host=byId('googlePlacesSearchHost');
+ host.replaceChildren();
+ try{
+  const {AutocompleteSuggestion}=await google.maps.importLibrary('places');
+  const result=await AutocompleteSuggestion.fetchAutocompleteSuggestions({input:query,includedRegionCodes:['de'],language:'de'});
+  const suggestions=(result?.suggestions||[]).filter(x=>x.placePrediction).slice(0,12);
+  for(const suggestion of suggestions){
+   const prediction=suggestion.placePrediction;
+   const row=document.createElement('button');
+   row.className='secondary';row.type='button';
+   row.style.cssText='display:block;width:100%;white-space:normal;text-align:left;margin:7px 0';
+   row.textContent='📍 '+(prediction.text?.text||prediction.mainText?.text||query);
+   row.addEventListener('click',()=>onSelection({placePrediction:prediction}));
+   host.append(row);
+  }
+  info(suggestions.length?suggestions.length+' Google-Treffer gefunden. Tippe auf einen Eintrag, um die Firmendaten zu übernehmen.':'Keine passenden Google-Treffer gefunden. Versuche einen anderen Namen oder Ort.');
+ }catch(err){info('Google-Suche fehlgeschlagen: '+(err?.message||'Unbekannter Fehler')+'. Bitte Google-Places-Konfiguration prüfen.');}
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
  byId('googleCompanyQuery')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();byId('googlePlacesStart')?.click();}});
  byId('googlePlacesStart')?.addEventListener('click',()=>{
-  if(ready){byId('googlePlacesSearchHost')?.querySelector('gmp-place-autocomplete')?.focus();return;}
+  if(ready){const value=byId('googleCompanyQuery')?.value.trim();if(value)searchGoogle(value);return;}
   if(loading)return;
   if(!navigator.onLine){info('Kein Internet. Bitte die Daten wie gewohnt manuell eingeben.');return;}
   const query=byId('googleCompanyQuery')?.value.trim();
@@ -96,11 +111,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
     host.appendChild(button);
    }
-   info(rows.length?rows.length+' gespeicherte Treffer in M-iCare. Für zusätzliche öffentliche Firmen muss Google Places einmalig eingerichtet werden.':'Keine gespeicherten Firmen gefunden. Öffentliche Google-Firmentreffer benötigen die einmalige Google-Places-Anbindung. Du kannst die Daten auch manuell eingeben.');
+   info(rows.length?rows.length+' gespeicherte Treffer. Öffentliche Google-Treffer benötigen einen einmalig eingerichteten API-Zugang.':'Keine gespeicherten Firmen gefunden. Für öffentliche Google-Firmen brauchst du einen aktivierten Google-Places-API-Zugang.');
    return;
   }
   loading=true;info('Google Places wird geladen …');
-  window.micarePlacesLoaded=()=>{mount();};
+  window.micarePlacesLoaded=()=>{mount(query);};
   window.gm_authFailure=()=>{loading=false;info('Google hat den API-Schlüssel abgelehnt. Bitte API-Freigabe, Abrechnung und Einschränkungen prüfen.');};
   const script=document.createElement('script');
   script.async=true;
