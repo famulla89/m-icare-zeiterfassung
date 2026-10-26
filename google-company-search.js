@@ -3,6 +3,24 @@
 'use strict';
 let loading=false,ready=false;
 const byId=id=>document.getElementById(id);
+let photonPending=null;
+window.micarePhotonResult=(ok,payload)=>{
+ const done=photonPending;photonPending=null;
+ if(!done)return;
+ if(!ok){done.reject(new Error(payload||'Netzwerkfehler'));return;}
+ try{done.resolve(JSON.parse(payload));}catch(err){done.reject(err);}
+};
+function fetchPhoton(url,query){
+ if(window.MiCareNative?.searchAddress){
+  return new Promise((resolve,reject)=>{
+   photonPending={resolve,reject};
+   window.MiCareNative.searchAddress(query);
+   setTimeout(()=>{if(photonPending?.resolve===resolve){photonPending=null;reject(new Error('Suche hat zu lange gedauert'));}},15000);
+  });
+ }
+ return fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)}).then(response=>{if(!response.ok)throw Error('HTTP '+response.status);return response.json();});
+}
+
 const info=message=>{const n=byId('googlePlacesMessage');if(n)n.textContent=message;};
 const setField=(id,value)=>{const el=byId(id);if(!el||!value)return;el.value=String(value).slice(0,el.maxLength>0?el.maxLength:1000);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));};
 function addressParts(parts){
@@ -115,9 +133,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    info('Suche kostenlose OpenStreetMap-Adressen …');
    try{
     const url='https://photon.komoot.io/api/?q='+encodeURIComponent(query)+'&limit=10&lang=de';
-    const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
-    if(!response.ok)throw Error('HTTP '+response.status);
-    const data=await response.json();
+    const data=await fetchPhoton(url,query);
     const places=Array.isArray(data.features)?data.features:[];
     for(const feature of places){
      const p=feature.properties||{};
