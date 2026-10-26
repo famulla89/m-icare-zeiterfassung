@@ -3,6 +3,7 @@
 (function(){
  const KEY='micare-local-account-v1';
  const BIO_KEY='micare-local-bio-v1';
+ const TRUST_KEY='micare-trusted-device-v1';
  const ITERATIONS=310000;
  let current=null,authPending=false,bioChallenge='',bioMode='';
  const el=id=>document.getElementById(id);
@@ -42,8 +43,10 @@
   }
   el('micareLoginPass').value='';
   el('micareConfirmPass').value='';
+  el('micareTrustDevice').checked=localStorage.getItem(TRUST_KEY)==='enabled';
   el('micareLoginUser').focus();
  }
+ function saveTrustedChoice(){if(el('micareTrustDevice')?.checked)localStorage.setItem(TRUST_KEY,'enabled');else localStorage.removeItem(TRUST_KEY);}
  function unlock(){
   document.body.classList.add('micare-authenticated');
   el('micareLock').hidden=true;
@@ -77,7 +80,7 @@
     if(readAccount())throw Error('Dieses Gerät ist bereits eingerichtet. Bitte App neu starten.');
     // No plaintext password, biometric secrets or keys in localStorage.
     localStorage.setItem(KEY,JSON.stringify({v:1,username,salt,hash,createdAt:new Date().toISOString()}));
-    current=readAccount();localStorage.removeItem('micare-failed-logins-v1');unlock();
+    current=readAccount();localStorage.removeItem('micare-failed-logins-v1');saveTrustedChoice();unlock();
    }else{
     const hash=await derive(pass,current.salt);
     if(username!==current.username||!constantEquals(hash,current.hash)){
@@ -87,7 +90,7 @@
      message(count>=5?'Anmeldung vorübergehend gesperrt. Bitte später erneut versuchen.':'Benutzername oder Passwort falsch.',true);
      return;
     }
-    localStorage.removeItem('micare-failed-logins-v1');unlock();
+    localStorage.removeItem('micare-failed-logins-v1');saveTrustedChoice();unlock();
    }
   }catch(err){message('Anmeldung fehlgeschlagen: '+err.message,true)}
   finally{authPending=false;el('micareLoginSubmit').disabled=false;el('micareLoginPass').value='';el('micareConfirmPass').value=''}
@@ -121,9 +124,9 @@
     localStorage.removeItem(BIO_KEY);el('micareEnableBio').textContent='Fingerabdruck aktivieren';
    }else requestBio('enable');
   };
-  el('micareLogout').onclick=()=>{document.body.style.overflow='hidden';showAuth()};
-  showAuth();
+  el('micareLogout').onclick=()=>{localStorage.removeItem(TRUST_KEY);document.body.style.overflow='hidden';showAuth()};
+  if(readAccount()&&localStorage.getItem(TRUST_KEY)==='enabled')unlock();else showAuth();
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
- window.MiCareLogin={biometricResult,lock:showAuth};
+ window.MiCareLogin={biometricResult,lock:()=>{if(localStorage.getItem(TRUST_KEY)==='enabled')return;showAuth();}};
 })();
