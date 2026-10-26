@@ -76,10 +76,10 @@ async function searchGoogle(query){
 
 document.addEventListener('DOMContentLoaded',()=>{
  byId('googleCompanyQuery')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();byId('googlePlacesStart')?.click();}});
- byId('googlePlacesStart')?.addEventListener('click',()=>{
+ byId('googlePlacesStart')?.addEventListener('click',async()=>{
   if(ready){const value=byId('googleCompanyQuery')?.value.trim();if(value)searchGoogle(value);return;}
   if(loading)return;
-  if(!navigator.onLine){info('Kein Internet. Bitte die Daten wie gewohnt manuell eingeben.');return;}
+  if(!navigator.onLine){info('Offline: Suche nur in gespeicherten Kunden möglich.');}
   const query=byId('googleCompanyQuery')?.value.trim();
   if(!query){info('Bitte zuerst einen Firmennamen oder eine Adresse eingeben.');byId('googleCompanyQuery')?.focus();return;}
   const key=byId('googlePlacesKey')?.value.trim();
@@ -111,7 +111,38 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
     host.appendChild(button);
    }
-   info(rows.length?rows.length+' gespeicherte Treffer. Öffentliche Google-Treffer benötigen einen einmalig eingerichteten API-Zugang.':'Keine gespeicherten Firmen gefunden. Für öffentliche Google-Firmen brauchst du einen aktivierten Google-Places-API-Zugang.');
+   if(!navigator.onLine){info(rows.length?rows.length+' lokale Treffer gefunden.':'Offline: Keine gespeicherten Treffer.');return;}
+   info('Suche kostenlose OpenStreetMap-Adressen …');
+   try{
+    const url='https://photon.komoot.io/api/?q='+encodeURIComponent(query)+'&limit=10&lang=de';
+    const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+    if(!response.ok)throw Error('HTTP '+response.status);
+    const data=await response.json();
+    const places=Array.isArray(data.features)?data.features:[];
+    for(const feature of places){
+     const p=feature.properties||{};
+     if(!p.name&&!p.street)continue;
+     const street=p.street||'',number=p.housenumber||'',zip=p.postcode||'',city=p.city||p.town||p.village||p.county||'';
+     const label=[p.name,street+' '+number,zip+' '+city].filter(Boolean).join(' · ');
+     const button=document.createElement('button');
+     button.type='button';button.className='secondary';
+     button.style.cssText='display:block;width:100%;text-align:left;margin:6px 0;white-space:normal';
+     button.textContent='📍 '+label;
+     button.addEventListener('click',()=>{
+      const object=byId('googlePlacesTarget')?.value==='object';
+      if(object&&!byId('selectedCustomer')?.value){info('Bitte zuerst einen Kunden auswählen, bevor du eine Geschäftsstelle übernimmst.');return;}
+      const fields=object?['newObjectAddress','newObjectHouseNumber','newObjectZip','newObjectCity']:['editCustomerAddress','editCustomerHouseNumber','editCustomerZip','editCustomerCity'];
+      if(!object&&!byId('selectedCustomer')?.value&&byId('newCustomerMode'))byId('newCustomerMode').click();
+      [street,number,zip,city].forEach((v,i)=>setField(fields[i],v));
+      info('Adresse aus OpenStreetMap übernommen. Bitte vor dem Speichern kontrollieren. Fehlende Adressteile kannst du selbst ergänzen.');
+     });
+     host.append(button);
+    }
+    info(places.length?'Treffer aus OpenStreetMap – wähle eine Adresse aus. Bitte Angaben vor dem Speichern prüfen.':'Keine OpenStreetMap-Adressen gefunden. Bitte die Adresse manuell eintragen.');
+   }catch(err){info('Online-Adresssuche derzeit nicht erreichbar ('+(err?.message||'Netzwerk')+'). Bereits gespeicherte Firmen bleiben durchsuchbar.');}
+   const credit=document.createElement('small');
+   credit.textContent='Adressdaten: © OpenStreetMap-Mitwirkende (ODbL), Suche: Photon/komoot. Kostenloser öffentlicher Testdienst, keine Verfügbarkeitsgarantie.';
+   host.append(credit);
    return;
   }
   loading=true;info('Google Places wird geladen …');
