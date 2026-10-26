@@ -42,6 +42,9 @@ public class MainActivity extends Activity {
     WebViewAssetLoader loader=new WebViewAssetLoader.Builder().addPathHandler("/assets/",new WebViewAssetLoader.AssetsPathHandler(this)).build();
     web=new WebView(this);
     web.getSettings().setJavaScriptEnabled(true);
+    // Offline assets must be reloaded after an APK update; retain DOM storage / customer data.
+    web.getSettings().setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE);
+    web.clearCache(true);
     web.addJavascriptInterface(new Object(){
 
       @JavascriptInterface public boolean isAvailable(){
