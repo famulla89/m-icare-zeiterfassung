@@ -1,6 +1,6 @@
 {
   "name": "m-icare-desktop",
-  "version": "1.9.13",
+  "version": "1.9.14",
   "private": true,
   "description": "M-iCare Windows offline",
   "main": "main.js",
