@@ -581,7 +581,7 @@ input,select,textarea{border-color:#ccd8e8;border-radius:11px}
 <details class="objectPanel" id="acceptedOrdersPanel" style="margin:14px 0" open>
  <summary style="font-weight:700;cursor:pointer;font-size:1.13rem">✅ Angenommene Aufträge – mit Arbeitskarten · Aufklappen / Zuklappen</summary>
  <div class="row" style="gap:10px;align-items:end">
-  <div style="flex:2;min-width:170px"><label for="acceptedOrdersSearch">Auftrag / Kunde / Angebotsnummer suchen</label><input id="acceptedOrdersSearch" placeholder="z. B. KV-2026-0004 oder Kundenname"></div>
+  <div style="flex:2;min-width:170px"><label for="acceptedOrdersSearch">Auftrag, Kunde, Angebotsnummer oder AK-Nummer suchen</label><input id="acceptedOrdersSearch" placeholder="z. B. AK 42, KV-2026-0004 oder Kundenname"></div>
   <div style="flex:1;min-width:170px"><label for="acceptedOrdersFilter">Auftragsfortschritt</label><select id="acceptedOrdersFilter"><option value="all">Alle angenommenen Aufträge</option><option value="open">Noch offene Einsätze</option><option value="done">Vollständig erledigt</option><option value="invoiced">Mit Rechnungen</option></select></div>
  </div>
  <p id="acceptedOrdersTotals" class="hint">Noch keine angenommenen Angebote vorhanden.</p>
@@ -1488,7 +1488,7 @@ function renderAcceptedOrders(){
    const invoiced=appointments.filter(a=>finalInvoiceForAk(a.id)).length;
    return {q,appointments,done,invoiced,total:ids.length};
   }).filter(item=>(filter==='all'||filter==='open'&&item.done<item.total||filter==='done'&&item.total>0&&item.done===item.total||filter==='invoiced'&&item.invoiced>0))
-    .filter(item=>!query||[item.q.customerName,item.q.number,item.q.service,item.q.objectName,item.q.customerNumber].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(query)))
+    .filter(item=>!query||[item.q.customerName,item.q.number,item.q.service,item.q.objectName,item.q.customerNumber].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(query))||item.appointments.some(a=>{const n=String(a.akNumber||'');return n&&(query===n||query==='ak '+n||('ak '+n).includes(query)&&query.startsWith('ak '));}))
     .sort((a,b)=>String(b.q.acceptedAt).localeCompare(String(a.q.acceptedAt)));
  summary.textContent=orders.length+' angenommene Aufträge angezeigt · '+orders.reduce((n,o)=>n+o.total,0)+' AK insgesamt · '+orders.reduce((n,o)=>n+o.done,0)+' erledigt.';
  if(!orders.length){area.append(el('p','Noch keine passenden angenommenen Aufträge. Angebote werden erst nach „Kunde hat angenommen“ zu verbindlichen Arbeitskarten.'));return}
@@ -1507,7 +1507,7 @@ function renderAcceptedOrders(){
    $('appointmentCalendarPanel').scrollIntoView({behavior:'smooth',block:'start'});
   };
   controls.append(calendar);
-  const expand=el('details','');expand.style.marginTop='8px';expand.dataset.quoteId=q.id;expand.open=expandedOrders.has(q.id);
+  const expand=el('details','');expand.style.marginTop='8px';expand.dataset.quoteId=q.id;expand.open=expandedOrders.has(q.id)||Boolean(query&&appointments.some(a=>{const n=String(a.akNumber||'');return n&&(query===n||query==='ak '+n)}));
   const open=el('summary','🗂 Arbeitskarten anzeigen ('+appointments.length+')');open.style.cursor='pointer';open.style.fontWeight='700';expand.append(open);
   for(const a of appointments){
    const entry=completedAppointmentEntry({appointment:a,originalDate:a.date});
