@@ -5,11 +5,15 @@ on:
     branches:
       - feature/reporting-dashboard-20261024
       - feature/audited-order-corrections-20261024
+      - feature/structured-workflow-dashboard-20261027
     paths:
       - index.html
       - tests/reporting-smoke.cjs
       - tests/app-core-smoke.cjs
       - tests/order-correction-smoke.cjs
+      - operations-core.js
+      - operations-ui.js
+      - tests/operations-core-smoke.cjs
       - .github/workflows/reporting-check.yml
   pull_request:
     paths:
