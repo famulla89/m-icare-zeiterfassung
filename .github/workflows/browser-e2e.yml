@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/audited-order-corrections-20261024
+      - feature/structured-workflow-dashboard-20261027
     paths:
       - index.html
       - cloud-transfer.js
@@ -25,6 +26,10 @@ on:
       - .github/workflows/browser-e2e.yml
   pull_request:
     paths:
+      - billing-ui.js
+      - quote-calculator.js
+      - tests/billing-core-smoke.cjs
+      - tests/customer-to-billing-report-e2e.cjs
       - index.html
       - login-gate.js
       - tests/auth-login-e2e.cjs
