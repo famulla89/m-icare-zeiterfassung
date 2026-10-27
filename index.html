@@ -644,6 +644,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 
 <section class="screen" id="billingScreen">
  <h2>🧾 Rechnungen</h2>
+ <div class="row" style="margin:0 0 12px"><button type="button" class="secondary" data-jump="paymentScreen">Zahlungen und offene Posten öffnen</button></div>
  <p class="hint">Ein angenommenes Angebot ergibt einen Auftrag mit beliebig vielen Arbeitskarten. Sobald eine AK tatsächlich erledigt wurde, kann dafür eine Teilrechnung ausgestellt werden. Sobald alle AK abgeschlossen sind, wird stattdessen die Schlussrechnung über den noch offenen Rest vorbereitet.</p>
  <div class="quoteBox"><h3>1 · Abrechenbare Aufträge</h3>
  <label for="billSearch">Auftrag / Kunde suchen</label><input id="billSearch" type="search" maxlength="160" placeholder="Name oder Angebotsnummer">
@@ -663,6 +664,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
  <div id="billBreakdown" class="mi-bill-breakdown hidden" aria-live="polite"></div>
  <div class="row actions"><button type="button" class="secondary" id="billPreview">📄 PDF-Entwurf prüfen</button><button type="button" id="billFinalize">✅ Rechnung endgültig erstellen</button><button type="button" class="secondary" id="billCancel">Abbrechen</button></div></div>
  <div class="quoteBox"><h3>3 · Erstellte Rechnungen</h3><p id="billSavedTotal" class="status" role="status">Noch keine Rechnungen vorhanden.</p><div id="billSaved"></div>
+ <p class="hint">Zahlungen und tatsächlichen E-Mail-Versand kann die lokale App nicht automatisch bestätigen. Bei zwei Geräten fehlen derzeit noch zentrale Synchronisierung und globale Rechnungsnummernvergabe.</p></div>
+</section>
+
+<section class="screen" id="paymentScreen"><h2>Zahlungen & offene Posten</h2>
+<p class="hint">Offene Rechnungen, Zahlungseingänge und manuelle Erinnerungen getrennt von der Rechnungserstellung verwalten.</p>
+<div class="row"><button type="button" class="secondary" data-jump="billingScreen">Zu den Rechnungen</button></div>
  <dialog id="miReminderDialog" class="mi-reminder-dialog" aria-labelledby="miReminderTitle">
 <h3 id="miReminderTitle">Zahlungserinnerung vorbereiten</h3>
 <p class="hint">Diese Nachricht wird nicht automatisch verschickt. Bitte Rechnung, Betrag und Empfänger prüfen.</p>
@@ -678,7 +685,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 <div><label for="miPayDate">Datum des Zahlungseingangs</label><input id="miPayDate" type="date" required></div>
 <div><label for="miPayNote">Buchungstext (optional)</label><input id="miPayNote" maxlength="160"></div></div>
 <button type="submit" id="miPaySubmit">Zahlungseingang speichern</button></form></div>
- <p class="hint">Zahlungen und tatsächlichen E-Mail-Versand kann die lokale App nicht automatisch bestätigen. Bei zwei Geräten fehlen derzeit noch zentrale Synchronisierung und globale Rechnungsnummernvergabe.</p></div>
+
 </section>
 
 <section class="screen" id="entryForm"><h2>Arbeitszeit erfassen</h2>
@@ -756,7 +763,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 <div class="objectPanel"><h3>👥 Kundenakte</h3><p>Kunden und Geschäftsstellen anlegen und bearbeiten. Vom Kunden direkt zu den Aufträgen und Rechnungen wechseln.</p><button type="button" data-jump="customerOverviewScreen">Kunden öffnen</button><button type="button" class="secondary" data-jump="customersPanel">Stammdaten ändern</button></div>
 <div class="objectPanel"><h3>📋 Auftragsfortschritt</h3><p>Angenommene Angebote mit offenen und erledigten Arbeitskarten sowie Kalendereinsätze.</p><button type="button" data-jump="appointmentsPanel">Aufträge und Termine</button></div>
 <div class="objectPanel"><h3>🧹 Einsätze & Zeiten</h3><p>Arbeitskarten nach Datum auswählen, Arbeit dokumentieren und Ist-Zeiten erfassen.</p><button type="button" data-jump="plannedWorkScreen">Arbeitskarten öffnen</button><button type="button" class="secondary" data-jump="entryForm">Freie Zeit erfassen</button></div>
-<div class="objectPanel"><h3>🧾 Finanzen</h3><p>Teil- und Schlussrechnungen aus erledigten Arbeitskarten erstellen. Rechnungen und Berichte prüfen.</p><button type="button" data-jump="billingScreen">Rechnungen öffnen</button><button type="button" class="secondary" data-jump="reportingScreen">Controlling</button></div>
+<div class="objectPanel"><h3>🧾 Finanzen</h3><p>Teil- und Schlussrechnungen aus erledigten Arbeitskarten erstellen. Rechnungen und Berichte prüfen.</p><button type="button" data-jump="billingScreen">Rechnungen öffnen</button><button type="button" class="secondary" data-jump="reportingScreen">Controlling</button><button type="button" class="secondary" data-jump="paymentScreen">Zahlungen</button></div>
 <div class="objectPanel"><h3>🧮 Vorlagen & Angebote</h3><p>Leistungsumfang kalkulieren, wiederkehrende Angebote planen und nach Annahme Arbeitskarten erzeugen.</p><button type="button" data-jump="quoteCalculator">Angebote öffnen</button></div>
 <div class="objectPanel"><h3>💾 Sicherung & Einstellungen</h3><p>Lokale Daten sichern und wiederherstellen. Weitere Einstellungen bleiben hier erreichbar.</p><button type="button" data-jump="backupSection">Datensicherung</button><button type="button" class="secondary" data-jump="management">Mitarbeiter (später)</button></div>
 </div></section>
@@ -2338,7 +2345,7 @@ document.getElementById('copyCustomerAddressToObject')?.addEventListener('click'
  for(const [source,target] of items){if(!source||!target)continue;target.value=source.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));}
  if(message)message.textContent='✓ Kundenadresse in die Geschäftsstelle übernommen. Objektbezeichnung und Schlüsselangaben bleiben unverändert.';
 });
-setupExtraVoiceButtons();document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['operationsHub','home','orderWorkspace','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history', 'quoteCalculator','billingScreen','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
+setupExtraVoiceButtons();document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['operationsHub','home','orderWorkspace','paymentScreen','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history', 'quoteCalculator','billingScreen','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
 let screenDirty=false;
 const editableFields=new Set(['editCustomerName','editCustomerAddress','editCustomerHouseNumber','editCustomerZip','editCustomerCity','newObjectName','newObjectAddress','newObjectHouseNumber','newObjectZip','newObjectCity','keyHolder','keyLocation','employee','service','object','date','endDate','start','end','breakMinutes','notes','linkedAppointment','orderStatus','workDone','orderRemarks','appointmentDate','appointmentStart','appointmentEnd','appointmentRepeat','appointmentInterval','appointmentUntil','newEmployee','editCustomerPhone','editCustomerMobile','editCustomerEmail','customerChoice','entryObjectChoice','deviationReason','deviationNote','correctionReason','correctionNote','appointmentCustomer','appointmentObject','appointmentEmployee','appointmentService','newCustomerName','newCustomerAddress']);
 function captureCurrentScreen(){screenDirty=false}
@@ -2585,7 +2592,7 @@ function renderHomeOverview(){
  }catch(error){console.warn('Dashboard-Kennzahlen nicht verfügbar',error)}
 }
 function showScreen(id,remember=true){if(!screenIds.includes(id))id='home';if(id!==currentScreen&&!confirmDiscardChanges())return;if(remember&&id!==currentScreen&&screenHistory[screenHistory.length-1]!==currentScreen)screenHistory.push(currentScreen);if(currentScreen==='customersPanel'&&id!=='customersPanel'){newCustomerMode=false;$('selectedCustomer').disabled=false;if(lastSelectedCustomer)$('selectedCustomer').value=lastSelectedCustomer}
-currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home'){renderContractReminders();renderHomeOverview();window.MiCareOperationsUI?.renderHome();}if(id==='orderWorkspace')window.MiCareOperationsUI?.renderOrderWorkspace();if(id==='billingScreen')window.MiCareOperationsUI?.renderPayments();if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
+currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home'){renderContractReminders();renderHomeOverview();window.MiCareOperationsUI?.renderHome();}if(id==='orderWorkspace')window.MiCareOperationsUI?.renderOrderWorkspace();if(id==='paymentScreen')window.MiCareOperationsUI?.renderPayments();if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
 function goBack(){if(!confirmDiscardChanges())return;const previous=screenHistory.pop()||'home';captureCurrentScreen();showScreen(previous,false)}
 $('goBack').onclick=goBack;$('goHome').onclick=()=>{if(!confirmDiscardChanges())return;screenHistory=[];captureCurrentScreen();showScreen('home',false)};
 document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));
