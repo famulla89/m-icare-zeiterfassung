@@ -151,19 +151,24 @@
   const container=$('billOrders'),saved=$('billSaved');if(!container||!saved)return;
   const expanded=new Set([...container.querySelectorAll('details[data-order][open]')].map(x=>x.dataset.order));
   const q=String($('billSearch').value||'').trim().toLocaleLowerCase('de-DE');
+  const akQuery=/^(?:ak\s*[-#:]?\s*)?(\d+)$/i.exec(q);
+  const exactAk=akQuery?Number(akQuery[1]):null;
+  const matchesAk=offer=>exactAk!==null&&(offer.appointmentIds||[]).some(id=>(state.appointments||[]).some(a=>a.id===id&&a.quoteId===offer.id&&Number(a.akNumber)===exactAk));
   container.replaceChildren();saved.replaceChildren();
-  const orders=(state.quotes||[]).filter(x=>x.kind==='quote'&&x.acceptedAt).filter(x=>!q||[x.customerName,x.number,x.service].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(q)));
+  const orders=(state.quotes||[]).filter(x=>x.kind==='quote'&&x.acceptedAt).filter(x=>!q||matchesAk(x)||[x.customerName,x.number,x.service].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(q)));
   let ready=0,outstanding=0,done=0;
   for(const offer of orders){
    let st;try{st=core.status(state,offer)}catch(e){const warn=make('p','⚠ '+offer.number+': '+e.message);container.append(warn);continue}
    ready+=st.unbilled.length;outstanding+=st.total-st.billed;done+=st.complete;
-   const panel=make('details');panel.dataset.order=offer.id;panel.open=expanded.has(offer.id);
+   const akMatch=matchesAk(offer);
+   const panel=make('details');panel.dataset.order=offer.id;panel.open=expanded.has(offer.id)||akMatch;
    panel.className='objectPanel';panel.style.margin='10px 0';
    const title=make('summary',offer.number+' · '+offer.customerName+' · '+euros(offer.net)+' netto · '+st.complete+'/'+st.total+' AK erledigt · '+st.billed+' abgerechnet');title.style.cursor='pointer';title.style.fontWeight='700';panel.append(title);
    const hint=make('p',st.allDone?st.unbilled.length?'Alle AK erledigt: Schlussrechnung über den offenen Restbetrag vorbereiten.':'Auftrag vollständig abgerechnet.':st.unbilled.length?'Erledigte Einsätze sind jetzt als Teilrechnung abrechenbar.':'Noch keine offene abrechenbare Leistung.');hint.className='hint';panel.append(hint);
    const list=make('div');
    for(const slot of st.slots){
     const row=make('div');row.className='appt';row.style.margin='5px 0';
+    if(akMatch&&Number(slot.ak?.akNumber)===exactAk){row.style.border='2px solid #1b5c83';row.style.borderRadius='10px';row.style.padding='10px';row.style.background='#eef6fa';row.setAttribute('data-ak-search-match','true');}
     const label=make('div','AK '+(slot.ak?.akNumber||slot.index)+' · '+dateDE(slot.ak?.date)+' · '+euros((slot.netCents||0)/100)+' netto · '+(slot.billed?'🧾 Abgerechnet mit '+slot.invoice.number:slot.done?'✅ Erledigt, abrechenbar':slot.ak?'⏳ Noch offen / in Bearbeitung':'⚠ AK fehlt'));row.append(label);
     if(slot.done&&!slot.billed&&!st.allDone&&slot.ak){
      const btn=make('button','🧾 Teilrechnung '+slot.index+'/'+st.total+' vorbereiten');btn.type='button';btn.className='secondary smallbtn';btn.onclick=()=>prepare(offer.id,slot.id);row.append(btn)
