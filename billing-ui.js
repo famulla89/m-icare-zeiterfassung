@@ -263,7 +263,7 @@
    state.quotes.push(doc);
    state.quoteSettings={...previousSettings,SellerName:doc.sellerName,SellerAddress:doc.sellerAddress,SellerTax:doc.sellerTaxId,SellerEmail:doc.sellerEmail,SellerPhone:doc.sellerPhone,Iban:doc.iban};
    try{await saveState()}catch(e){state.quotes=state.quotes.filter(x=>x.id!==doc.id);state.quoteSettings=previousSettings;throw e}
-   pending=null;$('billEditor').classList.add('hidden');render();
+   pending=null;$('billEditor').classList.add('hidden');render();root.MiCareOperationsUI?.renderPayments();
    try{await saveExport('M-iCare_Rechnung_'+doc.number+'.pdf',pdf,'Rechnungen')}
    catch(e){alert('Rechnung '+doc.number+' wurde gespeichert, aber der PDF-Download schlug fehl: '+e.message+'. PDF später in der Rechnungsübersicht erneut ausgeben.');return}
    notify('Rechnung '+doc.number+' erstellt; E-Mail wird NICHT automatisch versendet.');
