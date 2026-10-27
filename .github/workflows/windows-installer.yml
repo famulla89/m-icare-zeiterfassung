@@ -26,6 +26,9 @@ on:
       - 'quote-calculator.js'
       - 'quote-ui.js'
       - 'billing-ui.js'
+      - 'operations-core.js'
+      - 'operations-ui.js'
+      - 'tests/operations-core-smoke.cjs'
       - 'voice-input.js'
       - 'report-print.js'
       - 'tests/quote-calculator-smoke.cjs'
@@ -61,6 +64,7 @@ jobs:
           node tests/quote-calculator-smoke.cjs
           node tests/billing-core-smoke.cjs
           node tests/operations-core-smoke.cjs
+          node --check operations-core.js
           node --check operations-ui.js
           node tests/voice-input-smoke.cjs
           node --check login-gate.js
