@@ -48,7 +48,7 @@
   const s=state();const date=s.lastBackup?new Date(s.lastBackup).toLocaleString('de-DE'):'Keine externe Sicherung dokumentiert';
   const label=s.lastSave&&(!s.lastBackup||new Date(s.lastBackup)<new Date(s.lastSave))?'Datensicherung empfohlen':'Letzter externer Sicherungsstand';
   holder.append(el('strong',label),el('span',date));
-  holder.append(button('Sicherung öffnen',()=>api.show('backupSection')));
+  const open=button('Sicherung öffnen',()=>api.show('backupSection'));open.dataset.jump='backupSection';holder.append(open);
  }
  function renderHome(){
   renderToday();renderBackup();
