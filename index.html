@@ -208,11 +208,11 @@ tbody tr:nth-child(even){background:#f8fbfe}
 <div class="wrap">
 <header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.9.12 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
 <nav id="mainBottomNav" aria-label="Hauptnavigation" style="position:sticky;top:0;z-index:8;display:flex;gap:5px;overflow-x:auto;padding:7px 0;background:var(--paper,#f5f9fc)">
-<button type="button" class="secondary smallbtn" data-jump="home">⌂ Start</button>
-<button type="button" class="secondary smallbtn" data-jump="customerOverviewScreen">👥 Kunden</button>
-<button type="button" class="secondary smallbtn" data-jump="appointmentsPanel">📅 Aufträge</button>
-<button type="button" class="secondary smallbtn" data-jump="billingScreen">🧾 Finanzen</button>
-<button type="button" class="secondary smallbtn" data-jump="backupSection">⚙ Mehr</button>
+<button type="button" class="secondary smallbtn" data-nav="home">⌂ Start</button>
+<button type="button" class="secondary smallbtn" data-nav="customerOverviewScreen">👥 Kunden</button>
+<button type="button" class="secondary smallbtn" data-nav="appointmentsPanel">📅 Aufträge</button>
+<button type="button" class="secondary smallbtn" data-nav="billingScreen">🧾 Finanzen</button>
+<button type="button" class="secondary smallbtn" data-nav="backupSection">⚙ Mehr</button>
 </nav>
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
 <section id="home" class="screen active"><h2>🏠 Arbeitszentrale</h2>
@@ -2323,7 +2323,7 @@ function showScreen(id,remember=true){if(!screenIds.includes(id))id='home';if(id
 currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home'){renderContractReminders();renderWorkDashboard();}if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
 function goBack(){if(!confirmDiscardChanges())return;const previous=screenHistory.pop()||'home';captureCurrentScreen();showScreen(previous,false)}
 $('goBack').onclick=goBack;$('goHome').onclick=()=>{if(!confirmDiscardChanges())return;screenHistory=[];captureCurrentScreen();showScreen('home',false)};
-document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));
+document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>showScreen(b.dataset.nav));
 window.addEventListener('beforeunload',e=>{if(screenDirty){e.preventDefault();e.returnValue=''}});
 document.body.classList.add('ready');
 init().then(()=>renderWorkDashboard()).catch(err=>console.warn('Dashboard initialization:',err));captureCurrentScreen();
