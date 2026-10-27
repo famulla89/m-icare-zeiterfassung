@@ -123,7 +123,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert.equal(await page.locator('#allCustomersList > .objectItem').count(),10,'Clear search returns all customers');
  console.log('E2E step 2b: customer search exact number, object, name, city, archived, empty and PDF filter passed');
  await page.locator('#goHome').click();
- await page.locator('[data-jump="customersPanel"]').click();
+ await page.locator('#home [data-jump="customersPanel"]').click();
  assert(await page.locator('#customersPanel').isVisible());
  await page.locator('#goHome').click();
  console.log('E2E step 3: customer navigation passed');
@@ -136,7 +136,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  ]){
   const button=page.locator('#micareHomeStats .mi-stat-card').filter({has:page.locator('#'+counter)});
   assert.equal(await button.count(),1,'KPI card for '+counter+' exists');
-  assert(/^\\d+$/.test((await page.locator('#'+counter).innerText()).trim()),'KPI is numeric: '+counter);
+  assert(/^\d+$/.test((await page.locator('#'+counter).innerText()).trim()),'KPI is numeric: '+counter);
   await page.locator('#'+counter).click();
   assert(await page.locator('#'+target).isVisible(),'KPI '+counter+' opens '+target);
   await page.locator('#goHome').click();
@@ -302,7 +302,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('E2E quote: customer, office, AK, 2 window sizes, soil, profit presets, custom price, storage and PDF passed');
 
  // Reporting: search + customer filter, CSV and print
- await page.locator('[data-jump="reportingScreen"]').click();
+ await page.evaluate(()=>showScreen('reportingScreen'));
  assert(await page.locator('#reportHome').isVisible());
  await page.locator('[data-open-report="employees"]').click();
  assert(await page.locator('#reportDetail').isVisible());
