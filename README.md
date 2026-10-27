@@ -1,3 +1,22 @@
+# M-iCare Zeiterfassung – Entwicklungsstand 1.9.15
+
+## Flexible Kunden-Erinnerung vor Vertragsende (1.9.15)
+
+Im **Angebots- und Rechnungsrechner → Auftragsplanung → Kunden-Erinnerung vor Vertragsende** gibt es jetzt:
+
+- **Automatisch passend zur Auftragsdauer (Standard):** bei Aufträgen mit höchstens 14 Tagen Laufzeit bis zu 2 Tage vorher, bei 15–30 Tagen 7 Tage, bei 31–60 Tagen 14 Tage, darüber 30 Tage vor dem Ende.
+- **Feste Auswahl:** 1, 2, 3, 7, 14, 30 oder 60 Tage vorher, außerdem letzter Auftragstag und keine Erinnerung.
+- **Eigener Zeitraum:** beliebige ganze Zahl im Rahmen von 1–730 Tagen, 1–104 Wochen oder 1–24 **Kalendermonaten**. Beispiel: Ein Monat vor dem 31. März ist der 28. bzw. 29. Februar.
+- **Schutz bei kurzen Aufträgen:** Wenn der gewünschte Vorlauf länger als der Vertrag ist, wird die Erinnerung auf den **ersten geplanten Einsatztag** begrenzt; ein Hinweis erscheint in der Vorschau.
+- **Terminvorschau:** zeigt den konkreten Erinnerungstag und eine Warnung, wenn der Vorlauf angepasst wurde. Bei Kundenannahme wird der berechnete Tag als `reminderDays` und `reminderDate` gespeichert.
+- **Keine rückwirkende Migration:** Bereits angenommene Aufträge behalten ihre gespeicherten Erinnerungen. Vorhandene Entwürfe mit 7/14/30/60 Tagen bleiben bearbeitbar.
+
+**Beispiel:** Zweiwöchiger Auftrag 02.–16.11.2026 → automatische Erinnerung am 14.11.2026. Bei manuell gewähltem „1 Tag vorher“ erfolgt sie am 15.11.2026.
+
+**Wichtig:** Es handelt sich weiterhin um eine **In-App-Erinnerung** auf der Startseite, sobald die App geöffnet bzw. verwendet wird – **keine** Android-/Windows-Pushmeldung bei geschlossener App. Eine sichere JSON-Datensicherung bleibt vor Neuinstallationen nötig. Die Version 1.9.15 erhöht den Android-`versionCode` auf 207.
+
+---
+
 # M-iCare Zeiterfassung – Testversion 1.9.1
 
 ## PDF-Layout direkt in der App (Version 1.9.4)
