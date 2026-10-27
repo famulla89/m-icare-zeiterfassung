@@ -6,7 +6,7 @@
  const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=String(text);return node};
  const euro=value=>Number(value||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
  const dateDE=iso=>/^\d{4}-\d\d-\d\d$/.test(String(iso||''))?iso.slice(8)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4):String(iso||'');
- let api=null;
+ let api=null,paymentBusy=false;
  const state=()=>api.getState();
  function today(){return api.today()}
  function localDateAfter(days){
@@ -157,11 +157,11 @@
   }
   $('miPaymentSummary').textContent=invoices.length+' Rechnungen · '+euro(open/100)+' offen · '+overdue+' überfällig. Zahlungen nur nach tatsächlich bestätigtem Geldeingang erfassen.';
   if(!invoices.length)host.append(el('p','Noch keine endgültig ausgestellten Rechnungen vorhanden.'));
-  $('miPaySubmit').disabled=invoices.length===0;
+  $('miPaySubmit').disabled=invoices.length===0||paymentBusy;
  }
  async function savePayment(event){
   event.preventDefault();
-  const submit=$('miPaySubmit');if(submit.disabled)return;submit.disabled=true;
+  const submit=$('miPaySubmit');if(paymentBusy)return;paymentBusy=true;submit.disabled=true;
   try{
    const inv=state().quotes.find(x=>x.id===$('miPayInvoice').value);
    const payment=core.addPayment(inv,state().payments||[],{
@@ -172,7 +172,7 @@
    try{await api.save()}catch(e){state().payments=state().payments.filter(x=>x!==payment);throw e}
    $('miPayAmount').value='';$('miPayNote').value='';renderPayments();
   }catch(e){alert('Zahlung konnte nicht gespeichert werden: '+e.message)}
-  finally{submit.disabled=false}
+  finally{paymentBusy=false;submit.disabled=(state().quotes||[]).filter(x=>x.kind==='invoice'&&x.finalizedAt).length===0}
  }
  function renderTemplates(){
   const select=$('miTemplateSelect');if(!select)return;
