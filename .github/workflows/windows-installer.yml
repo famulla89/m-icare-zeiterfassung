@@ -11,6 +11,8 @@ on:
       - 'quote-calculator.js'
       - 'quote-ui.js'
       - 'billing-ui.js'
+      - 'operations-core.js'
+      - 'operations-ui.js'
       - 'voice-input.js'
       - 'report-print.js'
       - 'logo.svg'
@@ -48,7 +50,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force windows-app/web | Out-Null
-          Copy-Item index.html,login-gate.js,google-company-search.js,schedule-planner.js,cloud-transfer.js,quote-calculator.js,quote-ui.js,billing-ui.js,voice-input.js,report-print.js,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
+          Copy-Item index.html,login-gate.js,google-company-search.js,schedule-planner.js,cloud-transfer.js,quote-calculator.js,quote-ui.js,billing-ui.js,operations-core.js,operations-ui.js,voice-input.js,report-print.js,manifest.webmanifest,icon.svg,logo.svg windows-app/web/
       - name: Validate business rules and correction flows on Windows
         shell: pwsh
         run: |
@@ -58,6 +60,8 @@ jobs:
           node tests/cloud-transfer-smoke.cjs
           node tests/quote-calculator-smoke.cjs
           node tests/billing-core-smoke.cjs
+          node tests/operations-core-smoke.cjs
+          node --check operations-ui.js
           node tests/voice-input-smoke.cjs
           node --check login-gate.js
           node tests/schedule-planner-smoke.cjs
