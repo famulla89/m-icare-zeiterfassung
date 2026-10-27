@@ -80,7 +80,7 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  console.log('E2E: owner navigation without employee role toggle passed');
 
  // Navigation and customer data
- await page.locator('[data-jump="customerOverviewScreen"]').click();
+ await page.locator('#micareMainNavigation [data-jump="customerOverviewScreen"]').click();
  assert(await page.locator('#customerOverviewScreen').isVisible());
  assert((await page.locator('#allCustomersList').innerText()).includes('Nordstern'));
  // Kundenübersicht: exakte Kunden- und Objektnummern, Namen, Orte und Status.
