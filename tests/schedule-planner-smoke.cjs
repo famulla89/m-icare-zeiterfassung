@@ -23,4 +23,28 @@ assert.throws(()=>plan({start:'2026-11-31'}),/Ungültiges/);
 assert.throws(()=>plan({startTime:'12:00',endTime:'09:00'}),/Start-/);
 assert.throws(()=>plan({end:'2029-02-01'}),/zwei Jahre/);
 assert.throws(()=>plan({start:'2026-01-01',end:'2027-12-31',weekdays:[1,2,3,4,5]}),/104/);
-console.log('SCHEDULE PLANNER PASS: Tue+Wed 2 months, week intervals, DST/leap, 30-day reminders and input limits');
+
+// Lead-time regression: short contracts, configurable units, calendar months, disabled and invalid values.
+const reminder=overrides=>planner.reminderSettings({
+ start:'2026-11-02',end:'2026-11-16',selection:'auto',customValue:1,customUnit:'days',...overrides
+});
+assert.deepEqual([reminder().date,reminder().reminderDays,reminder().adjusted],['2026-11-14',2,false]);
+assert.equal(reminder({selection:'1'}).date,'2026-11-15');
+assert.equal(reminder({selection:'2'}).date,'2026-11-14');
+assert.equal(reminder({selection:'custom',customValue:4,customUnit:'days'}).date,'2026-11-12');
+assert.equal(reminder({selection:'custom',customValue:1,customUnit:'weeks'}).date,'2026-11-09');
+assert.equal(reminder({selection:'custom',customValue:1,customUnit:'months'}).date,'2026-11-02');
+assert.equal(reminder({selection:'30'}).date,'2026-11-02');
+assert.equal(reminder({selection:'30'}).adjusted,true);
+assert.equal(reminder({selection:'0'}).date,'2026-11-16');
+assert.equal(reminder({selection:'-1'}).disabled,true);
+assert.equal(planner.reminderSettings({start:'2027-01-01',end:'2027-03-31',selection:'custom',customValue:1,customUnit:'months'}).date,'2027-02-28');
+assert.equal(planner.reminderSettings({start:'2028-01-01',end:'2028-03-31',selection:'custom',customValue:1,customUnit:'months'}).date,'2028-02-29');
+assert.equal(planner.reminderSettings({start:'2026-11-02',end:'2026-11-03',selection:'auto'}).reminderDays,1);
+assert.equal(planner.reminderSettings({start:'2026-11-02',end:'2026-11-02',selection:'auto'}).reminderDays,0);
+assert.throws(()=>reminder({selection:'custom',customValue:0}),/ganze Zahl/);
+assert.throws(()=>reminder({selection:'custom',customValue:1.5}),/ganze Zahl/);
+assert.throws(()=>reminder({selection:'custom',customValue:25,customUnit:'months'}),/maximal/);
+assert.throws(()=>reminder({selection:'custom',customValue:1,customUnit:'nonsense'}),/maximal/);
+assert.throws(()=>reminder({end:'2026-10-28'}),/vor/);
+console.log('SCHEDULE PLANNER PASS: Tue+Wed 2 months, week intervals, DST/leap, custom day/week/month and short-contract reminders, input limits');
