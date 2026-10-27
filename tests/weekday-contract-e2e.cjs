@@ -38,7 +38,30 @@ const server=http.createServer((req,res)=>{
   await page.locator('#qPlanStart').fill('09:00');
   await page.locator('#qPlanEnd').fill('11:00');
   await page.locator('#qPlanEveryWeeks').selectOption('1');
-  await page.locator('#qPlanReminderDays').selectOption('30');
+  
+   // A two-week order must not get a reminder before it starts.
+   await page.locator('#qPlanEndDate').fill('2026-11-17');
+   await page.locator('#qPlanReminderDays').selectOption('auto');
+   await page.locator('#qPlanPreviewButton').click();
+   assert((await page.locator('#qPlanReminderHint').innerText()).includes('15.11.2026'));
+   await page.locator('#qPlanReminderDays').selectOption('custom');
+   assert(await page.locator('#qPlanReminderCustom').isVisible(),'Custom reminder controls should be visible');
+   await page.locator('#qPlanReminderValue').fill('1');
+   await page.locator('#qPlanReminderUnit').selectOption('days');
+   await page.locator('#qPlanPreviewButton').click();
+   assert((await page.locator('#qPlanReminderHint').innerText()).includes('16.11.2026'));
+   await page.locator('#qPlanReminderValue').fill('2');
+   await page.locator('#qPlanPreviewButton').click();
+   assert((await page.locator('#qPlanReminderHint').innerText()).includes('15.11.2026'));
+   await page.locator('#qPlanReminderUnit').selectOption('weeks');
+   await page.locator('#qPlanReminderValue').fill('1');
+   await page.locator('#qPlanPreviewButton').click();
+   assert((await page.locator('#qPlanReminderHint').innerText()).includes('10.11.2026'));
+   await page.locator('#qPlanReminderUnit').selectOption('months');
+   await page.locator('#qPlanPreviewButton').click();
+   assert((await page.locator('#qPlanReminderHint').innerText()).includes('03.11.2026'),'Month lead must be limited to first visit');
+   await page.locator('#qPlanEndDate').fill('2026-12-31');
+   await page.locator('#qPlanReminderDays').selectOption('30');
   await page.locator('#qPlanWeekdays input[value="2"]').check();
   await page.locator('#qPlanWeekdays input[value="3"]').check();
   await page.locator('#qPlanPreviewButton').click();
