@@ -50,7 +50,7 @@ const server=http.createServer((req,res)=>{
   assert.deepEqual(quote.formValues.PlanWeekdays,[2,3]);
   assert.equal(await page.evaluate(()=>state.appointments.length),0,'Draft must not create AK');
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.evaluate(()=>{calendarMonth='2026-12';chosenDay='2026-12-30';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   let overview=await page.locator('#selectedDayList').innerText();
   assert(overview.includes('ANGEBOTSENTWURF')&&overview.includes('noch KEINE Arbeitskarte'));
@@ -72,7 +72,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(result.items.at(-1).date,'2026-12-30');
   assert(result.items.every(a=>a.status==='open'&&a.plannedInvoiceNetCents===5000));
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.evaluate(()=>{calendarMonth='2026-12';chosenDay='2026-12-30';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   overview=await page.locator('#selectedDayList').innerText();
   assert(overview.includes('AK ')&&overview.includes('Offen')&&!overview.includes('ANGEBOTSENTWURF'));
