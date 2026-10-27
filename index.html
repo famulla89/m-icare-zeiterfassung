@@ -208,7 +208,21 @@ tbody tr:nth-child(even){background:#f8fbfe}
 <div class="wrap">
 <header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.9.11 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
-<section id="home" class="screen active"><h2>Was möchtest du machen?</h2><div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:10px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerung beim Öffnen der App wird hier angezeigt.</p></div><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angenommene Angebote · AK bearbeiten · Termine</small></button><button class="tile" data-jump="quoteCalculator">🧮 Kostenvoranschläge<small>Leistung kalkulieren · Angebot annehmen · Arbeitskarten planen</small></button><button class="tile" data-jump="billingScreen">🧾 Rechnungen<small>Teilrechnungen je erledigter AK · Schlussrechnung · PDF</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
+<section id="home" class="screen active"><h2>Arbeitszentrale</h2>
+<p class="hint">Dein Tagesüberblick: offene Einsätze, Kunden und Rechnungen. Alle vorhandenen Funktionen bleiben erreichbar.</p>
+<div class="grid" id="micareHomeStats" aria-live="polite">
+ <div class="status"><strong id="homeCustomerCount">–</strong><div>Aktive Kunden</div></div>
+ <div class="status"><strong id="homeAppointmentCount">–</strong><div>Geplante Termine</div></div>
+ <div class="status"><strong id="homeEntryCount">–</strong><div>Dokumentierte Arbeiten</div></div>
+ <div class="status"><strong id="homeOpenCount">–</strong><div>Offene Arbeitskarten</div></div>
+</div>
+<h3>Direkt loslegen</h3>
+<div class="row" style="margin:12px 0;flex-wrap:wrap">
+<button type="button" data-jump="appointmentsPanel">📋 Aufträge & Kalender</button>
+<button type="button" data-jump="entryForm" class="secondary">⏱ Arbeit dokumentieren</button>
+<button type="button" data-jump="billingScreen" class="secondary">🧾 Rechnungen</button>
+</div>
+<h3>Alle Bereiche</h3><div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:10px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerung beim Öffnen der App wird hier angezeigt.</p></div><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angenommene Angebote · AK bearbeiten · Termine</small></button><button class="tile" data-jump="quoteCalculator">🧮 Kostenvoranschläge<small>Leistung kalkulieren · Angebot annehmen · Arbeitskarten planen</small></button><button class="tile" data-jump="billingScreen">🧾 Rechnungen<small>Teilrechnungen je erledigter AK · Schlussrechnung · PDF</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
 
 <section class="screen" id="quoteCalculator">
  <h2>🧮 Kostenvoranschläge</h2>
@@ -2286,13 +2300,29 @@ $('reportTableCsv').onclick=async()=>{
 };
 $('reportPrint').onclick=()=>MiCareReportPrint.print();
 
+function renderHomeOverview(){
+ try{
+  const count=(name)=>Array.isArray(state?.[name])?state[name].length:0;
+  const value=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=String(n)};
+  value('homeCustomerCount',Array.isArray(state?.customers)?state.customers.filter(c=>!c.archived).length:0);
+  value('homeAppointmentCount',count('appointments'));
+  value('homeEntryCount',count('entries'));
+  const now=isoDate();
+  let open=0;
+  for(const a of (state?.appointments||[])){
+   if(a.status==='done'||a.status==='cancelled')continue;
+   if(a.date&&a.date<=now)open++;
+  }
+  value('homeOpenCount',open);
+ }catch(error){console.warn('Dashboard-Kennzahlen nicht verfügbar',error)}
+}
 function showScreen(id,remember=true){if(!screenIds.includes(id))id='home';if(id!==currentScreen&&!confirmDiscardChanges())return;if(remember&&id!==currentScreen&&screenHistory[screenHistory.length-1]!==currentScreen)screenHistory.push(currentScreen);if(currentScreen==='customersPanel'&&id!=='customersPanel'){newCustomerMode=false;$('selectedCustomer').disabled=false;if(lastSelectedCustomer)$('selectedCustomer').value=lastSelectedCustomer}
-currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home')renderContractReminders();if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
+currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home'){renderContractReminders();renderHomeOverview();}if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
 function goBack(){if(!confirmDiscardChanges())return;const previous=screenHistory.pop()||'home';captureCurrentScreen();showScreen(previous,false)}
 $('goBack').onclick=goBack;$('goHome').onclick=()=>{if(!confirmDiscardChanges())return;screenHistory=[];captureCurrentScreen();showScreen('home',false)};
 document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));
 window.addEventListener('beforeunload',e=>{if(screenDirty){e.preventDefault();e.returnValue=''}});
 document.body.classList.add('ready');
-init();captureCurrentScreen();
+init();renderHomeOverview();captureCurrentScreen();
 </script>
 </body></html>
