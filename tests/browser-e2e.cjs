@@ -45,22 +45,14 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await page.evaluate(()=>renderHomeOverview());
  assert.equal(await page.locator('#homeCustomerCount').textContent(),'10','Dashboard customer count');
  assert.equal(await page.locator('#homeEntryCount').textContent(),String((await page.evaluate(()=>state.entries.length))),'Dashboard work entry count');
- assert(await page.locator('#home [data-jump="appointmentsPanel"]').count()>=1,'Direct appointment shortcut present');
- assert(await page.locator('#home [data-jump="billingScreen"]').count()>=1,'Direct billing shortcut present');
+ assert(await page.locator('#home [data-jump="appointmentsPanel"]').count()>=1,'Appointments present');
+ assert(await page.locator('#home [data-jump="billingScreen"]').count()>=1,'Billing present');
  console.log('E2E: workflow dashboard counts and shortcuts passed');
- // Reduced office/employee navigation, persisted mode and key operational paths.
- await page.locator('#micareEmployeeMode').click();
- assert(await page.locator('#micareEmployeeHome').isVisible(),'Employee home mode visible');
- assert(!(await page.locator('#micareOfficeHome').isVisible()),'Employee view hides office menu');
- assert.equal(await page.locator('#micareEmployeeHome .tile').count(),3,'Only three staff actions');
- await page.reload({waitUntil:'load'});
- await unlock(page);
- assert(await page.locator('#micareEmployeeHome').isVisible(),'Employee mode persists over restart');
- await page.locator('#micareOfficeMode').click();
- assert(await page.locator('#micareOfficeHome').isVisible(),'Office mode restored');
- assert.equal(await page.locator('#micareMainNavigation .tile').count(),4,'Only four office areas');
- console.log('E2E: staff/office modes, compact navigation and persistence passed');
-
+ // Single-owner UI: all five operational areas visible; no role switch.
+ assert.equal(await page.locator('#micareMainNavigation .tile').count(),5,'Five owner navigation areas');
+ assert.equal(await page.locator('#micareModeSwitcher').count(),0,'No employee/office mode switch');
+ assert(await page.locator('#micareMainNavigation [data-jump="plannedWorkScreen"]').count()===1,'Owner has work-card access');
+ console.log('E2E: owner navigation without employee role toggle passed');
 
  // Navigation and customer data
  await page.locator('[data-jump="customerOverviewScreen"]').click();
