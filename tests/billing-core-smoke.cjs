@@ -34,6 +34,9 @@ assert.equal(final.performedWork.filter(x=>x.priorInvoice).length,1);
 assert.equal(final.performedWork.filter(x=>!x.priorInvoice).length,9);
 assert.deepEqual(final.coveredAppointmentIds,quote.appointmentIds.slice(1));
 assert.equal(final.alreadyInvoicedNet,100);
+assert.deepEqual(final.precedingInvoices.map(i=>({number:i.number,net:i.net,gross:i.gross})),
+ [{number:'RG-2026-0001',net:100,gross:100}],'Schlussrechnung führt vorherige Rechnungen strukturiert auf');
+assert.equal(final.precedingInvoices[0].date,state.quotes.find(x=>x.kind==='invoice').date,'Original-Rechnungsdatum bleibt erhalten');
 assert(final.notes.includes('Bisherige Teilrechnungen'));
 assert(final.notes.includes('RG-2026-0001'),'Frühere Teilrechnungsnummer auf Schlussrechnung');
 assert(final.notes.includes('100,00'),'Teilrechnungsbetrag auf Schlussrechnung');
