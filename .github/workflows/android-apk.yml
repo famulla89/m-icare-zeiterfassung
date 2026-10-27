@@ -115,10 +115,10 @@ jobs:
       - name: Give APK a unique recognizable filename
         shell: bash
         run: |
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.12-Android.apk
-          test -s M-iCare-NEU-1.9.12-Android.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.13-Android.apk
+          test -s M-iCare-NEU-1.9.13-Android.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: M-iCare-NEU-1.9.12-Android
-          path: M-iCare-NEU-1.9.12-Android.apk
+          name: M-iCare-NEU-1.9.13-Android
+          path: M-iCare-NEU-1.9.13-Android.apk
           retention-days: 30
