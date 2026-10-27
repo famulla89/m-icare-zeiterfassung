@@ -207,8 +207,28 @@ tbody tr:nth-child(even){background:#f8fbfe}
  </div></div>
 <div class="wrap">
 <header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.9.11 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
+<nav id="mainBottomNav" aria-label="Hauptnavigation" style="position:sticky;top:0;z-index:8;display:flex;gap:5px;overflow-x:auto;padding:7px 0;background:var(--paper,#f5f9fc)">
+<button type="button" class="secondary smallbtn" data-jump="home">⌂ Start</button>
+<button type="button" class="secondary smallbtn" data-jump="customerOverviewScreen">👥 Kunden</button>
+<button type="button" class="secondary smallbtn" data-jump="appointmentsPanel">📅 Aufträge</button>
+<button type="button" class="secondary smallbtn" data-jump="billingScreen">🧾 Finanzen</button>
+<button type="button" class="secondary smallbtn" data-jump="backupSection">⚙ Mehr</button>
+</nav>
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
-<section id="home" class="screen active"><h2>Was möchtest du machen?</h2><div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:10px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerung beim Öffnen der App wird hier angezeigt.</p></div><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angenommene Angebote · AK bearbeiten · Termine</small></button><button class="tile" data-jump="quoteCalculator">🧮 Kostenvoranschläge<small>Leistung kalkulieren · Angebot annehmen · Arbeitskarten planen</small></button><button class="tile" data-jump="billingScreen">🧾 Rechnungen<small>Teilrechnungen je erledigter AK · Schlussrechnung · PDF</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
+<section id="home" class="screen active"><h2>🏠 Arbeitszentrale</h2>
+<p class="hint">Dein Überblick für heute. Kunden, Angebote, Aufträge, Arbeitskarten und Rechnungen bleiben miteinander verknüpft.</p>
+<div class="grid" id="workDashboardStats" aria-live="polite">
+ <div class="status"><strong id="dashCustomers">–</strong><div>Kunden</div></div>
+ <div class="status"><strong id="dashToday">–</strong><div>Termine heute</div></div>
+ <div class="status"><strong id="dashOpen">–</strong><div>Offene Arbeitskarten</div></div>
+ <div class="status"><strong id="dashDone">–</strong><div>Dokumentierte Arbeiten</div></div>
+</div>
+<div class="row" style="margin:12px 0;gap:8px;flex-wrap:wrap">
+ <button class="secondary" type="button" data-jump="dailyWorkOverview">📅 Heutige Einsätze</button>
+ <button class="secondary" type="button" data-jump="appointmentsPanel">📋 AK und Kalender</button>
+ <button class="secondary" type="button" data-jump="billingScreen">🧾 Rechnungen</button>
+</div>
+<h3>Bereiche</h3><div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:10px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerung beim Öffnen der App wird hier angezeigt.</p></div><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angenommene Angebote · AK bearbeiten · Termine</small></button><button class="tile" data-jump="quoteCalculator">🧮 Kostenvoranschläge<small>Leistung kalkulieren · Angebot annehmen · Arbeitskarten planen</small></button><button class="tile" data-jump="billingScreen">🧾 Rechnungen<small>Teilrechnungen je erledigter AK · Schlussrechnung · PDF</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
 
 <section class="screen" id="quoteCalculator">
  <h2>🧮 Kostenvoranschläge</h2>
@@ -2050,6 +2070,19 @@ document.getElementById('copyCustomerAddressToObject')?.addEventListener('click'
  for(const [source,target] of items){if(!source||!target)continue;target.value=source.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));}
  if(message)message.textContent='✓ Kundenadresse in die Geschäftsstelle übernommen. Objektbezeichnung und Schlüsselangaben bleiben unverändert.';
 });
+function renderWorkDashboard(){
+ const customers=Array.isArray(state?.customers)?state.customers:[];
+ const appointments=Array.isArray(state?.appointments)?state.appointments:[];
+ const entries=Array.isArray(state?.entries)?state.entries:[];
+ const today=isoDate(),todayAppointments=new Set();
+ let open=0;
+ for(const a of appointments){
+  if(a.date===today)todayAppointments.add(a.id);
+  if(!entries.some(e=>e.appointmentId===a.id))open++;
+ }
+ const counts={dashCustomers:customers.length,dashToday:todayAppointments.size,dashOpen:open,dashDone:entries.length};
+ for(const [id,value] of Object.entries(counts)){const el=document.getElementById(id);if(el)el.textContent=String(value);}
+}
 setupExtraVoiceButtons();document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['home','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history', 'quoteCalculator','billingScreen','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
 let screenDirty=false;
 const editableFields=new Set(['editCustomerName','editCustomerAddress','editCustomerHouseNumber','editCustomerZip','editCustomerCity','newObjectName','newObjectAddress','newObjectHouseNumber','newObjectZip','newObjectCity','keyHolder','keyLocation','employee','service','object','date','endDate','start','end','breakMinutes','notes','linkedAppointment','orderStatus','workDone','orderRemarks','appointmentDate','appointmentStart','appointmentEnd','appointmentRepeat','appointmentInterval','appointmentUntil','newEmployee','editCustomerPhone','editCustomerMobile','editCustomerEmail','customerChoice','entryObjectChoice','deviationReason','deviationNote','correctionReason','correctionNote','appointmentCustomer','appointmentObject','appointmentEmployee','appointmentService','newCustomerName','newCustomerAddress']);
@@ -2287,12 +2320,12 @@ $('reportTableCsv').onclick=async()=>{
 $('reportPrint').onclick=()=>MiCareReportPrint.print();
 
 function showScreen(id,remember=true){if(!screenIds.includes(id))id='home';if(id!==currentScreen&&!confirmDiscardChanges())return;if(remember&&id!==currentScreen&&screenHistory[screenHistory.length-1]!==currentScreen)screenHistory.push(currentScreen);if(currentScreen==='customersPanel'&&id!=='customersPanel'){newCustomerMode=false;$('selectedCustomer').disabled=false;if(lastSelectedCustomer)$('selectedCustomer').value=lastSelectedCustomer}
-currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home')renderContractReminders();if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
+currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home'){renderContractReminders();renderWorkDashboard();}if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
 function goBack(){if(!confirmDiscardChanges())return;const previous=screenHistory.pop()||'home';captureCurrentScreen();showScreen(previous,false)}
 $('goBack').onclick=goBack;$('goHome').onclick=()=>{if(!confirmDiscardChanges())return;screenHistory=[];captureCurrentScreen();showScreen('home',false)};
 document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));
 window.addEventListener('beforeunload',e=>{if(screenDirty){e.preventDefault();e.returnValue=''}});
 document.body.classList.add('ready');
-init();captureCurrentScreen();
+init().then(()=>renderWorkDashboard()).catch(err=>console.warn('Dashboard initialization:',err));captureCurrentScreen();
 </script>
 </body></html>
