@@ -77,7 +77,7 @@ jobs:
           if [ -z "${MICARE_DEBUG_KEYSTORE_BASE64:-}" ]; then
             echo "::warning::MICARE_DEBUG_KEYSTORE_BASE64 fehlt: Nur NEUINSTALLATIONS-Test-APK, kein verlässliches Android-Update."
             echo "MICARE_SIGNING_KIND=TEMPORAER" >> "$GITHUB_ENV"
-            echo "MICARE_ARTIFACT_NAME=M-iCare-TEST-1.9.14-NEUINSTALLATION" >> "$GITHUB_ENV"
+            echo "MICARE_ARTIFACT_NAME=M-iCare-TEST-1.9.15-NEUINSTALLATION" >> "$GITHUB_ENV"
           else
             mkdir -p "$HOME/.android"
             printf '%s' "$MICARE_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
@@ -90,7 +90,7 @@ jobs:
               exit 1
             fi
             echo "MICARE_SIGNING_KIND=FEST" >> "$GITHUB_ENV"
-            echo "MICARE_ARTIFACT_NAME=M-iCare-UPDATE-1.9.14-FESTE-SIGNATUR" >> "$GITHUB_ENV"
+            echo "MICARE_ARTIFACT_NAME=M-iCare-UPDATE-1.9.15-FESTE-SIGNATUR" >> "$GITHUB_ENV"
             echo "PASS: correct pinned persistent test signing certificate"
           fi
       - name: Build APK
@@ -121,7 +121,7 @@ jobs:
           unzip -p "$APK" assets/index.html | grep -Fq 'data-jump="quoteCalculator"'
           unzip -p "$APK" assets/index.html | cmp - index.html
           unzip -p "$APK" assets/index.html | grep -Fq 'Betriebsverwaltung'
-          unzip -p "$APK" assets/index.html | grep -Fq 'M-iCare Gebäudereinigung · Version 1.9.14'
+          unzip -p "$APK" assets/index.html | grep -Fq 'M-iCare Gebäudereinigung · Version 1.9.15'
           for screen in customerOverviewScreen appointmentsPanel plannedWorkScreen billingScreen operationsHub; do
             grep -Fq "data-jump=\"$screen\"" index.html
             grep -Fq "id=\"$screen\"" index.html
@@ -172,17 +172,17 @@ jobs:
             echo "::warning::$UPDATE_TEXT"
           fi
           APK_FILE_SHA256="$(sha256sum "$APK" | awk '{print $1}')"
-          printf 'M-iCare Android 1.9.14\nSignaturstatus: %s\nZertifikat SHA-256: %s\nAPK SHA-256: %s\n%s\n' "$MICARE_SIGNING_KIND" "$APK_CERT_SHA256" "$APK_FILE_SHA256" "$UPDATE_TEXT" > M-iCare-APK-Signaturstatus.txt
+          printf 'M-iCare Android 1.9.15\nSignaturstatus: %s\nZertifikat SHA-256: %s\nAPK SHA-256: %s\n%s\n' "$MICARE_SIGNING_KIND" "$APK_CERT_SHA256" "$APK_FILE_SHA256" "$UPDATE_TEXT" > M-iCare-APK-Signaturstatus.txt
           cat M-iCare-APK-Signaturstatus.txt
       - name: Give APK a unique recognizable filename
         shell: bash
         run: |
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.14-Android.apk
-          test -s M-iCare-NEU-1.9.14-Android.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.15-Android.apk
+          test -s M-iCare-NEU-1.9.15-Android.apk
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.MICARE_ARTIFACT_NAME }}
           path: |
-            M-iCare-NEU-1.9.14-Android.apk
+            M-iCare-NEU-1.9.15-Android.apk
             M-iCare-APK-Signaturstatus.txt
           retention-days: 30
