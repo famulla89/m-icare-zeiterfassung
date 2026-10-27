@@ -354,6 +354,25 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 }
 #calendarGrid button.chosen{outline:3px solid #1589d5;outline-offset:0}
 #calendarGrid button:hover:not(:disabled){filter:brightness(.96)}
+
+/* Schlussrechnung: belastbare, responsive Vorschau vor dem endgültigen Ausstellen */
+.mi-bill-breakdown{margin:20px 0 16px;padding:20px;background:#f4f9ff;border:1px solid #cfe5f8;border-radius:13px}
+.mi-bill-breakdown.hidden{display:none!important}
+.mi-bill-breakdown h4{color:#124b7a;font-size:1.14rem;margin:0 0 7px}
+.mi-bill-breakdown h5{color:#17486e;font-size:.98rem;margin:20px 0 9px}
+.mi-bill-table-scroll{width:100%;overflow-x:auto;background:#fff;border:1px solid #dbe9f6;border-radius:10px}
+.mi-bill-table{border-collapse:collapse;width:100%;min-width:600px;font-size:.85rem;line-height:1.45}
+.mi-bill-table th{background:#e9f4ff;color:#20537e;text-align:left;font-weight:700;padding:11px 10px;white-space:nowrap}
+.mi-bill-table td{color:#234360;padding:11px 10px;vertical-align:top;border-top:1px solid #e6eff8}
+.mi-bill-table tbody tr:nth-child(even){background:#f7fbff}
+.mi-bill-table td:nth-child(4){white-space:nowrap}
+.mi-bill-summary{margin:18px 0 10px;border:1px solid #d8e7f7;border-radius:10px;background:#fff;overflow:hidden}
+.mi-bill-summary>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid #e8f0f8;font-size:.9rem}
+.mi-bill-summary>div:last-child{border-bottom:0}
+.mi-bill-summary strong{white-space:nowrap;color:#124b7a}
+.mi-bill-summary>div.mi-bill-due{background:#e7f2ff;color:#0e4d87;font-weight:700}
+.mi-bill-summary>div.mi-bill-due strong{font-size:1.1rem;color:#0968d9}
+@media(max-width:540px){.mi-bill-breakdown{padding:13px}.mi-bill-summary>div{padding:10px 11px;font-size:.84rem}}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -594,6 +613,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
  <div><label for="billEmail">Eigene Kontakt-E-Mail</label><input id="billEmail" type="email" maxlength="160"></div>
  <div><label for="billPhone">Telefon (optional)</label><input id="billPhone" maxlength="50"></div></div>
  <p class="hint">Rechnungsbetrag und Steuerregelung werden unverändert aus dem angenommenen Angebot übernommen. Bereits abgerechnete Leistungen werden abgezogen. PDF und Pflichtangaben vor dem endgültigen Ausstellen kontrollieren; kein automatischer Versand.</p>
+ <div id="billBreakdown" class="mi-bill-breakdown hidden" aria-live="polite"></div>
  <div class="row actions"><button type="button" class="secondary" id="billPreview">📄 PDF-Entwurf prüfen</button><button type="button" id="billFinalize">✅ Rechnung endgültig erstellen</button><button type="button" class="secondary" id="billCancel">Abbrechen</button></div></div>
  <div class="quoteBox"><h3>3 · Erstellte Rechnungen</h3><p id="billSavedTotal" class="status" role="status">Noch keine Rechnungen vorhanden.</p><div id="billSaved"></div>
  <p class="hint">Zahlungen und tatsächlichen E-Mail-Versand kann die lokale App nicht automatisch bestätigen. Bei zwei Geräten fehlen derzeit noch zentrale Synchronisierung und globale Rechnungsnummernvergabe.</p></div>
