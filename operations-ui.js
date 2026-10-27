@@ -131,8 +131,10 @@
       const reason=prompt('Stornierungsgrund (mindestens 5 Zeichen):');if(reason===null)return;
       try{
        const index=state().payments.findIndex(x=>x.id===p.id);
-       state().payments[index]=core.voidPayment(p,reason);
-       await api.save();renderPayments();
+       const revised=core.voidPayment(p,reason);
+       state().payments[index]=revised;
+       try{await api.save()}catch(e){state().payments[index]=p;throw e}
+       renderPayments();
       }catch(e){alert(e.message)}
     }));
     host.append(paid);
@@ -177,7 +179,7 @@
    if(state().quoteTemplates.length>=50)throw Error('Maximal 50 Vorlagen. Bitte ältere Vorlage löschen.');
    if(state().quoteTemplates.some(t=>t.name.toLocaleLowerCase('de-DE')===template.name.toLocaleLowerCase('de-DE')))throw Error('Vorlagenname bereits vorhanden');
    state().quoteTemplates.push(template);
-   api.save().then(()=>renderTemplates()).catch(e=>alert('Vorlage speichern fehlgeschlagen: '+e.message));
+   api.save().then(()=>renderTemplates()).catch(e=>{state().quoteTemplates=state().quoteTemplates.filter(x=>x.id!==template.id);alert('Vorlage speichern fehlgeschlagen: '+e.message)});
   }catch(e){alert(e.message)}
  }
  function applyTemplate(){
