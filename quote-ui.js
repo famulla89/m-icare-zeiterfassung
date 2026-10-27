@@ -2,7 +2,7 @@
 /* Kalkulationsrechner: Verknüpfung mit bestehenden M-iCare-Kunden, Objekten und AK. */
 (function(){
  const byId=id=>document.getElementById(id);
- const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','RecipientEmail','Iban','Notes','PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanRhythm','PlanMode','PlanEndDate','PlanEveryWeeks','PlanReminderDays'];
+ const tracked=['Scope','Customer','Object','Appointment','Service','ObjectType','Area','Wc','Kitchen','Heavy','Visits','Hours','SqmHour','Hourly','Nonwage','Overhead','Productivity','Material','Km','KmPrice','Margin','MinNet','MinimumSqm','SetupMinutes','LiftRental','FixedProfit','ManualNet','TaxMode','Vat','Kind','Number','ServiceDate','ValidUntil','SellerName','SellerAddress','SellerTax','SellerEmail','SellerPhone','RecipientEmail','Iban','Notes','PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanRhythm','PlanMode','PlanEndDate','PlanEveryWeeks','PlanReminderDays','PlanReminderValue','PlanReminderUnit'];
  // Einträge in öffentlich zugänglichen Firmenverzeichnissen; mögliche Adressänderungen bitte prüfen.
  const companyPublic={SellerName:'M-iCare Gebäudereinigung',SellerAddress:'Lippestraße 9, 58097 Hagen',SellerEmail:'info@m-icare-gebaeudereinigung.de',SellerPhone:'0162 8564663'};
  const typeAreas={standard:{label:'Standardfenster',sqm:1.5},large:{label:'Große Glasflächen',sqm:4},sliding:{label:'Schiebeelemente',sqm:2.5},mullion:{label:'Sprossenfenster',sqm:1.2},winter:{label:'Wintergarten',sqm:1},roof:{label:'Glasüberdachung',sqm:1}};
@@ -162,7 +162,7 @@
  }
 
  function planFields(){
-  return {...Object.fromEntries(['PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanRhythm','PlanMode','PlanEndDate','PlanEveryWeeks','PlanReminderDays'].map(k=>[k,value(k)])),
+  return {...Object.fromEntries(['PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanRhythm','PlanMode','PlanEndDate','PlanEveryWeeks','PlanReminderDays','PlanReminderValue','PlanReminderUnit'].map(k=>[k,value(k)])),
     PlanWeekdays:[...document.querySelectorAll('#qPlanWeekdays input:checked')].map(x=>Number(x.value))};
  }
  function proposedDays(values,visits,startOverride,startOverrideTime,endOverrideTime){
@@ -181,8 +181,21 @@
   byId('qVisits').readOnly=range;
   byId('qVisits').title=range?'Anzahl wird aus Vertragszeitraum und Wochentagen berechnet':'Anzahl der Einsätze';
  }
+ function toggleReminderMode(){
+  const custom=value('PlanReminderDays')==='custom';
+  byId('qPlanReminderCustom').classList.toggle('hidden',!custom);
+  byId('qPlanReminderValue').required=custom;
+  byId('qPlanReminderValue').max=({days:730,weeks:104,months:24})[value('PlanReminderUnit')]||730;
+ }
+ function resolveReminder(values,dates){
+  return MiCareSchedulePlanner.reminderSettings({
+   start:dates[0],end:values.PlanMode==='range'?values.PlanEndDate:dates.at(-1),
+   selection:values.PlanReminderDays||'auto',customValue:values.PlanReminderValue,
+   customUnit:values.PlanReminderUnit||'days'
+  });
+ }
  function previewPlan(){
-  togglePlanMode();
+  togglePlanMode();toggleReminderMode();
   const list=byId('qPlanPreview'),info=byId('qPlanStatus');list.replaceChildren();
   if(!value('PlanDate')){info.textContent='Bitte Startdatum auswählen.';list.textContent='Noch kein Terminplan berechnet.';return []}
   try{
@@ -190,9 +203,12 @@
    if(v.PlanMode==='range'&&Number(value('Visits'))!==dates.length){
     byId('qVisits').value=String(dates.length);calculate();
    }
-   info.textContent=dates.length+' unverbindliche Einsätze · '+formatDate(dates[0])+' bis '+formatDate(dates.at(-1))+
-     ' · Erinnerung '+(v.PlanReminderDays==='-1'?'deaktiviert':(v.PlanReminderDays||30)+' Tage vor Ende');
-   const container=document.createElement('div');container.style.maxHeight='240px';container.style.overflow='auto';
+   const reminder=resolveReminder(v,dates);
+    info.textContent=dates.length+' unverbindliche Einsätze · '+formatDate(dates[0])+' bis '+formatDate(dates.at(-1))+
+      ' · Erinnerung '+(reminder.disabled?'deaktiviert':formatDate(reminder.date));
+    byId('qPlanReminderHint').textContent=reminder.disabled?'Keine Erinnerung eingestellt.':
+      reminder.label+' · '+formatDate(reminder.date)+(reminder.adjusted?' · Achtung: Vorlauf überschreitet die Auftragsdauer; frühestens ab dem ersten Einsatz.':'');
+    const container=document.createElement('div');container.style.maxHeight='240px';container.style.overflow='auto';
    let conflicts=0;
    dates.forEach((d,i)=>{
     const clash=v.PlanEmployee?employeeConflicts({date:d,start:v.PlanStart,end:v.PlanEnd,employee:v.PlanEmployee}):[];
@@ -204,7 +220,7 @@
    });
    if(conflicts){const warn=document.createElement('strong');warn.textContent='⚠ '+conflicts+' Überschneidungen – Mitarbeiterplanung prüfen.';list.append(warn)}
    list.append(container);return dates;
-  }catch(e){info.textContent='⚠ '+e.message;list.textContent='Planung noch nicht gültig.';return []}
+  }catch(e){info.textContent='⚠ '+e.message;byId('qPlanReminderHint').textContent='⚠ '+e.message;list.textContent='Planung noch nicht gültig.';return []}
  }
  function alignQuoteVisits(){
   if(value('Kind')==='quote'&&value('PlanMode')==='range')
@@ -215,6 +231,10 @@
  }
  function updateNumber(){if(!activeId)byId('qNumber').value=nextNumber(value('Kind'))}
  function collect(){
+  if(value('PlanReminderDays')==='custom'){
+   const count=Number(value('PlanReminderValue')),max=({days:730,weeks:104,months:24})[value('PlanReminderUnit')];
+   if(!Number.isInteger(count)||count<1||!max||count>max)throw Error('Eigene Erinnerung: 1–730 Tage, 1–104 Wochen oder 1–24 Monate eingeben');
+  }
   const out=calculate();if(!out)throw Error('Bitte die Kalkulation oben korrigieren');
   const cid=value('Customer'),c=state.customers.find(c=>c.id===cid);
   if(!c)throw Error('Bitte einen vorhandenen Kunden auswählen');
@@ -278,7 +298,7 @@
   byId('qCustomer').value=doc.customerId;updateObjects();
   byId('qObject').value=doc.objectId;updateAppointments();byId('qAppointment').value=doc.appointmentId;
   if(Array.isArray(values.PlanWeekdays))document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=values.PlanWeekdays.map(Number).includes(Number(x.value)));
-  togglePlanMode();
+  togglePlanMode();toggleReminderMode();
   renderWindowItems();showPartInvoiceInfo();calculate();schedulePdfPreview();window.scrollTo(0,0);notify('Kalkulation '+doc.number+' geöffnet');
  }
  async function exportSavedPdf(item,button){
@@ -513,11 +533,18 @@
    if(!doc||doc.acceptedAt)throw Error('Angebot wurde bereits angenommen oder nicht gefunden');
    const proposed=scheduleForQuote(doc);if(!proposed)return;
    if(!confirm('Kundenannahme bestätigen und '+proposed.length+' offene Arbeitskarte(n) für '+doc.number+' verbindlich einplanen?'))return;
+   const contractEnd=doc.formValues?.PlanMode==='range'?doc.formValues.PlanEndDate:proposed.at(-1).date;
+   const reminder=MiCareSchedulePlanner.reminderSettings({
+    start:proposed[0].date,end:contractEnd,selection:doc.formValues?.PlanReminderDays??'30',
+    customValue:doc.formValues?.PlanReminderValue??1,customUnit:doc.formValues?.PlanReminderUnit||'days'
+   });
    state.appointments.push(...proposed);
    doc.acceptedAt=new Date().toISOString();
    doc.appointmentIds=proposed.map(x=>x.id);
-   doc.contractEnd=doc.formValues?.PlanMode==='range'?doc.formValues.PlanEndDate:proposed.at(-1).date;
-   doc.reminderDays=Number(doc.formValues?.PlanReminderDays??30);
+   doc.contractEnd=contractEnd;
+   doc.reminderDays=reminder.reminderDays;
+   doc.reminderDate=reminder.date;
+   doc.reminderLabel=reminder.label;
    doc.reminderDoneAt='';
    await saveState();
    window.MiCareContractReminders?.refresh();
@@ -674,7 +701,7 @@
   byId('qScope').value='rooms';
   byId('qService').value='Unterhaltsreinigung';updateScope();
   byId('qKind').value='quote';showPartInvoiceInfo();byId('qManualNet').value='0';byId('qTaxMode').value=state.quoteSettings?.TaxMode||'small';
-  byId('qNotes').value='';byId('qServiceDate').value='';byId('qPlanDate').value='';byId('qPlanStart').value='09:00';byId('qPlanEnd').value='11:00';byId('qPlanRhythm').value='7';byId('qPlanMode').value='count';byId('qPlanEndDate').value='';byId('qPlanEveryWeeks').value='1';byId('qPlanReminderDays').value='30';document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=false);togglePlanMode();
+  byId('qNotes').value='';byId('qServiceDate').value='';byId('qPlanDate').value='';byId('qPlanStart').value='09:00';byId('qPlanEnd').value='11:00';byId('qPlanRhythm').value='7';byId('qPlanMode').value='count';byId('qPlanEndDate').value='';byId('qPlanEveryWeeks').value='1';byId('qPlanReminderDays').value='auto';byId('qPlanReminderValue').value='1';byId('qPlanReminderUnit').value='days';document.querySelectorAll('#qPlanWeekdays input').forEach(x=>x.checked=false);togglePlanMode();toggleReminderMode();byId('qPlanReminderHint').textContent='Bei kurzen Aufträgen empfiehlt M-iCare automatisch einen kürzeren Vorlauf.';
   byId('qValidUntil').value=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
   for(const k of ['Wc','Kitchen','Heavy'])byId('q'+k).checked=false;
   byId('qVat').disabled=value('TaxMode')==='small';updateObjects();updateNumber();calculate();schedulePdfPreview();window.scrollTo(0,0);
@@ -684,7 +711,7 @@
   for(const [k,v] of Object.entries(settings)){const node=byId('q'+k);if(node&&(k==='TaxMode'||!node.value))node.value=String(v).slice(0,node.maxLength>0?node.maxLength:300)}
   // Öffentliche Kontaktdaten nur in wirklich leere Felder eintragen. Nie vorhandene Angaben überschreiben.
   for(const [k,v] of Object.entries(companyPublic)){const field=byId('q'+k);if(!field.value.trim())field.value=v}
-  refreshPlanEmployees();togglePlanMode();byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();schedulePdfPreview();
+  refreshPlanEmployees();togglePlanMode();toggleReminderMode();byId('qVat').disabled=value('TaxMode')==='small';refreshCustomers();showSaved();if(!value('Number'))updateNumber();calculate();schedulePdfPreview();
  }
  function init(){
   for(const k of tracked){
@@ -737,7 +764,8 @@
    schedulePdfPreview();
   });
   byId('qPlanPreviewButton').onclick=previewPlan;
-  for(const key of ['PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanEndDate','PlanEveryWeeks','PlanReminderDays','PlanRhythm'])byId('q'+key).addEventListener('change',previewPlan);
+  for(const key of ['PlanDate','PlanEmployee','PlanStart','PlanEnd','PlanEndDate','PlanEveryWeeks','PlanReminderDays','PlanReminderValue','PlanReminderUnit','PlanRhythm'])byId('q'+key).addEventListener('change',previewPlan);
+  byId('qPlanReminderValue').addEventListener('input',previewPlan);
   byId('qPlanMode').addEventListener('change',previewPlan);
   document.querySelectorAll('#qPlanWeekdays input').forEach(el=>el.addEventListener('change',previewPlan));
   byId('qPlanOpenCalendar').onclick=()=>{const day=value('PlanDate');if(day){calendarMonth=day.slice(0,7);chosenDay=day}document.getElementById('appointmentCalendarPanel').open=true;showScreen('appointmentsPanel');renderAppointments()};
