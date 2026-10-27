@@ -2246,7 +2246,7 @@ async function cloudChooseEncryptedFile(event){
   cloudPending={...payload,fileName:file.name,differences,comparedLocalState:JSON.stringify(state)};
   const lc=MiCareCloudTransfer.counts(state),rc=MiCareCloudTransfer.counts(payload.state);
   $('cloudImportSource').textContent='Datei: '+file.name+' · Sicherung: '+new Date(payload.exportedAt).toLocaleString('de-DE')+' · Konto: '+(payload.ownerEmail||'Nicht hinterlegt');
-  const labels={customers:'Kunden',objects:'Geschäftsstellen',appointments:'Aufträge',entries:'Arbeitszeiten'};
+  const labels={customers:'Kunden',objects:'Geschäftsstellen',appointments:'Aufträge',entries:'Arbeitszeiten',payments:'Zahlungen',quoteTemplates:'Leistungsvorlagen'};
   for(const [type,label] of Object.entries(labels)){
    const d=differences[type],p=document.createElement('p');
    p.textContent=label+': lokal '+lc[type]+' / Datei '+rc[type]+' · neu '+d.added+', geändert '+d.changed+', fehlen in Datei '+d.removed;
