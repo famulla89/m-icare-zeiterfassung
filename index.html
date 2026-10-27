@@ -335,6 +335,25 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
  #micareHomeStats button.mi-stat-card .mi-stat-label{font-size:.79rem}
  #micareHomeStats button.mi-stat-card::after{right:9px;font-size:1.3rem}
 }
+
+/* Kalender: vorhandene Statusfarben gegen die globale Button-Formatierung schützen. */
+#calendarGrid button:not(.secondary):not(.danger):not(.tile){
+  background:#eef5fc;color:#154671;box-shadow:none;
+}
+#calendarGrid button.hasEvent:not(.secondary):not(.danger):not(.tile){
+  background:#d2f2db;color:#155a2a;
+}
+#calendarGrid button.allDone:not(.secondary):not(.danger):not(.tile){
+  background:#dbeafe;color:#174b8c;
+}
+#calendarGrid button.mixedStatus:not(.secondary):not(.danger):not(.tile){
+  background:#ffe4bd;color:#855000;
+}
+#calendarGrid button.draftEvent:not(.secondary):not(.danger):not(.tile){
+  background:#e9e0fa;color:#54327a;border:1px solid #bba5dd;
+}
+#calendarGrid button.chosen{outline:3px solid #1589d5;outline-offset:0}
+#calendarGrid button:hover:not(:disabled){filter:brightness(.96)}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
