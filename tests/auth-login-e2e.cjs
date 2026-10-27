@@ -79,6 +79,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(await page.locator('#micareBioLogin').isHidden(),true);
   checks.push('Correct password works after lockout and browser has no fake biometrics');
 
+  await page.locator('.micareAccountMenu summary').click();
   await page.locator('#micareLogout').click();
   await page.waitForFunction(()=>!document.body.classList.contains('micare-authenticated'));
   await page.evaluate(()=>window.MiCareLogin.biometricResult('forged',true));
