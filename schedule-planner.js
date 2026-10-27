@@ -32,5 +32,39 @@
   }
   return dates;
  }
- return Object.freeze({build,iso,parse,addDays});
+ // Calendar-based lead times. An accepted quote retains the resolved integer reminderDays.
+ // Existing records with only reminderDays remain compatible.
+ const dayDistance=(from,to)=>{const a=parse(from),b=parse(to);return Math.round((Date.UTC(b.getFullYear(),b.getMonth(),b.getDate())-Date.UTC(a.getFullYear(),a.getMonth(),a.getDate()))/864e5)};
+ function subtractMonths(end,months){
+  const d=parse(end),first=new Date(d.getFullYear(),d.getMonth()-months,1,12);
+  const lastDay=new Date(first.getFullYear(),first.getMonth()+1,0,12).getDate();
+  first.setDate(Math.min(d.getDate(),lastDay));
+  return iso(first);
+ }
+ function reminderSettings({start,end,selection='auto',customValue=1,customUnit='days'}){
+  const from=iso(parse(start)),until=iso(parse(end)),duration=dayDistance(from,until);
+  if(duration<0)throw Error('Vertragsende liegt vor dem Vertragsbeginn');
+  let requestedDate,label;
+  if(selection==='-1')return {disabled:true,reminderDays:-1,date:'',label:'deaktiviert',adjusted:false};
+  if(selection==='auto'){
+   const days=duration<=14?Math.min(2,duration):duration<=30?7:duration<=60?14:30;
+   requestedDate=addDays(until,-days);
+   label='Automatisch: '+days+' '+(days===1?'Tag':'Tage')+' vorher';
+  }else if(selection==='custom'){
+   const n=Number(customValue);
+   if(!Number.isInteger(n)||n<1)throw Error('Bitte eine ganze Zahl ab 1 eingeben');
+   const max={days:730,weeks:104,months:24};
+   if(!Object.prototype.hasOwnProperty.call(max,customUnit)||n>max[customUnit])throw Error('Eigener Zeitraum: maximal 730 Tage, 104 Wochen oder 24 Monate');
+   requestedDate=customUnit==='months'?subtractMonths(until,n):addDays(until,-n*(customUnit==='weeks'?7:1));
+   label=n+' '+(customUnit==='days'?(n===1?'Tag':'Tage'):customUnit==='weeks'?(n===1?'Woche':'Wochen'):(n===1?'Monat':'Monate'))+' vorher';
+  }else{
+   const n=Number(selection);
+   if(!Number.isInteger(n)||n<0||n>730)throw Error('Ungültige Erinnerungseinstellung');
+   requestedDate=addDays(until,-n);
+   label=n===0?'Am letzten Auftragstag':n+' '+(n===1?'Tag':'Tage')+' vorher';
+  }
+  const adjusted=requestedDate<from,date=adjusted?from:requestedDate;
+  return {disabled:false,reminderDays:dayDistance(date,until),date,label,adjusted};
+ }
+ return Object.freeze({build,iso,parse,addDays,dayDistance,reminderSettings});
 });
