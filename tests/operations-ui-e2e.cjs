@@ -57,10 +57,12 @@ const server=http.createServer((req,res)=>{
   await page.locator('#miPayAmount').fill('75.01');
   await page.locator('#miPayForm button[type="submit"]').click();
   await page.waitForFunction(()=>state.payments?.length===2);
-  assert((await page.locator('#miPaymentList').innerText()).includes('Bezahlt'));
+  await page.waitForFunction(()=>document.querySelector('#miPaymentList')?.innerText.includes('Bezahlt'));
+  assert.equal(await page.evaluate(()=>MiCareOperationsCore.paymentSummary(state.quotes.find(x=>x.id==='qa-i'),state.payments,isoDate()).remainingCents),0);
   await page.locator('#miPaymentList button').filter({hasText:'Stornieren'}).first().click();
   await page.waitForFunction(()=>state.payments?.some(x=>x.voidedAt));
-  assert((await page.locator('#miPaymentList').innerText()).includes('Teilbezahlt'));
+  await page.waitForFunction(()=>document.querySelector('#miPaymentList')?.innerText.includes('Teilbezahlt'));
+  assert.equal(await page.evaluate(()=>state.payments.filter(x=>!x.voidedAt).length),1);
   await page.evaluate(()=>showScreen('quoteCalculator'));
   await page.locator('#qService').fill('Fensterreinigung Standard');
   await page.locator('#miTemplateSave').click();
