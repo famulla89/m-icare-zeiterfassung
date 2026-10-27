@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - feature/full-pdf-regression-qa-20261025
+      - feature/structured-workflow-dashboard-20261027
   pull_request:
     paths:
       - 'index.html'
+      - 'operations-core.js'
+      - 'operations-ui.js'
+      - 'tests/operations-core-smoke.cjs'
       - 'report-print.js'
       - 'tests/pdf-all-exports-e2e.cjs'
       - 'tests/logic-fuzz-smoke.cjs'
@@ -34,6 +38,9 @@ jobs:
           node --check quote-calculator.js
           node --check quote-ui.js
           node --check billing-ui.js
+          node --check operations-core.js
+          node --check operations-ui.js
+          node tests/operations-core-smoke.cjs
           node --check voice-input.js
           node tests/voice-input-smoke.cjs
           node tests/billing-core-smoke.cjs
