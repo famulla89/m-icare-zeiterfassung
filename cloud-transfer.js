@@ -11,7 +11,7 @@
 })(typeof globalThis!=='undefined'?globalThis:null,function(){
  const FORMAT='M-iCare-Cloud-Backup';
  const VERSION=1,ITERATIONS=310000,MAX_BYTES=12*1024*1024;
- const categories=['customers','objects','appointments','entries','employees','appointmentTrash','changeHistory'];
+ const categories=['customers','objects','appointments','entries','employees','appointmentTrash','changeHistory','payments','quoteTemplates'];
  function getCrypto(){
   const c=globalThis.crypto;
   if(!c?.subtle||!c?.getRandomValues)throw Error('Verschlüsselung ist in dieser App-Umgebung nicht verfügbar.');
@@ -50,7 +50,7 @@
  function validateSnapshot(state){
   if(!state||typeof state!=='object'||Array.isArray(state))throw Error('Ungültiger Datenbestand');
   for(const key of ['customers','objects','appointments','entries','employees'])if(!Array.isArray(state[key]))throw Error('Sicherung enthält keine vollständigen '+key);
-  const limit={customers:5000,objects:20000,appointments:30000,entries:50000,employees:5000,appointmentTrash:5000,changeHistory:4000};
+  const limit={customers:5000,objects:20000,appointments:30000,entries:50000,employees:5000,appointmentTrash:5000,changeHistory:4000,payments:50000,quoteTemplates:50};
   for(const [key,max] of Object.entries(limit))if(state[key]!==undefined&&(!Array.isArray(state[key])||state[key].length>max))throw Error('Ungültige Anzahl '+key);
   for(const key of ['customers','objects','appointments','entries']){
    const ids=new Set();
@@ -104,6 +104,13 @@
   const out={};
   for(const type of ['customers','objects','appointments','entries']){
    const a=new Map((local[type]||[]).map(x=>[x.id,x])),b=new Map(remote[type].map(x=>[x.id,x]));
+   let added=0,changed=0,removed=0;
+   for(const [id,row] of b){if(!a.has(id))added++;else if(JSON.stringify(a.get(id))!==JSON.stringify(row))changed++}
+   for(const id of a.keys())if(!b.has(id))removed++;
+   out[type]={added,changed,removed};
+  }
+  for(const type of ['payments','quoteTemplates']){
+   const a=new Map((local[type]||[]).map(x=>[x.id,x])),b=new Map((remote[type]||[]).map(x=>[x.id,x]));
    let added=0,changed=0,removed=0;
    for(const [id,row] of b){if(!a.has(id))added++;else if(JSON.stringify(a.get(id))!==JSON.stringify(row))changed++}
    for(const id of a.keys())if(!b.has(id))removed++;
