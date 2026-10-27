@@ -28,6 +28,12 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  await firstRun(page);
  await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0,{timeout:15000});
  assert(await page.locator('#home').isVisible(),'Home screen is visible');
+ // Regression: do not render any source code as text after the home footer.
+ const renderedText=await page.locator('body').innerText();
+ assert(!renderedText.includes('setupExtraVoiceButtons();'),'JavaScript leaked visibly into the app');
+ assert(!renderedText.includes('w.document.close();w.focus();w.print()'),'PDF print source leaked into the app');
+ assert(!renderedText.includes('const screenIds='),'App initialization code leaked into the home screen');
+ console.log('E2E: no visible JavaScript source in home screen');
  const fixture=JSON.parse(fs.readFileSync(path.join(root,'testdata/micare-10-kunden.json'),'utf8'));
  await page.evaluate(async data=>{
    state=structuredClone(data);state.changeHistory??=[];state.appointmentTrash??=[];state.lastSave=null;

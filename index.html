@@ -103,6 +103,87 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 #quoteCalculator #qPreviewStatus{margin:12px 0;color:#395773;font-size:.92rem}
 #quoteCalculator .qPdfPreviewPanel button{min-height:42px}
 @media(max-width:640px){#quoteCalculator .qPdfPreviewPanel{margin:12px -6px;padding:9px}#quoteCalculator .qPdfPreviewPaper{box-shadow:none}#quoteCalculator #qJumpPreview{width:100%}}
+
+/* M-iCare handbook-inspired visual system: screenshots in 1.9.3 PDFs are schematics.
+   Pure presentation overrides; identifiers, business logic and print output unchanged. */
+:root{--mc-navy:#173956;--mc-navy-deep:#12314a;--mc-blue:#168fd1;--mc-blue-soft:#eaf4fc;--mc-surface:#fff;--mc-border:#d4e4ef;--mc-text:#193d5b;--mc-muted:#587086;--mc-gold:#ecb34b;--mc-shadow:0 5px 18px rgba(24,57,84,.08);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:var(--mc-text);background:#f6f9fc}
+body{background:#f6f9fc;color:var(--mc-text);line-height:1.5}
+.wrap{max-width:1180px;padding:22px 20px 42px}
+header{padding:17px 22px;margin:0 0 19px;background:var(--mc-navy);color:white;border-radius:13px;box-shadow:var(--mc-shadow);gap:18px}
+header img{border-radius:9px;max-height:75px;width:min(27vw,165px);background:white;padding:6px}
+header h1{font-size:1.42rem;letter-spacing:.01em;color:white}
+header .sub,header .muted{color:#d8e7f1}
+header .badge{background:#35617f;color:#fff}
+header button.secondary{background:#e7f2fa;color:#164666}
+section{border:1px solid var(--mc-border);border-radius:14px;padding:23px;margin:16px 0;background:var(--mc-surface);box-shadow:var(--mc-shadow)}
+h2{font-size:1.25rem;line-height:1.28;color:var(--mc-navy);margin-bottom:14px}
+h3{color:var(--mc-navy)}
+.sub,.hint,.muted{color:var(--mc-muted)}
+label{color:#294a65;font-size:.89rem;letter-spacing:.005em}
+input,select,textarea{border:1px solid #c7d8e5;border-radius:8px;background:#fff;color:#1b3c57;min-height:43px;padding:10px 12px}
+textarea{min-height:88px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #198dd3;outline-offset:1px;border-color:#198dd3;box-shadow:0 0 0 3px rgba(25,141,211,.12)}
+button{border-radius:8px;background:var(--mc-blue);min-height:42px;padding:9px 14px;transition:background-color .16s,box-shadow .16s,transform .16s}
+button:hover:not(:disabled){filter:brightness(.97);box-shadow:0 2px 8px #1439581b}
+button:focus-visible{outline:3px solid var(--mc-gold);outline-offset:2px}
+button.secondary,.backbar button{background:#e8f3fb;color:#174e78;border:1px solid #d0e2ef}
+button.danger{background:#b74750;color:#fff}
+.tiles{gap:13px}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;min-height:105px;padding:19px 20px;background:var(--mc-blue-soft);border:1px solid var(--mc-border);border-radius:11px;color:var(--mc-navy);font-size:1.06rem;line-height:1.35;box-shadow:none}
+.tile:hover:not(:disabled),.tile:focus-visible{background:#dceefb;border-color:#8abde1}
+.tile small{font-size:.83rem;line-height:1.4;margin-top:5px;color:#567086}
+#home>h2{font-size:1.52rem;margin:6px 0 18px}
+#home>.status{border:1px solid #d6e6f1;background:#f2f7fc}
+.grid{gap:16px}
+.quoteBox,#quoteCalculator .quoteBox,.objectPanel,.backupGroup,#reportingScreen .reportMetric{border:1px solid var(--mc-border);background:#fbfdff;border-radius:11px;box-shadow:none}
+#quoteCalculator .quoteBox{padding:21px}
+#quoteCalculator .quoteBox h3{padding-bottom:11px;border-bottom:1px solid #dfeaf3}
+#quoteCalculator .quoteScopePanel,#quoteCalculator .quoteHelp{background:#edf6fc;border-color:#c7dfef}
+#quoteCalculator .quoteSummary{background:var(--mc-navy);border-radius:11px}
+#quoteCalculator .quoteWindowPicker button,#reportingScreen .reportMenu button{background:var(--mc-blue-soft);border:1px solid var(--mc-border);color:var(--mc-navy);border-radius:10px}
+#quoteCalculator .quoteWindowRow{border-color:var(--mc-border)}
+#reportingScreen .reportMenu button{min-height:100px}
+#reportingScreen .reportMetric{background:#edf6fc}
+#reportingScreen .reportBarFill{background:var(--mc-blue)}
+table th{background:#e5f2fb;color:var(--mc-navy);font-weight:750}
+table td{border-bottom-color:#e2ecf4}
+tbody tr:nth-child(even){background:#f8fbfe}
+.status{border:1px solid #d7e7f1;border-radius:9px}
+.status.warn{border-color:#ecd4a1}
+.status.good{border-color:#b7dfca}
+.backbar{background:rgba(246,249,252,.97);border-color:var(--mc-border);box-shadow:0 3px 12px #17395212}
+#micareLoginCard{border-color:var(--mc-border);box-shadow:var(--mc-shadow)}
+#quoteCalculator .qPdfPreviewPanel{background:#edf6fc;border-color:var(--mc-border)}
+#quoteCalculator .qPdfPreviewPaper{border-color:#bfd5e5}
+@media(min-width:850px){#home .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}#home .tile{min-height:107px}}
+@media(max-width:700px){
+ .wrap{padding:10px 10px 30px}
+ header{margin-bottom:12px;padding:12px;border-radius:10px;gap:10px;flex-wrap:wrap}
+ header img{width:94px;max-height:67px}
+ header h1{font-size:1.14rem}
+ header .sub{font-size:.77rem}
+ section{padding:15px 13px;margin:11px 0;border-radius:11px}
+ h2{font-size:1.13rem}
+ #home>h2{font-size:1.32rem}
+ .tiles{grid-template-columns:1fr}
+ .tile{min-height:77px;padding:13px 15px;font-size:.98rem}
+ .tile small{font-size:.8rem;margin-top:3px}
+ .grid,.three{grid-template-columns:1fr}
+ #quoteCalculator .quoteBox{padding:14px}
+ input,select,textarea{font-size:16px}
+ .row.actions>button{max-width:100%}
+ .backbar{top:0;padding:6px;gap:6px}
+ .backbar button{min-height:44px}
+ .tablewrap{max-width:100%;overflow-x:auto}
+}
+@media print{
+ :root{background:white}body{background:white}
+ header{background:white;color:#14243a;border:0;box-shadow:none}
+ header h1{color:#14243a}header .sub{color:#53667c}
+ section{box-shadow:none}
+ button{transition:none}
+}
+
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -118,15 +199,36 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
     <input id="micareConfirmPass" type="password" minlength="10" maxlength="200" autocomplete="new-password">
     <p class="authFoot">Das Konto gilt nur auf diesem Gerät. Merke dir dein Passwort und sichere regelmäßig deine Kundendaten. Ohne Passwort gibt es keinen automatischen Online-Reset.</p>
    </div>
+   <label style="display:flex;gap:8px;align-items:start;margin:10px 0"><input type="checkbox" id="micareTrustDevice" style="width:auto;margin-top:4px" checked><span>Auf diesem Gerät angemeldet bleiben (keine Passwortabfrage beim nächsten Start). Nur auf meinem privaten, gesperrten Gerät aktivieren.</span></label>
    <button id="micareLoginSubmit" type="submit">Anmelden / Konto anlegen</button>
    <button id="micareBioLogin" type="button" class="secondary" hidden>🔒 Mit Fingerabdruck anmelden</button>
   </form>
   <p class="authFoot">Passwörter werden nicht im Klartext gespeichert. Die lokale Anmeldung ersetzt noch keine verschlüsselte Datenspeicherung und keine Synchronisation mehrerer Geräte.</p>
  </div></div>
 <div class="wrap">
-<header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.9.4 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
+<header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.9.12 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
+<nav id="mainBottomNav" aria-label="Hauptnavigation" style="position:sticky;top:0;z-index:8;display:flex;gap:5px;overflow-x:auto;padding:7px 0;background:var(--paper,#f5f9fc)">
+<button type="button" class="secondary smallbtn" data-nav="home">⌂ Start</button>
+<button type="button" class="secondary smallbtn" data-nav="customerOverviewScreen">👥 Kunden</button>
+<button type="button" class="secondary smallbtn" data-nav="appointmentsPanel">📅 Aufträge</button>
+<button type="button" class="secondary smallbtn" data-nav="billingScreen">🧾 Finanzen</button>
+<button type="button" class="secondary smallbtn" data-nav="backupSection">⚙ Mehr</button>
+</nav>
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
-<section id="home" class="screen active"><h2>Was möchtest du machen?</h2><div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:10px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerung beim Öffnen der App wird hier angezeigt.</p></div><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angenommene Angebote · AK bearbeiten · Termine</small></button><button class="tile" data-jump="quoteCalculator">🧮 Kostenvoranschläge<small>Leistung kalkulieren · Angebot annehmen · Arbeitskarten planen</small></button><button class="tile" data-jump="billingScreen">🧾 Rechnungen<small>Teilrechnungen je erledigter AK · Schlussrechnung · PDF</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
+<section id="home" class="screen active"><h2>🏠 Arbeitszentrale</h2>
+<p class="hint">Dein Überblick für heute. Kunden, Angebote, Aufträge, Arbeitskarten und Rechnungen bleiben miteinander verknüpft.</p>
+<div class="grid" id="workDashboardStats" aria-live="polite">
+ <div class="status"><strong id="dashCustomers">–</strong><div>Kunden</div></div>
+ <div class="status"><strong id="dashToday">–</strong><div>Termine heute</div></div>
+ <div class="status"><strong id="dashOpen">–</strong><div>Offene Arbeitskarten</div></div>
+ <div class="status"><strong id="dashDone">–</strong><div>Dokumentierte Arbeiten</div></div>
+</div>
+<div class="row" style="margin:12px 0;gap:8px;flex-wrap:wrap">
+ <button class="secondary" type="button" data-jump="dailyWorkOverview">📅 Heutige Einsätze</button>
+ <button class="secondary" type="button" data-jump="appointmentsPanel">📋 AK und Kalender</button>
+ <button class="secondary" type="button" data-jump="billingScreen">🧾 Rechnungen</button>
+</div>
+<h3>Bereiche</h3><div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:10px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerung beim Öffnen der App wird hier angezeigt.</p></div><div class="tiles"><button class="tile" data-jump="customerOverviewScreen">🔎 Kundenübersicht<small>Kunden suchen, Geschäftsstellen ansehen</small></button><button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeitszeiten eintragen und bearbeiten</small></button><button class="tile" data-jump="customersPanel">📝 Kundenverwaltung<small>Kunden bearbeiten, Standorte und Schlüssel verwalten</small></button><button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angenommene Angebote · AK bearbeiten · Termine</small></button><button class="tile" data-jump="quoteCalculator">🧮 Kostenvoranschläge<small>Leistung kalkulieren · Angebot annehmen · Arbeitskarten planen</small></button><button class="tile" data-jump="billingScreen">🧾 Rechnungen<small>Teilrechnungen je erledigter AK · Schlussrechnung · PDF</small></button><button class="tile" data-jump="reportingScreen">📊 Reporting & Controlling<small>Berichte, Auswertungen, PDF und Excel · für Laptop</small></button><button class="tile" data-jump="backupSection">💾 Datensicherung<small>Ordner, Vollsicherung und Wiederherstellung</small></button></div></section>
 
 <section class="screen" id="quoteCalculator">
  <h2>🧮 Kostenvoranschläge</h2>
@@ -399,6 +501,23 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 </section>
 <section class="screen" id="customersPanel"><h2>Kundenverwaltung</h2><p class="hint">Wähle einen bestehenden Kunden oder lege einen neuen an. Kundendaten, Reinigungsobjekt und Schlüssel sind in einer gemeinsamen Maske.</p>
 <div class="objectPanel"><div class="row actions"><div id="customerSelectionBlock" style="flex:1;min-width:230px"><label for="selectedCustomer">Kunde auswählen</label><select id="selectedCustomer"></select><p id="newCustomerNotice" class="hint hidden">Neuer Kunde: Bitte die Felder ausfüllen und speichern. Es ist kein bestehender Kunde ausgewählt.</p></div><button type="button" id="newCustomerMode" class="secondary customerModeButton">+ Neuen Kunden anlegen</button></div>
+<div class="objectPanel" id="googleCompanySearch">
+<h3>🔎 Firma suchen</h3>
+<p class="hint">Firma oder Ort eingeben: Treffer erscheinen direkt in M-iCare. Bereits gespeicherte Kunden kannst du ohne Internet suchen. Die kostenlose OpenStreetMap-Suche zeigt öffentlich erfasste Adressen ohne Google-Abrechnung. Nicht jeder Betrieb ist enthalten.</p>
+<div class="row" style="align-items:end">
+<div style="flex:3;min-width:195px"><label for="googleCompanyQuery">Firmenname oder Adresse</label><input id="googleCompanyQuery" type="search" placeholder="z. B. REWE Hagen" autocomplete="off"></div>
+<div style="flex:1;min-width:140px"><label for="googlePlacesTarget">Übernehmen für</label><select id="googlePlacesTarget"><option value="customer">Kunde</option><option value="object">Geschäftsstelle</option></select></div>
+</div>
+<div class="row" style="margin:12px 0"><button type="button" id="googlePlacesStart">🔎 Firma suchen</button></div>
+<div id="googlePlacesSearchHost"></div>
+<p class="hint" id="googlePlacesMessage" role="status" aria-live="polite">Ohne Internet kannst du die Felder darunter wie bisher manuell ausfüllen.</p>
+<details class="backupDetails" id="googlePlacesAdvanced"><summary>⚙️ Optionale Google-Places-Anbindung einrichten</summary>
+<p class="hint">Nur für die automatische Übernahme der Treffer in M-iCare. Erfordert einen eigenen Google-Maps-API-Schlüssel, aktivierte Places API und Abrechnung. Der Schlüssel wird nicht gespeichert.</p>
+<label for="googlePlacesKey">Google Maps API-Schlüssel (optional, nur für diese Sitzung)</label>
+<input type="password" id="googlePlacesKey" autocomplete="off" placeholder="API-Schlüssel">
+<p class="hint">Diese Google-Funktion ist nicht nötig, um kostenlose OpenStreetMap-Adressen zu suchen.</p>
+</details>
+</div>
 <h3 id="customerFormTitle">Kunden- und Objektdaten bearbeiten</h3><div class="status" id="customerNumberPanel" style="margin:12px 0">Kundennummer und Objektnummer werden automatisch vergeben.</div><h3 style="margin-top:20px">1. Kundendaten</h3><div class="row" id="objectPickerRow"><div style="flex:1;min-width:230px"><label for="selectedObject">Geschäftsstelle / Objekt auswählen</label><select id="selectedObject"></select></div><button type="button" id="newObjectMode" class="secondary customerModeButton">+ Geschäftsstelle hinzufügen</button></div>
 <div class="grid"><div><label for="editCustomerName">Firmenname / Kundenname</label><div class="microw"><input id="editCustomerName" maxlength="100" required><button class="secondary mic" type="button" data-voice="editCustomerName" aria-label="Kundenname diktieren">🎤</button></div></div><div><label for="editCustomerAddress">Kundenstraße</label><div class="microw"><input id="editCustomerAddress" maxlength="180" autocomplete="street-address" placeholder="z. B. Lippestraße"><button class="secondary mic" type="button" data-voice="editCustomerAddress" aria-label="Kundenstraße diktieren">🎤</button></div></div><div><label for="editCustomerHouseNumber">Hausnummer des Kunden</label><div class="microw"><input id="editCustomerHouseNumber" maxlength="16" placeholder="z. B. 9a" inputmode="text"><button class="secondary mic" type="button" data-voice="editCustomerHouseNumber" aria-label="Hausnummer des Kunden diktieren">🎤</button></div></div>
 <div><label for="editCustomerZip">Kunden-PLZ</label><input id="editCustomerZip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" title="Bitte genau fünf Ziffern eingeben" placeholder="z. B. 44135"></div><div><label for="editCustomerCity">Kundenort</label><input id="editCustomerCity" maxlength="100" placeholder="z. B. Dortmund"></div></div><h3 style="margin-top:22px">Kontaktinformationen des Kunden</h3><div class="grid">
@@ -406,7 +525,7 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 <div><label for="editCustomerMobile">Mobilnummer</label><div class="microw"><input id="editCustomerMobile" type="tel" autocomplete="tel-national" maxlength="40" placeholder="z. B. 0176 12345678"><button type="button" class="secondary" data-copy-field="editCustomerMobile" aria-label="Mobilnummer kopieren">📋</button></div></div>
 <div><label for="editCustomerEmail">E-Mail-Adresse</label><div class="microw"><input id="editCustomerEmail" type="email" autocomplete="email" maxlength="254" placeholder="kontakt@kunde.de"><button type="button" class="secondary" data-copy-field="editCustomerEmail" aria-label="E-Mail-Adresse kopieren">📋</button></div></div>
 </div><p class="hint">📋 kopiert die jeweilige Angabe in die Zwischenablage. Kontaktdaten werden nur beim Kunden gespeichert und sind für alle seine Geschäftsstellen gültig.</p>
-<h3 style="margin-top:22px">2. Geschäftsstelle / Reinigungsobjekt</h3><div class="grid"><div><label for="newObjectName">Objektbezeichnung</label><div class="microw"><input id="newObjectName" maxlength="100" placeholder="z. B. Geschäftsstelle"><button class="secondary mic" type="button" data-voice="newObjectName" aria-label="Objektbezeichnung diktieren">🎤</button></div></div><div><label for="newObjectAddress">Objektstraße</label><div class="microw"><input id="newObjectAddress" maxlength="180" placeholder="z. B. Bahnhofstraße"><button class="secondary mic" type="button" data-voice="newObjectAddress" aria-label="Objektstraße diktieren">🎤</button></div></div><div><label for="newObjectHouseNumber">Hausnummer der Geschäftsstelle</label><div class="microw"><input id="newObjectHouseNumber" maxlength="16" placeholder="z. B. 12a" inputmode="text"><button class="secondary mic" type="button" data-voice="newObjectHouseNumber" aria-label="Hausnummer des Objekts diktieren">🎤</button></div></div>
+<h3 style="margin-top:22px">2. Geschäftsstelle / Reinigungsobjekt</h3><div class="row" style="margin:12px 0"><button type="button" class="secondary" id="copyCustomerAddressToObject">📋 Adresse von Kunde übernehmen</button></div><p class="hint" id="copyCustomerAddressMessage" role="status" aria-live="polite">Übernimmt Straße, Hausnummer, PLZ und Ort aus Punkt 1. Die Objektbezeichnung und die Schlüsselangaben bleiben erhalten.</p><div class="grid"><div><label for="newObjectName">Objektbezeichnung</label><div class="microw"><input id="newObjectName" maxlength="100" placeholder="z. B. Geschäftsstelle"><button class="secondary mic" type="button" data-voice="newObjectName" aria-label="Objektbezeichnung diktieren">🎤</button></div></div><div><label for="newObjectAddress">Objektstraße</label><div class="microw"><input id="newObjectAddress" maxlength="180" placeholder="z. B. Bahnhofstraße"><button class="secondary mic" type="button" data-voice="newObjectAddress" aria-label="Objektstraße diktieren">🎤</button></div></div><div><label for="newObjectHouseNumber">Hausnummer der Geschäftsstelle</label><div class="microw"><input id="newObjectHouseNumber" maxlength="16" placeholder="z. B. 12a" inputmode="text"><button class="secondary mic" type="button" data-voice="newObjectHouseNumber" aria-label="Hausnummer des Objekts diktieren">🎤</button></div></div>
 <div><label for="newObjectZip">Objekt-PLZ</label><input id="newObjectZip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" title="Bitte genau fünf Ziffern eingeben" placeholder="z. B. 44135"></div><div><label for="newObjectCity">Objektort</label><input id="newObjectCity" maxlength="100" placeholder="z. B. Dortmund"></div><div><label for="keyHolder">Wer hat den Schlüssel?</label><select id="keyHolder"><option value="none">Kein Schlüssel / unbekannt</option><option value="customer">Kunde</option><option value="employee">Ich / Mitarbeiter</option></select></div><div><label for="keyLocation">Wo ist der Schlüssel?</label><div class="microw"><input id="keyLocation" maxlength="100" placeholder="z. B. beim Kunden"><button class="secondary mic" type="button" data-voice="keyLocation" aria-label="Schlüsselort diktieren">🎤</button></div></div></div>
 <p class="hint">Die ausgewählte Geschäftsstelle wird bearbeitet. Über „+ Geschäftsstelle hinzufügen“ kannst du einen weiteren Standort anlegen.</p>
 <p id="newObjectHint" class="hint hidden" style="padding:10px;background:#e7f3ff;border-radius:8px">Neue Geschäftsstelle für diesen Kunden: Objektbezeichnung eingeben, Adresse und Schlüssel ergänzen und unten speichern.</p><div class="row actions"><button type="button" id="saveCustomerChanges">💾 Kunde und Objekt speichern</button><button id="archiveCustomer" class="secondary" type="button">Kunden archivieren</button><button id="deleteCustomer" class="danger" type="button">Kunden endgültig löschen</button></div><div id="customerOverview" class="status"></div></div>
@@ -470,7 +589,8 @@ body:not(.micare-authenticated) #micareLock{display:flex!important}
 <div class="footer">M-iCare Gebäudereinigung · Version 1.9.4 · Offline-Nutzung · Auf diesem Gerät gespeicherte Daten</div>
 </div><div id="toast" class="hidden" role="status"></div>
 <dialog id="linkedCustomerDialog" aria-labelledby="linkedCustomerTitle" style="border:1px solid #cbd9e8;border-radius:14px;padding:24px;max-width:460px;width:calc(100% - 32px);box-shadow:0 10px 45px #0004"><h3 id="linkedCustomerTitle">Kunde hat bereits Einträge</h3><p id="linkedCustomerMessage"></p><p>Endgültiges Löschen ist gesperrt. Möchtest du den Kunden stattdessen archivieren?</p><div class="row" style="justify-content:flex-end;margin-top:20px"><button type="button" class="secondary" id="linkedCustomerNo">Nein, abbrechen</button><button type="button" id="linkedCustomerArchive">Ja, archivieren</button></div></dialog><script src="./cloud-transfer.js"></script><script src="./report-print.js"></script><script src="./schedule-planner.js"></script>
-<script src="./voice-input.js"></script><script src="./quote-calculator.js"></script><script src="./quote-ui.js" defer></script><script src="./billing-ui.js" defer></script><script>
+<script src="./voice-input.js"></script><script src="./quote-calculator.js"></script><script src="./quote-ui.js" defer></script><script src="./billing-ui.js" defer></script><script src="./google-company-search.js"></script>
+<script>
 'use strict';
 const $=id=>document.getElementById(id);
 const SERVICES=['Gebäudereinigung','Unterhaltsreinigung','Büroreinigung','Glas- & Fensterreinigung','Grundreinigung','Bauendreinigung','Haus- & Wohnungsreinigung','Treppenhaus- & Aufgangsreinigung','Praxis- & Ladenreinigung','Kita- & Schulreinigung','Hausmeisterservice','Sonderreinigungen'];
@@ -1939,6 +2059,30 @@ document.querySelectorAll('[data-picker]').forEach(b=>b.addEventListener('click'
 $('saveCustomerChanges').onclick=saveCustomerChanges;$('selectedObject').onchange=()=>{if(!confirmDiscardChanges())return;newObjectMode=false;fillObjectEditor();captureCurrentScreen()};$('newObjectMode').onclick=()=>{if(!newObjectMode&&!state.customers.some(c=>c.id===$('selectedCustomer').value&&!c.archived))return alert('Bitte zuerst einen Kunden auswählen');if(!confirmDiscardChanges())return;newObjectMode=!newObjectMode;updateObjectPicker();fillObjectEditor();captureCurrentScreen();if(newObjectMode){$('newObjectName').focus();notify('Neue Geschäftsstelle: Namen und Adresse eintragen, dann speichern')}};$('newCustomerMode').onclick=()=>{if(!confirmDiscardChanges())return;if(!newCustomerMode){lastSelectedCustomer=$('selectedCustomer').value;newCustomerMode=true;newObjectMode=false;$('selectedCustomer').value=''}else{newCustomerMode=false;newObjectMode=false;$('selectedCustomer').disabled=false;$('selectedCustomer').value=lastSelectedCustomer;renderCustomers()}fillCustomerEditor();captureCurrentScreen();if(newCustomerMode)$('editCustomerName').focus()};$('customerSearch').oninput=renderAllCustomers;$('customerStateFilter').onchange=renderAllCustomers;$('allCustomersPdf').onclick=exportAllCustomersPdf;$('appointmentForm').onsubmit=addAppointment;$('appointmentRepeat').onchange=toggleAppointmentInterval;$('appointmentEmployeeFilter').onchange=renderAppointments;$('appointmentConflictFilter').onchange=renderAppointments;$('appointmentCustomer').onchange=()=>{updateAppointmentObjects();captureCurrentScreen()};$('appointmentsSort').onchange=renderAppointments;$('appointmentsFilter').onchange=renderAppointments;$('appointmentStatus').onchange=renderAppointments;$('appointmentMonth').onchange=renderAppointments;$('appointmentYear').onchange=renderAppointments;$('selectedCustomer').onchange=()=>{newCustomerMode=false;newObjectMode=false;renderCustomers();captureCurrentScreen()};$('customerChoice').onchange=()=>{const c=state.customers.find(x=>x.id===$('customerChoice').value);if(c)$('object').value=c.name;updateEntryObjects()};$('deleteCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c)return;const entries=state.entries.filter(e=>e.customerId===c.id||(!e.customerId&&e.object?.trim().toLowerCase()===c.name.toLowerCase()));const appointments=state.appointments.filter(a=>a.customerId===c.id);if(entries.length||appointments.length){$('linkedCustomerMessage').textContent='Dieser Kunde hat '+entries.length+' Arbeitszeiteinträge und '+appointments.length+' Terminserien. Diese Daten bleiben erhalten.';const dlg=$('linkedCustomerDialog');$('linkedCustomerNo').onclick=()=>dlg.close();$('linkedCustomerArchive').onclick=async()=>{dlg.close();c.archived=true;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde archiviert – Einträge bleiben erhalten')};dlg.showModal();return}const count=state.objects.filter(o=>o.customerId===c.id).length;if(!confirm('ACHTUNG: Soll der Kunde „'+c.name+'“ mit '+count+' Geschäftsstelle(n) wirklich endgültig gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.'))return;state.customers=state.customers.filter(x=>x.id!==c.id);state.objects=state.objects.filter(o=>o.customerId!==c.id);newCustomerMode=false;newObjectMode=false;await saveState();renderCustomers();captureCurrentScreen();notify('Kunde endgültig gelöscht')};$('archiveCustomer').onclick=async()=>{const c=state.customers.find(x=>x.id===$('selectedCustomer').value);if(!c||!confirm('Kunden archivieren?'))return;c.archived=true;await saveState();renderCustomers();notify('Kunde archiviert')};
 $('calPrev').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m-2,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};$('calNext').onclick=()=>{let [y,m]=calendarMonth.split('-').map(Number);let d=new Date(y,m,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');chosenDay=calendarMonth+'-01';renderCalendar()};
 for(let i=1;i<=12;i++){let o=el('option',new Date(2026,i-1,1).toLocaleDateString('de-DE',{month:'long'}));o.value=String(i).padStart(2,'0');$('appointmentMonth').append(o)}$('appointmentPdf').onclick=()=>{const rows=appointmentRows();const title=$('appointmentStatus').value==='done'?'Geleistete Einsätze':'Geplante Termine';const w=window.open('','_blank');if(!w)return alert('Popup blockiert. Bitte Popups zulassen');const safe=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));w.document.write('<!doctype html><html lang="de"><head><meta charset="utf-8"><title>M-iCare Terminübersicht</title><style>body{font:14px Arial;margin:30px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #bbb;padding:8px;text-align:left}h1{color:#145284}</style></head><body><h1>'+title+'</h1><p>Gefilterte Übersicht · '+rows.length+' Einträge</p><table><tr><th>Datum</th><th>Uhrzeit</th><th>Kunde / ID</th><th>Objekt / ID</th><th>Leistung</th></tr>'+rows.map(x=>'<tr><td>'+safe(formatDate(x.date))+'</td><td>'+safe(x.start+'–'+x.end)+'</td><td>'+safe(customerDisplay(state.customers.find(c=>c.id===x.customerId)))+'</td><td>'+safe(objectDisplay(state.objects.find(o=>o.id===x.appointment?.objectId)))+'</td><td>'+safe(x.service)+'</td></tr>').join('')+'</table><p>Drucken → Als PDF speichern</p></body></html>');w.document.close();w.focus();w.print()};
+document.getElementById('copyCustomerAddressToObject')?.addEventListener('click',()=>{
+ const ids=[['editCustomerAddress','newObjectAddress'],['editCustomerHouseNumber','newObjectHouseNumber'],['editCustomerZip','newObjectZip'],['editCustomerCity','newObjectCity']];
+ const items=ids.map(([source,target])=>[document.getElementById(source),document.getElementById(target)]);
+ const filled=items.filter(([source])=>source?.value.trim()).length;
+ const message=document.getElementById('copyCustomerAddressMessage');
+ if(!filled){if(message)message.textContent='Bitte zuerst unter Punkt 1 eine Kundenadresse eingeben.';return;}
+ const overwrites=items.some(([source,target])=>target?.value.trim()&&source?.value!==target.value);
+ if(overwrites&&!confirm('Vorhandene Objektadresse durch die Kundenadresse aus Punkt 1 ersetzen?'))return;
+ for(const [source,target] of items){if(!source||!target)continue;target.value=source.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));}
+ if(message)message.textContent='✓ Kundenadresse in die Geschäftsstelle übernommen. Objektbezeichnung und Schlüsselangaben bleiben unverändert.';
+});
+function renderWorkDashboard(){
+ const customers=Array.isArray(state?.customers)?state.customers:[];
+ const appointments=Array.isArray(state?.appointments)?state.appointments:[];
+ const entries=Array.isArray(state?.entries)?state.entries:[];
+ const today=isoDate(),todayAppointments=new Set();
+ let open=0;
+ for(const a of appointments){
+  if(a.date===today)todayAppointments.add(a.id);
+  if(!entries.some(e=>e.appointmentId===a.id))open++;
+ }
+ const counts={dashCustomers:customers.length,dashToday:todayAppointments.size,dashOpen:open,dashDone:entries.length};
+ for(const [id,value] of Object.entries(counts)){const el=document.getElementById(id);if(el)el.textContent=String(value);}
+}
 setupExtraVoiceButtons();document.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>voice(b.dataset.voice));const screenIds=['home','customerOverviewScreen','reportingScreen','entryForm','plannedWorkScreen','plannedEditorScreen','dailyWorkOverview','customersPanel','appointmentsPanel','history', 'quoteCalculator','billingScreen','backupSection','management'];let currentScreen='home',screenHistory=[],screenBaseline='';
 let screenDirty=false;
 const editableFields=new Set(['editCustomerName','editCustomerAddress','editCustomerHouseNumber','editCustomerZip','editCustomerCity','newObjectName','newObjectAddress','newObjectHouseNumber','newObjectZip','newObjectCity','keyHolder','keyLocation','employee','service','object','date','endDate','start','end','breakMinutes','notes','linkedAppointment','orderStatus','workDone','orderRemarks','appointmentDate','appointmentStart','appointmentEnd','appointmentRepeat','appointmentInterval','appointmentUntil','newEmployee','editCustomerPhone','editCustomerMobile','editCustomerEmail','customerChoice','entryObjectChoice','deviationReason','deviationNote','correctionReason','correctionNote','appointmentCustomer','appointmentObject','appointmentEmployee','appointmentService','newCustomerName','newCustomerAddress']);
@@ -2176,11 +2320,12 @@ $('reportTableCsv').onclick=async()=>{
 $('reportPrint').onclick=()=>MiCareReportPrint.print();
 
 function showScreen(id,remember=true){if(!screenIds.includes(id))id='home';if(id!==currentScreen&&!confirmDiscardChanges())return;if(remember&&id!==currentScreen&&screenHistory[screenHistory.length-1]!==currentScreen)screenHistory.push(currentScreen);if(currentScreen==='customersPanel'&&id!=='customersPanel'){newCustomerMode=false;$('selectedCustomer').disabled=false;if(lastSelectedCustomer)$('selectedCustomer').value=lastSelectedCustomer}
-currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home')renderContractReminders();if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
+currentScreen=id;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$('backbar').classList.toggle('hidden',id==='home');$('goBack').disabled=screenHistory.length===0;window.scrollTo(0,0);if(id==='customerOverviewScreen')renderAllCustomers();if(id==='reportingScreen')reportOpenHome();if(id==='customersPanel')renderCustomers();if(id==='appointmentsPanel'){updateCustomerSelects();refreshAppointmentEmployees();toggleAppointmentInterval();renderAppointments()}if(id==='home'){renderContractReminders();renderWorkDashboard();}if(id==='dailyWorkOverview')renderDailyWorkOverview();if(id==='plannedWorkScreen')renderPlannedWorkScreen();if(id==='entryForm'){$('entryForm').append($('form'));if(!editId)setWorkEntryMode('free');refreshLinkedAppointments();}if(id==='history'){fillMonths();$('historyMonth').value=isoDate().slice(0,7);render()}if(id==='quoteCalculator'&&window.MiCareQuoteUI)window.MiCareQuoteUI.refresh();if(id==='billingScreen'&&window.MiCareBilling)window.MiCareBilling.render();captureCurrentScreen()}
 function goBack(){if(!confirmDiscardChanges())return;const previous=screenHistory.pop()||'home';captureCurrentScreen();showScreen(previous,false)}
 $('goBack').onclick=goBack;$('goHome').onclick=()=>{if(!confirmDiscardChanges())return;screenHistory=[];captureCurrentScreen();showScreen('home',false)};
-document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));
+document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>showScreen(b.dataset.jump));document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>showScreen(b.dataset.nav));
 window.addEventListener('beforeunload',e=>{if(screenDirty){e.preventDefault();e.returnValue=''}});
 document.body.classList.add('ready');
-init();captureCurrentScreen();
-</script></body></html>
+init().then(()=>renderWorkDashboard()).catch(err=>console.warn('Dashboard initialization:',err));captureCurrentScreen();
+</script>
+</body></html>

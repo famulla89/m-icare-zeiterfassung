@@ -42,6 +42,9 @@ public class MainActivity extends Activity {
     WebViewAssetLoader loader=new WebViewAssetLoader.Builder().addPathHandler("/assets/",new WebViewAssetLoader.AssetsPathHandler(this)).build();
     web=new WebView(this);
     web.getSettings().setJavaScriptEnabled(true);
+    // Offline assets must be reloaded after an APK update; retain DOM storage / customer data.
+    web.getSettings().setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE);
+    web.clearCache(true);
     web.addJavascriptInterface(new Object(){
 
       @JavascriptInterface public boolean isAvailable(){
@@ -77,6 +80,33 @@ public class MainActivity extends Activity {
           });
         }catch(Exception ex){biometricPending=false;sendBiometricResult(challenge,false);}
       });}
+      @JavascriptInterface public void searchAddress(String query){
+        if(query==null||query.trim().length()<3||query.length()>150)return;
+        new Thread(()->{
+          String result="";
+          try {
+            String u="https://photon.komoot.io/api/?q="+java.net.URLEncoder.encode(query.trim(),"UTF-8")+"&limit=10&lang=de";
+            java.net.HttpURLConnection connection=(java.net.HttpURLConnection)new java.net.URL(u).openConnection();
+            connection.setConnectTimeout(8000);connection.setReadTimeout(10000);
+            connection.setRequestProperty("Accept","application/json");
+            connection.setRequestProperty("User-Agent","M-iCare/1.9.8 (Android; OpenStreetMap address search)");
+            try{
+              if(connection.getResponseCode()!=200)throw new java.io.IOException("HTTP "+connection.getResponseCode());
+              try(java.io.InputStream stream=connection.getInputStream()){
+                java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
+                byte[] buffer=new byte[8192];int count;
+                while((count=stream.read(buffer))!=-1){if(output.size()+count>250000)throw new java.io.IOException("Suchantwort zu groß");output.write(buffer,0,count);}
+                result=output.toString("UTF-8");
+              }
+            }finally{connection.disconnect();}
+            String json=result;
+            runOnUiThread(()->web.evaluateJavascript("window.micarePhotonResult&&window.micarePhotonResult(true,"+JSONObject.quote(json)+")",null));
+          }catch(Exception error){
+            String msg=error.getMessage()==null?"Netzwerkfehler":error.getMessage();
+            runOnUiThread(()->web.evaluateJavascript("window.micarePhotonResult&&window.micarePhotonResult(false,"+JSONObject.quote(msg)+")",null));
+          }
+        }).start();
+      }
       @JavascriptInterface public void speech(){runOnUiThread(()->{try{
         Intent intent=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
