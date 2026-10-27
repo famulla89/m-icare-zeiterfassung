@@ -276,6 +276,37 @@ input,select,textarea{border-radius:7px}
 @media(max-width:540px){header.micareTopbar{min-height:54px;padding:8px 11px;gap:10px}header.micareTopbar img{width:58px;max-height:38px}header.micareTopbar h1{font-size:1rem}.micareVersion{display:none}#micareHomeStats{gap:8px}#micareHomeStats .status{padding:11px}#micareHomeStats strong{font-size:1.34rem}#micareMainNavigation{grid-template-columns:1fr 1fr;gap:8px}#micareMainNavigation .tile{min-height:83px;padding:12px;font-size:.88rem}}
 @media(max-width:380px){#micareMainNavigation{grid-template-columns:1fr}}
 @media print{header.micareTopbar{display:none}}
+
+/* M-iCare premium visual system — clean, vivid, purpose-built */
+:root{--mi-bg:#eff5fc;--mi-surface:#ffffff;--mi-border:#dce8f5;--mi-ink:#102b49;--mi-sub:#57708c;--mi-accent:#0968d9;--mi-blue:#0968d9}
+body{background:linear-gradient(180deg,#eaf4ff 0,#f5f9ff 330px,#f6f9fd 100%);color:#102b49}
+.wrap{max-width:1340px}
+header.micareTopbar{background:#fff;border:1px solid #d9e8f7;box-shadow:0 7px 25px #164b8b0c;border-radius:14px;padding:11px 17px;min-height:76px}
+header.micareTopbar img{width:112px;max-height:57px;object-fit:contain}
+header.micareTopbar h1{font-size:1.2rem;color:#102c4a}
+header.micareTopbar .sub{color:#52738f}
+.micareAccountMenu summary{border:1px solid #d5e6f6;background:#f0f7ff;color:#19568d}
+.micareAccountActions{border-color:#d5e6f6;box-shadow:0 14px 40px #0b478820}
+section{background:white;border:1px solid #dce9f7;border-radius:15px;box-shadow:0 8px 28px #164b8b0a}
+#home{background:transparent}
+#home>h2{font-size:1.7rem;color:#10385e;font-weight:750}
+#home>.hint{color:#637c96}
+#micareHomeStats{gap:13px}
+#micareHomeStats .status{background:#fff;border:1px solid #dfecf9;border-top:3px solid #2482e1;border-radius:13px;box-shadow:0 5px 20px #145eaa0c;padding:18px}
+#micareHomeStats strong{color:#0968cf;font-size:1.9rem}
+#micareMainNavigation{gap:13px}
+#micareMainNavigation .tile{border:1px solid #dce9f7;background:#fff;border-radius:13px;box-shadow:0 5px 20px #145eaa0c;min-height:99px;padding:18px;color:#123d67;font-size:1.02rem;position:relative}
+#micareMainNavigation .tile:hover{background:#f0f7ff;border-color:#77b5ef;box-shadow:0 9px 26px #1669bd18}
+#micareMainNavigation .tile small{color:#647f9a;font-size:.82rem}
+#micareContractReminders{background:#eaf5ff!important;border:1px solid #cfe5fa;border-left:4px solid #1976d2;border-radius:12px}
+button:not(.secondary):not(.danger):not(.tile){background:#0968d9;color:#fff;box-shadow:0 3px 10px #0968d922}
+button.secondary{background:#edf6ff;color:#145d9d;border:1px solid #cfe3f8}
+button:hover:not(:disabled){filter:brightness(.98)}
+input,select,textarea{background:#fff;border:1px solid #bfd7ee;border-radius:9px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #a2ceff}
+.backbar{background:#f1f8ff;border-bottom:1px solid #d6e7f7}
+@media(max-width:540px){header.micareTopbar{min-height:64px;padding:9px 12px}header.micareTopbar img{width:85px;max-height:48px}#micareHomeStats .status{padding:13px}#micareHomeStats strong{font-size:1.55rem}#micareMainNavigation .tile{min-height:92px;padding:14px;font-size:.92rem}}
+@media print{body{background:white}section{box-shadow:none}}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
