@@ -406,6 +406,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 #calendarGrid button.mi-plan-conflict:not(.secondary):not(.danger):not(.tile){border:3px solid #c92b37;box-shadow:inset 0 0 0 1px #fff!important}
 #calendarGrid button.mi-plan-conflict::after{content:"!";display:inline-flex;justify-content:center;align-items:center;font-size:.68rem;margin-left:3px;border-radius:50%;background:#ad1930;color:white;width:16px;height:16px}
 @media(max-width:540px){.mi-op-panel{padding:12px}.mi-op-heading{align-items:flex-start}.mi-op-row{align-items:flex-start}.mi-op-actions{width:100%}.mi-op-actions button{flex:1}.mi-op-backup button{margin-left:0}}
+
+.mi-reminder-dialog{border:1px solid #c8def2;border-radius:14px;width:min(600px,calc(100% - 24px));max-height:85vh;padding:22px;box-shadow:0 24px 80px #12365f44}
+.mi-reminder-dialog::backdrop{background:#0f274c88}
+.mi-reminder-dialog textarea{font-family:"Segoe UI",system-ui,sans-serif;line-height:1.55;resize:vertical}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -659,6 +663,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
  <div id="billBreakdown" class="mi-bill-breakdown hidden" aria-live="polite"></div>
  <div class="row actions"><button type="button" class="secondary" id="billPreview">📄 PDF-Entwurf prüfen</button><button type="button" id="billFinalize">✅ Rechnung endgültig erstellen</button><button type="button" class="secondary" id="billCancel">Abbrechen</button></div></div>
  <div class="quoteBox"><h3>3 · Erstellte Rechnungen</h3><p id="billSavedTotal" class="status" role="status">Noch keine Rechnungen vorhanden.</p><div id="billSaved"></div>
+ <dialog id="miReminderDialog" class="mi-reminder-dialog" aria-labelledby="miReminderTitle">
+<h3 id="miReminderTitle">Zahlungserinnerung vorbereiten</h3>
+<p class="hint">Diese Nachricht wird nicht automatisch verschickt. Bitte Rechnung, Betrag und Empfänger prüfen.</p>
+<label for="miReminderText">Text der Erinnerung</label>
+<textarea id="miReminderText" rows="9" readonly></textarea>
+<div class="row actions"><button type="button" id="miReminderCopy">Text kopieren</button><button type="button" class="secondary" id="miReminderClose">Schließen</button></div>
+<p id="miReminderStatus" class="hint" role="status"></p></dialog>
  <div class="mi-op-panel" id="miPaymentLedger"><h3>Zahlungseingänge</h3><p class="hint">Nur tatsächlich auf dem Konto eingegangene Beträge eintragen. Teilzahlungen sind möglich; Stornos bleiben nachvollziehbar.</p>
 <p id="miPaymentSummary" class="status" role="status"></p><div id="miPaymentList"></div>
 <form id="miPayForm" class="mi-op-payform"><h4>Zahlung erfassen</h4><div class="grid">
