@@ -199,7 +199,15 @@
    page.push(item);used+=item.height;
   }
   if(page.length)detailPages.push(page);
-  function render(pageIndex,rows,pageCount,workItems=null){
+  // Separater, übersichtlicher Abrechnungsnachweis; die detaillierte AK-Anlage bleibt erhalten.
+  const overviewPages=[];
+  if(d.invoiceType==='final'&&d.kind==='invoice'&&appendix.length){
+   const chunks=(items,max)=>{for(let i=0;i<items.length;i+=max)overviewPages.push({type:items===appendix?'work':'prior',items:items.slice(i,i+max),start:i})};
+   const previous=Array.isArray(d.precedingInvoices)?d.precedingInvoices:[];
+   if(previous.length)chunks(previous,18);
+   chunks(appendix,18);
+  }
+  function render(pageIndex,rows,pageCount,workItems=null,overview=null){
    const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
    const c=canvas.getContext('2d');if(!c)throw Error('Canvas nicht verfügbar');
    c.fillStyle='#fff';c.fillRect(0,0,W,H);
@@ -222,6 +230,50 @@
    c.fillText(workItems?'LEISTUNGSNACHWEIS':d.kind==='quote'?'KOSTENVORANSCHLAG':d.invoiceType==='final'?(d.finalizedAt?'SCHLUSSRECHNUNG':'SCHLUSSRECHNUNGSENTWURF'):Number(d.sourceVisitCount)>1?(d.finalizedAt?'TEILRECHNUNG':'TEILRECHNUNGSENTWURF'):(d.finalizedAt?'RECHNUNG':'RECHNUNGSENTWURF'),455,91);
    c.fillStyle=muted;c.font='20px Arial';c.fillText((d.finalizedAt?'Seite ':'Entwurf zur Prüfung  ·  Seite ')+(pageIndex+1)+' von '+pageCount,458,133);
    c.strokeStyle='#c7d8e9';c.lineWidth=2;c.beginPath();c.moveTo(70,199);c.lineTo(1170,199);c.stroke();
+   if(overview){
+    let y=249;
+    c.fillStyle=blue;c.font='bold 29px Arial';c.fillText('Abrechnungsübersicht zur Schlussrechnung',70,y);y+=45;
+    c.fillStyle=muted;c.font='19px Arial';c.fillText('Auftrag '+(d.sourceQuoteNumber||'–')+' · alle Beträge beziehen sich auf Rechnungen, nicht auf Zahlungseingänge.',70,y);y+=42;
+    c.fillStyle='#eaf3fd';c.fillRect(70,y-23,1100,50);
+    c.fillStyle=blue;c.font='bold 21px Arial';
+    if(overview.type==='prior'){
+     c.fillText('Bereits ausgestellte Teilrechnungen',82,y+8);y+=65;
+     c.font='bold 19px Arial';c.fillStyle=dark;
+     c.fillText('Rechnungsnummer',85,y);c.fillText('Datum',495,y);c.fillText('Netto',760,y);c.fillText('Brutto',982,y);y+=31;
+     for(const invoice of overview.items){
+      c.fillStyle='#f5f9ff';c.fillRect(70,y-25,1100,46);
+      c.fillStyle=dark;c.font='19px Arial';
+      c.fillText(String(invoice.number||'–'),85,y,380);
+      c.fillText(formatPdfDate(invoice.date)||String(invoice.date||'–'),495,y);
+      c.fillText(euros(invoice.net||0),750,y);
+      c.fillText(euros(invoice.gross||0),972,y);y+=53;
+     }
+    }else{
+     c.fillText('Ausgeführte Arbeitskarten ('+appendix.length+')',82,y+8);y+=65;
+     c.font='bold 19px Arial';c.fillStyle=dark;
+     c.fillText('AK',85,y);c.fillText('Datum',202,y);c.fillText('Leistung',398,y);c.fillText('Netto',785,y);c.fillText('Abgerechnet über',949,y);y+=31;
+     for(const work of overview.items){
+      c.fillStyle='#f5f9ff';c.fillRect(70,y-25,1100,46);
+      c.fillStyle=dark;c.font='18px Arial';
+      c.fillText('AK '+work.akNumber,85,y,105);
+      c.fillText(formatPdfDate(work.date),202,y,176);
+      c.fillText(String(work.service||'–'),398,y,355);
+      c.fillText(euros(work.net||0),785,y,145);
+      c.fillText(String(work.priorInvoice||'Jetzt'),949,y,210);y+=53;
+     }
+    }
+    c.strokeStyle='#d0e2f1';c.beginPath();c.moveTo(70,1490);c.lineTo(1170,1490);c.stroke();
+    c.fillStyle=dark;c.font='20px Arial';
+    const oldGross=(Array.isArray(d.precedingInvoices)?d.precedingInvoices:[])
+      .reduce((sum,i)=>sum+Math.round(Number(i.gross||0)*100),0)/100;
+    c.fillText('Auftragswert: '+euros(oldGross+Number(d.gross||0))+' brutto',75,1530);
+    c.fillText('Bereits abgerechnet: '+euros(oldGross)+' brutto',75,1564);
+    c.fillStyle=blue;c.font='bold 21px Arial';
+    c.fillText('Diese Schlussrechnung: '+euros(d.gross)+' brutto',75,1600);
+    c.fillStyle=muted;c.font='17px Arial';
+    c.fillText('Bereits fakturierte Leistungen werden nicht erneut berechnet.',75,1650);
+    return encodeCanvas(canvas);
+   }
    if(workItems){
     let y=245;
     c.font='bold 26px Arial';c.fillStyle=blue;c.fillText('Ausgeführte Arbeiten – Anlage zur Schlussrechnung '+d.number,70,y);y+=46;
@@ -322,11 +374,12 @@
   if(!allPages.length)allPages.push([]);
   // Wenn 6 Zeilen auf der letzten Seite zu wenig Platz für Summen lassen: eigene Summenseite.
   if(allPages[allPages.length-1].length>4)allPages.push([]);
-  const standardPageCount=allPages.length,pageCount=standardPageCount+detailPages.length;
+  const standardPageCount=allPages.length,pageCount=standardPageCount+overviewPages.length+detailPages.length;
   // The UI preview uses the exact same canvas page renderer as the exported PDF.
   if(options.firstPageImage===true)return new Blob([render(0,allPages[0],pageCount)],{type:'image/jpeg'});
   allPages.forEach((rows,index)=>jpgs.push(render(index,rows,pageCount)));
-  detailPages.forEach((items,i)=>jpgs.push(render(standardPageCount+i,[],pageCount,items)));
+  overviewPages.forEach((item,i)=>jpgs.push(render(standardPageCount+i,[],pageCount,null,item)));
+  detailPages.forEach((items,i)=>jpgs.push(render(standardPageCount+overviewPages.length+i,[],pageCount,items)));
   const enc=new TextEncoder(),parts=[],offsets=[0];let pos=0;
   function add(v){const b=typeof v==='string'?enc.encode(v):v;parts.push(b);pos+=b.length}
   function obj(id,value){offsets[id]=pos;add(id+' 0 obj\n'+value+'\nendobj\n')}
