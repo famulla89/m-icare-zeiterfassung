@@ -105,6 +105,19 @@
    section.append(inner);host.append(section);
   }
  }
+ function openReminder(inv,financial){
+  const text='Guten Tag '+(inv.customerName||'')+',\n\n'
+   +'bei der Prüfung unserer Buchungen ist aufgefallen, dass zu Ihrer Rechnung '+inv.number
+   +' vom '+dateDE(inv.date||String(inv.createdAt||'').slice(0,10))
+   +' mit Fälligkeit '+dateDE(inv.dueDate)+' noch ein Betrag von '+euro(financial.remainingCents/100)
+   +' offen ist.\n\n'
+   +'Bitte prüfen Sie die Zahlung und überweisen Sie den offenen Betrag unter Angabe der Rechnungsnummer. '
+   +'Falls Sie inzwischen gezahlt haben, betrachten Sie diese Erinnerung bitte als gegenstandslos.\n\n'
+   +'Mit freundlichen Grüßen\nM-iCare';
+  $('miReminderText').value=text;
+  $('miReminderStatus').textContent='Nur eine Textvorlage – kein automatischer Versand und kein registrierter Mahnstatus.';
+  $('miReminderDialog').showModal();
+ }
  function renderPayments(){
   const host=$('miPaymentList');if(!host)return;host.replaceChildren();
   const invoices=(state().quotes||[]).filter(x=>x.kind==='invoice'&&x.finalizedAt)
@@ -123,6 +136,7 @@
    tag.className='mi-op-tag '+(m.status==='paid'?'done':m.status==='overdue'?'late':m.status==='partial'?'progress':'open');
    row.append(info,tag);
    if(m.remainingCents>0)row.append(button('Zahlung erfassen',()=>{select.value=inv.id;$('miPayAmount').value=(m.remainingCents/100).toFixed(2);$('miPayAmount').focus()}));
+   if(m.overdue)row.append(button('Zahlungserinnerung',()=>openReminder(inv,m)));
    const payments=(state().payments||[]).filter(p=>p.invoiceId===inv.id&&!p.voidedAt);
    for(const p of payments){
     const paid=el('div');paid.className='mi-op-payment';
@@ -230,6 +244,18 @@
   if(api||!core)return;api=context;
   $('miPayDate').value=today();
   $('miPayForm').addEventListener('submit',savePayment);
+  $('miReminderClose').onclick=()=>$('miReminderDialog').close();
+  $('miReminderCopy').onclick=async()=>{
+   const text=$('miReminderText').value;
+   try{
+    if(!navigator.clipboard?.writeText)throw Error('Clipboard nicht verfügbar');
+    await navigator.clipboard.writeText(text);
+    $('miReminderStatus').textContent='Erinnerungstext kopiert. Bitte in der E-Mail-Anwendung selbst versenden.';
+   }catch{
+    $('miReminderText').focus();$('miReminderText').select();
+    $('miReminderStatus').textContent='Text ausgewählt: Bitte kopieren und in deiner E-Mail-Anwendung einfügen.';
+   }
+  };
   $('miOrderSearch').addEventListener('input',()=>renderOrderWorkspace());
   $('miTemplateSave').onclick=storeTemplate;$('miTemplateApply').onclick=applyTemplate;$('miTemplateDelete').onclick=deleteTemplate;
   $('miChecklistApply').onclick=insertChecklist;
