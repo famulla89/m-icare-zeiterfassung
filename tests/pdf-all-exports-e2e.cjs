@@ -68,7 +68,7 @@ let activeBrowser=null;
    return await new Promise((resolve,reject)=>{reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
   },expression);
   const bytes=Buffer.from(base64,'base64');
-  const result=verifyPdf(name,bytes,options);results.push(result);await checkPdfLogo(name,result.pages,logoBefore);console.log('PDF PASS',result.name,result.pages,Math.round(result.bytes/1024)+'KB');
+  const result=verifyPdf(name,bytes,options);if(options?.expectPagesExactly)assert.equal(result.pages,options.expectPagesExactly,name+' must have the expected number of pages');results.push(result);await checkPdfLogo(name,result.pages,logoBefore);console.log('PDF PASS',result.name,result.pages,Math.round(result.bytes/1024)+'KB');
  }
  async function downloaded(name,fn){
   const logoBefore=await page.evaluate(()=>window.__qaLogoDraws.length);
@@ -121,7 +121,41 @@ let activeBrowser=null;
   Object.assign(window.__qaQuoteDoc,{rows:data.rows,net:data.net,tax:data.tax,gross:data.gross,vat:data.vat,taxMode:'regular'});
  });
  await fromBlob('12_Kostenvoranschlag_8_Fensterpositionen_Mehrseitig.pdf',"MiCareQuote.pdf(window.__qaQuoteDoc)",{expectPagesMin:2});
- // 5. Alle druckbaren Reporting-Reiter: Browser-Druck-PDF statt Webseiten-Screenshot.
+ // 5. Schlussrechnung: fünf AK gehören auf eine einzige, übersichtliche Rechnungsseite.
+ await page.evaluate(()=>{
+  const amount=486.72;
+  const work=Array.from({length:5},(_,i)=>({
+   akNumber:String(i+1),date:'2026-11-'+String(2+i*7).padStart(2,'0'),
+   service:'Glas- & Fensterreinigung',
+   workDone:'Glas- & Fensterreinigung | Standardfenster · 10 × 1.5 m² · beidseitig · Rahmen/Falz · Leiter · 5 Einsätze | Große Glasflächen · 4 × 4 m² · beidseitig · Rahmen/Falz · Leiter · 5 Einsätze',
+   employee:'Inhaber',net:amount,priorInvoice:i<4?'RG-2026-'+String(i+1).padStart(4,'0'):''
+  }));
+  window.__qaFinalDoc={
+   id:'qa-final-five',kind:'invoice',invoiceType:'final',finalizedAt:'2026-10-27',
+   number:'RG-2026-0005',date:'27.10.2026',sourceQuoteNumber:'KV-2026-0001',
+   customerName:'Testkunde GmbH',customerAddress:'Musterstraße 16, 58093 Hagen',objectName:'Zentrale',
+   sellerName:'M-iCare Testbetrieb',sellerAddress:'Teststraße 9, 58097 Hagen',
+   sellerTaxId:'QA-123',sellerEmail:'test@example.invalid',sellerPhone:'0123 123456',
+   service:'Glas- & Fensterreinigung',serviceDate:'02.11.2026 – 30.11.2026',
+   dueDate:'2026-12-14',iban:'DE12345678901234567890',taxMode:'small',vat:0,
+   net:amount,tax:0,gross:amount,rows:[{title:'Restarbeiten',quantity:1,unit:'Einsatz',total:amount}],
+   orderNetTotal:amount*5,alreadyInvoicedNet:amount*4,performedWork:work,
+   precedingInvoices:work.slice(0,4).map(w=>({number:w.priorInvoice,date:'27.10.2026',net:amount,gross:amount}))
+  };
+  window.__qaInvoiceText=[];
+  const orig=CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText=function(value,...args){
+   window.__qaInvoiceText.push(String(value));return orig.call(this,value,...args);
+  };
+ });
+ await fromBlob('13_Schlussrechnung_5_AK_kompakt.pdf',"MiCareQuote.pdf(window.__qaFinalDoc)",{expectPagesExactly:1});
+ const invoiceDraws=await page.evaluate(()=>window.__qaInvoiceText);
+ for(let i=1;i<=5;i++)assert(invoiceDraws.some(x=>x.startsWith('AK '+i+' ·')), 'Final invoice missing AK '+i);
+ assert(invoiceDraws.some(x=>x.includes('Bereits in Rechnung gestellt')),'Final invoice missing prior invoice offset');
+ assert(invoiceDraws.some(x=>x.includes('Auftragswert netto')),'Final invoice missing total order value');
+ assert(invoiceDraws.some(x=>x.includes('486,72')),'Final invoice missing correct remaining payable amount');
+ assert(!invoiceDraws.includes('LEISTUNGSNACHWEIS')&&!invoiceDraws.includes('Abrechnungsübersicht zur Schlussrechnung'),'No redundant final invoice attachment');
+ // 6. Alle druckbaren Reporting-Reiter: Browser-Druck-PDF statt Webseiten-Screenshot.
  await page.evaluate(()=>{showScreen('reportingScreen');document.getElementById('reportFrom').value='2026-10-01';document.getElementById('reportTo').value='2026-10-31';});
  for(const [tab,filename] of [
   ['overview','13_Reporting_Management.pdf'],
