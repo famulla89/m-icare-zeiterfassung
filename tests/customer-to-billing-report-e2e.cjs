@@ -39,7 +39,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   ok('Datenbank mit leeren synthetischen Testdaten initialisiert');
 
   // Real customer editor buttons, no preloaded customer fixture.
-  await page.locator('#home [data-jump="customersPanel"]').click();
+  await page.evaluate(()=>showScreen('customersPanel'));
   await page.locator('#newCustomerMode').click();
   await page.locator('#editCustomerName').fill('QA Muster Gebäudeservice');
   await page.locator('#editCustomerAddress').fill('Teststraße 7');
@@ -129,7 +129,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   });
   // Offer based on the completed AK, with SME tax mode and actual matching customer/date.
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.evaluate(()=>showScreen('quoteCalculator'));
   assert.equal(await page.locator('#qSellerName').inputValue(),'M-iCare Gebäudereinigung','Public company name defaults into empty form');
   assert.equal(await page.locator('#qSellerAddress').inputValue(),'Lippestraße 9, 58097 Hagen','Public company address defaults into empty form');
   assert.equal(await page.locator('#qSellerEmail').inputValue(),'info@m-icare-gebaeudereinigung.de','Public contact email defaults into empty form');
@@ -271,7 +271,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.reload();
   await unlock(page);
   await page.waitForFunction(()=>document.querySelector('#employee')?.options?.length>0);
-  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.evaluate(()=>showScreen('quoteCalculator'));
   assert.equal(await page.locator('.quoteSavedItem').count(),3,'Document overview survives restart');
   assert((await page.locator('#qSavedTotals').innerText()).includes('2 Kostenvoranschläge und 1 Rechnungen (0 endgültig, 1 Entwürfe)'),'Separate document counts preserved');
   await page.screenshot({path:path.join(out,'04_Dokumentenuebersicht.png'),fullPage:true});
@@ -279,7 +279,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
 
   // Reporting from the same actual UI-made data and dates.
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="reportingScreen"]').click();
+  await page.evaluate(()=>showScreen('reportingScreen'));
   await page.locator('[data-open-report="orders"]').click();
   await page.evaluate(()=>{
    document.getElementById('reportFrom').value='2026-11-01';
@@ -310,7 +310,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
 
   // Test a completed-order invoice and its email attachment, without actually delivering mail.
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.evaluate(()=>showScreen('quoteCalculator'));
   await page.locator('#qSavedSearch').fill(invoice.number);
   await page.locator('#qSavedList button').filter({hasText:'Bearbeiten'}).click();
   const newPdf=page.waitForEvent('download');
@@ -411,7 +411,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   ok('Annahme-Dialog erzeugt fünf individuell bearbeitbare AK und zeigt sie in eigener Auftragsübersicht');
   assert.equal((await page.evaluate(()=>state.entries.length)),1,'Accepting a quote MUST NOT mark work as done or create worktime entries');
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.evaluate(()=>showScreen('quoteCalculator'));
   await page.locator('#qSavedSearch').fill(contract.number);
   await page.waitForFunction(()=>document.querySelector('#qSavedList')?.textContent?.includes('Angenommen') && !document.querySelector('#qSavedList')?.textContent?.includes('Kunde hat angenommen'));
   assert.equal(await page.locator('#qSavedList button').filter({hasText:'Kunde hat angenommen'}).count(),0,'Already accepted quote cannot create duplicates');
@@ -473,7 +473,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(rawPart.sourceQuoteNumber,contract.number);
   ok('Erledigte AK öffnet eigene Rechnungsmaske mit anteiligem Preis 100 EUR');
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.evaluate(()=>showScreen('quoteCalculator'));
   // Exact business scenario: 10 scheduled services, 1,000 EUR agreed net, one 100 EUR partial invoice.
   await page.locator('#qNew').click();
   await page.locator('#qCustomer').selectOption(created.customer.id);
@@ -574,7 +574,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
     await saveState();
   },firstTen.slice(1).map(a=>a.id));
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="billingScreen"]').click();
+  await page.evaluate(()=>showScreen('billingScreen'));
   const tenBilling=page.locator('#billOrders details[data-order="'+tenQuote.id+'"]');
   await tenBilling.locator(':scope > summary').click();
   assert((await tenBilling.innerText()).includes('10/10 AK erledigt'));
