@@ -28,6 +28,9 @@ on:
       - 'tests/quote-calculator-smoke.cjs'
       - 'quote-ui.js'
       - 'billing-ui.js'
+      - 'operations-core.js'
+      - 'operations-ui.js'
+      - 'tests/operations-core-smoke.cjs'
       - 'voice-input.js'
       - 'report-print.js'
       - 'sw.js'
@@ -108,6 +111,9 @@ jobs:
           unzip -l "$APK" | grep -Fq 'assets/billing-ui.js'
           unzip -l "$APK" | grep -Fq 'assets/operations-core.js'
           unzip -l "$APK" | grep -Fq 'assets/operations-ui.js'
+          unzip -p "$APK" assets/operations-core.js | cmp - operations-core.js
+          unzip -p "$APK" assets/operations-ui.js | cmp - operations-ui.js
+          echo 'PASS: exact operations scripts embedded in Android APK'
           unzip -l "$APK" | grep -Fq 'assets/voice-input.js'
           unzip -l "$APK" | grep -Fq 'assets/report-print.js'
           unzip -l "$APK" | grep -Fq 'assets/cloud-transfer.js'
