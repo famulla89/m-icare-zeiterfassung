@@ -96,6 +96,7 @@ jobs:
           unzip -p "$APK" assets/index.html | grep -Fq 'data-jump="quoteCalculator"'
           unzip -p "$APK" assets/index.html | cmp - index.html
           unzip -p "$APK" assets/index.html | grep -Fq 'Betriebsverwaltung'
+          unzip -p "$APK" assets/index.html | grep -Fq 'M-iCare Gebäudereinigung · Version 1.9.14'
           for screen in customerOverviewScreen appointmentsPanel plannedWorkScreen billingScreen operationsHub; do
             grep -Fq "data-jump=\"$screen\"" index.html
             grep -Fq "id=\"$screen\"" index.html
@@ -121,10 +122,10 @@ jobs:
       - name: Give APK a unique recognizable filename
         shell: bash
         run: |
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.13-Android.apk
-          test -s M-iCare-NEU-1.9.13-Android.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk M-iCare-NEU-1.9.14-Android.apk
+          test -s M-iCare-NEU-1.9.14-Android.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: M-iCare-NEU-1.9.13-Android
-          path: M-iCare-NEU-1.9.13-Android.apk
+          name: M-iCare-NEU-1.9.14-Android
+          path: M-iCare-NEU-1.9.14-Android.apk
           retention-days: 30
