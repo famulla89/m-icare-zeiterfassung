@@ -13,7 +13,7 @@ const server=http.createServer((req,res)=>{
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
- const page=await browser.newPage({viewport:{width:1180,height:900}});
+ const page=await browser.newPage({acceptDownloads:true,viewport:{width:1180,height:900}});
  page.setDefaultTimeout(12000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  page.on('dialog',async d=>{
@@ -80,6 +80,29 @@ const server=http.createServer((req,res)=>{
   await page.locator('#miChecklistOptions input').first().check();
   await page.locator('#miChecklistApply').click();
   assert((await page.locator('#workDone').inputValue()).includes('gereinigt'));
+  // New financial history and templates must round-trip through an ordinary full JSON backup.
+  await page.evaluate(()=>showScreen('backupSection'));
+  const exportPromise=page.waitForEvent('download');
+  await page.locator('#exportJson').click();
+  const archive=await exportPromise;
+  const snapshot=JSON.parse(fs.readFileSync(await archive.path(),'utf8'));
+  assert.equal(snapshot.payments.length,2,'Backup contains payment and void history');
+  assert.equal(snapshot.quoteTemplates.length,1,'Backup contains saved service templates');
+  await page.evaluate(()=>MiCareOperationsCore.validateOperationsSnapshot(state));
+  const difference=await page.evaluate(snap=>MiCareCloudTransfer.compare(
+   {...snap,payments:[],quoteTemplates:[]},snap),snapshot);
+  assert.equal(difference.payments.added,2,'Encrypted restore preview notices payment changes');
+  assert.equal(difference.quoteTemplates.added,1,'Encrypted restore preview notices template changes');
+  await page.evaluate(async()=>{
+   state.payments=[];state.quoteTemplates=[];await saveState();
+  });
+  await page.locator('#importJson').setInputFiles({
+   name:'M-iCare-Operations-Backup.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(snapshot))
+  });
+  await page.waitForFunction(()=>state.payments?.length===2&&state.quoteTemplates?.length===1);
+  assert.equal(await page.evaluate(()=>state.payments.filter(x=>!x.voidedAt).length),1,'Restored payment stornos remain effective');
+  console.log('OPERATIONS BACKUP PASS: payments, reversals and quote templates survive export/import and encrypted preview');
   assert.equal(errors.length,0,'No browser JS errors: '+errors.join('; '));
   console.log('OPERATIONS E2E PASS: daily work, 30-day KPI, red calendar conflicts, order file, 2 partial payments, refund audit, reusable templates, work checklist.');
  }finally{await browser.close();server.close()}
