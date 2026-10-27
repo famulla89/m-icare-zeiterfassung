@@ -7,6 +7,8 @@ on:
       - 'cloud-transfer.js'
       - 'quote-calculator.js'
       - 'quote-ui.js'
+      - 'operations-core.js'
+      - 'operations-ui.js'
       - 'report-print.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
@@ -23,7 +25,7 @@ jobs:
       - name: Pack browser-only files
         run: |
           mkdir -p windows-browser-test
-          cp index.html cloud-transfer.js quote-calculator.js quote-ui.js report-print.js manifest.webmanifest icon.svg logo.svg sw.js windows-browser-test/
+          cp index.html login-gate.js google-company-search.js schedule-planner.js cloud-transfer.js quote-calculator.js quote-ui.js billing-ui.js operations-core.js operations-ui.js voice-input.js report-print.js manifest.webmanifest icon.svg logo.svg sw.js windows-browser-test/
           cat > windows-browser-test/START-HIER.txt <<'EOF'
           M-iCare Windows-Browsertest - keine EXE, keine Installation
 
