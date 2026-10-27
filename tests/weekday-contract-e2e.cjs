@@ -114,6 +114,31 @@ const server=http.createServer((req,res)=>{
   await unlock(page);
   await page.waitForFunction(number=>!document.getElementById('micareContractReminders').textContent.includes(number),quote.number);
   assert(await page.evaluate(id=>Boolean(state.quotes.find(q=>q.id===id)?.reminderDoneAt),quote.id),'Acknowledgement must survive restart');
+  // Save and accept a separate two-visit order with an exact one-day reminder.
+  await page.locator('#home [data-jump="quoteCalculator"]').click();
+  await page.locator('#qNew').click();
+  await page.locator('#qCustomer').selectOption('test-c');
+  await page.locator('#qObject').selectOption('test-o');
+  await page.locator('#qService').fill('Büroreinigung');
+  await page.locator('#qManualNet').fill('200');
+  await page.locator('#qVisits').fill('2');
+  await page.locator('#qPlanDate').fill('2026-11-02');
+  await page.locator('#qPlanEmployee').selectOption('Testkraft');
+  await page.locator('#qPlanReminderDays').selectOption('custom');
+  await page.locator('#qPlanReminderValue').fill('1');
+  await page.locator('#qPlanReminderUnit').selectOption('days');
+  await page.locator('#qPlanPreviewButton').click();
+  assert((await page.locator('#qPlanReminderHint').innerText()).includes('08.11.2026'));
+  await page.locator('#qSave').click();
+  await page.waitForFunction(()=>state.quotes.some(q=>!q.acceptedAt&&q.formValues?.PlanReminderDays==='custom'));
+  const short=await page.evaluate(()=>state.quotes.find(q=>!q.acceptedAt&&q.formValues?.PlanReminderDays==='custom'));
+  assert.equal(short.formValues.PlanReminderValue,'1');
+  await page.locator('#qSavedSearch').fill(short.number);
+  await page.locator('.quoteSavedItem button').filter({hasText:'Kunde hat angenommen'}).click();
+  await page.locator('#qAcceptConfirm').click();
+  await page.waitForFunction(id=>Boolean(state.quotes.find(q=>q.id===id)?.acceptedAt),short.id);
+  const accepted=await page.evaluate(id=>{const q=state.quotes.find(q=>q.id===id);return {days:q.reminderDays,date:q.reminderDate,end:q.contractEnd,count:q.appointmentIds.length}},short.id);
+  assert.deepEqual(accepted,{days:1,date:'2026-11-08',end:'2026-11-09',count:2});
   assert.deepEqual(errors,[]);
   console.log('WEEKDAY CONTRACT PASS: 18 Tue/Wed proposal dates, preview ghost calendar, 18 open AK on acceptance, 30-day renewal reminder and acknowledgement');
  }catch(e){console.error('WEEKDAY CONTRACT FAILED',e);process.exitCode=1}
