@@ -614,23 +614,23 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
       return {heading,header:String.fromCharCode(...bytes.slice(0,5)),
        appendixPages:rendered.filter(t=>t.startsWith('Ausgeführte Arbeiten – Anlage')).length,
        overviewPages:rendered.filter(t=>t==='Abrechnungsübersicht zur Schlussrechnung').length,
-       hasTableHeaders:all.includes('Bereits ausgestellte Teilrechnungen')&&all.includes('Ausgeführte Arbeitskarten (10)'),
+       hasTableHeaders:all.includes('AK · Datum · Leistung')&&all.includes('Abgerechnet'),
        akHeaders:rendered.filter(t=>/^AK \d+ ·/.test(t)),
        hasPrior:all.includes(doc.precedingInvoiceNumbers[0]),
        hasWorkDetails:all.includes('Fünf Testfenster')&&all.includes('Leistung erledigt'),
-       showsAmounts:all.includes('Bereits berechnet')&&all.includes('Diese Schlussrechnung')};
+       showsAmounts:all.includes('Bereits in Rechnung gestellt')&&all.includes('Auftragswert netto')&&all.includes('900,00')};
     }finally{CanvasRenderingContext2D.prototype.fillText=original}
   },finalDoc);
   assert.equal(closingPdf.heading,'SCHLUSSRECHNUNG','Final invoice PDF must be clearly labeled');
   assert.equal(closingPdf.header,'%PDF-');
-  assert(closingPdf.overviewPages>=2,'Tabellarische Abrechnungsübersicht mit Teilrechnungen und AK vorhanden');
-  assert(closingPdf.hasTableHeaders,'PDF-Übersicht muss beide Tabellen zeigen');
-  assert(closingPdf.appendixPages>=2,'All 10 AK should be on a legible multipage appendix');
+  assert.equal(closingPdf.overviewPages,0,'Keine überflüssige Abrechnungs-Anlage');
+  assert(closingPdf.hasTableHeaders,'Kompakte AK-Tabelle muss auf der Rechnung stehen');
+  assert.equal(closingPdf.appendixPages,0,'Kein separater Leistungsnachweis als Anhang');
   assert.equal(closingPdf.akHeaders.length,10,'Exactly 10 AK headings must be printed in PDF');
   assert(closingPdf.hasWorkDetails,'PDF must actually print all documented work');
   assert(closingPdf.hasPrior,'Previously issued partial invoice must be visible');
   assert(closingPdf.showsAmounts,'PDF must show prior invoices and remaining balance');
-  ok('Schlussrechnungs-PDF zeigt alle zehn ausgeführten AK, Arbeitsbeschreibungen und frühere Teilrechnung');
+  ok('Schlussrechnungs-PDF zeigt alle zehn AK direkt in der Rechnung ohne Zusatzseiten');
   const beforeFinalPreview=await page.evaluate(()=>state.quotes.filter(q=>q.finalizedAt).length);
   const previewDownload=page.waitForEvent('download');
   await page.locator('#billPreview').click();
