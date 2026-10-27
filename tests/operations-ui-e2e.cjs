@@ -47,8 +47,12 @@ const server=http.createServer((req,res)=>{
   await page.evaluate(()=>window.MiCareOperationsUI.openOrder('qa-q'));
   assert(await page.locator('#orderWorkspace').isVisible());
   assert((await page.locator('#miOrderList').innerText()).includes('AK 991'));
-  await page.evaluate(()=>showScreen('billingScreen'));
+  await page.evaluate(()=>showScreen('paymentScreen'));
+  assert(await page.locator('#paymentScreen').isVisible());
   assert((await page.locator('#miPaymentList').innerText()).includes('RG-QA'));
+  await page.locator('#miPaymentList button').filter({hasText:'Zahlungserinnerung'}).click();
+  assert((await page.locator('#miReminderText').inputValue()).includes('RG-QA'));
+  await page.locator('#miReminderClose').click();
   await page.locator('#miPayInvoice').selectOption('qa-i');
   await page.locator('#miPayAmount').fill('25.02');
   await page.locator('#miPayForm button[type="submit"]').click();
