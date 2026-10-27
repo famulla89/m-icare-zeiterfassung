@@ -76,7 +76,8 @@ const server=http.createServer((req,res)=>{
   await page.locator('#miTemplateSelect').selectOption({label:'Standardfenster'});
   await page.locator('#miTemplateApply').click();
   assert.equal(await page.locator('#qService').inputValue(),'Fensterreinigung Standard');
-  await page.evaluate(()=>showScreen('entryForm'));
+  await page.evaluate(()=>{showScreen('entryForm');setWorkEntryMode('planned')});
+  assert(await page.locator('#plannedWorkPanel').isVisible(),'Checkliste ist nur für geplante AK verfügbar');
   await page.locator('.mi-op-checklist summary').click();
   await page.locator('#miChecklistOptions input').first().check();
   await page.locator('#miChecklistApply').click();
