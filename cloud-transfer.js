@@ -77,7 +77,7 @@
    for(const p of state.payments){
     if(!p||typeof p.id!=='string'||!p.id||ids.has(p.id)||!invoiceIds.has(p.invoiceId)||
        !Number.isSafeInteger(p.amountCents)||p.amountCents<1||p.amountCents>1000000000||
-       !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(p.date||''))||
+       !/^\d{4}-\d{2}-\d{2}$/.test(String(p.date||''))||
        typeof p.reference!=='string'||p.reference.length>160||typeof p.createdAt!=='string'||
        p.voidedAt&&!p.voidReason)throw Error('Ungültiger Zahlungseintrag');
     ids.add(p.id);
