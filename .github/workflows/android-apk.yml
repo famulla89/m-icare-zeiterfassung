@@ -158,13 +158,13 @@ jobs:
             echo "::error::APK-Zertifikat SHA-256 konnte aus apksigner nicht ausgelesen werden."
             exit 1
           fi
-          KEYSTORE_CERT_SHA256="$(keytool -exportcert -alias androiddebugkey -keystore "$HOME/.android/debug.keystore" -storepass android 2>/dev/null | sha256sum | awk '{print $1}')"
-          printf 'APK-Zertifikat: %s / Debug-Keystore-Zertifikat: %s\n' "$APK_CERT_SHA256" "$KEYSTORE_CERT_SHA256"
-          if [ "$APK_CERT_SHA256" != "$KEYSTORE_CERT_SHA256" ]; then
-            echo "::error::Die APK wurde nicht mit dem erwarteten Debug-Keystore signiert."
-            exit 1
-          fi
           if [ "$MICARE_SIGNING_KIND" = "FEST" ]; then
+            KEYSTORE_CERT_SHA256="$(keytool -exportcert -alias androiddebugkey -keystore "$HOME/.android/debug.keystore" -storepass android 2>/dev/null | sha256sum | awk '{print $1}')"
+            printf 'APK-Zertifikat: %s / fester Keystore: %s\n' "$APK_CERT_SHA256" "$KEYSTORE_CERT_SHA256"
+            if [ "$APK_CERT_SHA256" != "$KEYSTORE_CERT_SHA256" ]; then
+              echo "::error::Die APK wurde nicht mit dem festen Debug-Keystore signiert."
+              exit 1
+            fi
             test "$APK_CERT_SHA256" = "422d32cd1b257b9519ca63d6c16dd7b736a8f02671e1010843d02ae450c1c5a5"
             UPDATE_TEXT="Gleicher fester Testschluessel: Update ab der ersten damit signierten Installation moeglich."
           else
