@@ -571,7 +571,25 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
      <label><input type="checkbox" value="1"> Mo</label><label><input type="checkbox" value="2"> Di</label><label><input type="checkbox" value="3"> Mi</label><label><input type="checkbox" value="4"> Do</label><label><input type="checkbox" value="5"> Fr</label><label><input type="checkbox" value="6"> Sa</label><label><input type="checkbox" value="0"> So</label>
     </div>
    </div>
-   <div><label for="qPlanReminderDays">Kunden-Erinnerung vor Vertragsende</label><select id="qPlanReminderDays"><option value="30">30 Tage vorher</option><option value="60">60 Tage vorher</option><option value="14">14 Tage vorher</option><option value="7">7 Tage vorher</option><option value="0">Am letzten Einsatztag</option><option value="-1">Keine Erinnerung</option></select></div>
+   <div style="grid-column:1/-1">
+   <label for="qPlanReminderDays">Kunden-Erinnerung vor Vertragsende</label>
+   <select id="qPlanReminderDays">
+    <option value="auto">Automatisch passend zur Auftragsdauer (empfohlen)</option>
+    <option value="1">1 Tag vorher</option><option value="2">2 Tage vorher</option>
+    <option value="3">3 Tage vorher</option><option value="7">7 Tage vorher</option>
+    <option value="14">14 Tage vorher</option><option value="30">30 Tage vorher</option>
+    <option value="60">60 Tage vorher</option>
+    <option value="custom">Eigenen Zeitraum eingeben …</option>
+    <option value="0">Am letzten Auftragstag</option><option value="-1">Keine Erinnerung</option>
+   </select>
+   <div id="qPlanReminderCustom" class="hidden" style="margin-top:10px">
+    <div class="grid" style="grid-template-columns:minmax(95px,1fr) minmax(120px,1fr);gap:10px">
+     <div><label for="qPlanReminderValue">Anzahl</label><input id="qPlanReminderValue" type="number" inputmode="numeric" min="1" max="730" step="1" value="1" placeholder="z. B. 2"></div>
+     <div><label for="qPlanReminderUnit">Einheit</label><select id="qPlanReminderUnit"><option value="days">Tage</option><option value="weeks">Wochen</option><option value="months">Monate (Kalendermonate)</option></select></div>
+    </div>
+   </div>
+   <p class="hint" id="qPlanReminderHint" role="status" aria-live="polite">Der Erinnerungszeitpunkt wird aus dem Vertragsende berechnet und bei kurzen Aufträgen auf frühestens den ersten Einsatztag begrenzt.</p>
+  </div>
   </div>
   <div class="row actions" style="margin-top:10px"><button type="button" class="secondary" id="qPlanPreviewButton">📅 Termine und Überschneidungen prüfen</button><button type="button" class="secondary" id="qPlanOpenCalendar">Kalenderübersicht öffnen</button></div>
   <p class="hint" id="qPlanStatus">Noch kein Terminplan berechnet. Die Planung bleibt bis zur Kundenannahme unverbindlich.</p>
