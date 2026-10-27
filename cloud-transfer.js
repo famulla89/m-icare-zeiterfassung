@@ -70,6 +70,30 @@
    if(e.customerId&&!cid.has(e.customerId)||e.objectId&&!oid.has(e.objectId)||e.appointmentId&&!aid.has(e.appointmentId))throw Error('Arbeitszeit verweist auf unbekannten Auftrag/Kunden');
    if(e.corrections!==undefined&&(!Array.isArray(e.corrections)||e.corrections.length>5000))throw Error('Ungültige Korrekturhistorie');
   }
+  // Auch neue lokale Zahlungs- und Vorlagendaten dürfen beim Wiederherstellen nicht ungeprüft übernommen werden.
+  if(state.payments!==undefined){
+   if(!Array.isArray(state.payments)||state.payments.length>50000)throw Error('Ungültige Zahlungsliste');
+   const ids=new Set(),invoiceIds=new Set((state.quotes||[]).filter(q=>q.kind==='invoice'&&q.finalizedAt).map(q=>q.id));
+   for(const p of state.payments){
+    if(!p||typeof p.id!=='string'||!p.id||ids.has(p.id)||!invoiceIds.has(p.invoiceId)||
+       !Number.isSafeInteger(p.amountCents)||p.amountCents<1||p.amountCents>1000000000||
+       !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(p.date||''))||
+       typeof p.reference!=='string'||p.reference.length>160||typeof p.createdAt!=='string'||
+       p.voidedAt&&!p.voidReason)throw Error('Ungültiger Zahlungseintrag');
+    ids.add(p.id);
+   }
+  }
+  if(state.quoteTemplates!==undefined){
+   if(!Array.isArray(state.quoteTemplates)||state.quoteTemplates.length>50)throw Error('Ungültige Angebotsvorlagen');
+   const ids=new Set();
+   for(const t of state.quoteTemplates){
+    if(!t||typeof t.id!=='string'||!t.id||ids.has(t.id)||typeof t.name!=='string'||t.name.length<3||
+       typeof t.service!=='string'||!t.service||!['rooms','windows','combined','other'].includes(t.scope))
+      throw Error('Ungültige Leistungsvorlage');
+    ids.add(t.id);
+   }
+  }
+  if(globalThis.MiCareOperationsCore?.validateOperationsSnapshot)globalThis.MiCareOperationsCore.validateOperationsSnapshot(state);
   return state;
  }
  function counts(state){
