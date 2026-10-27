@@ -307,6 +307,34 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 .backbar{background:#f1f8ff;border-bottom:1px solid #d6e7f7}
 @media(max-width:540px){header.micareTopbar{min-height:64px;padding:9px 12px}header.micareTopbar img{width:85px;max-height:48px}#micareHomeStats .status{padding:13px}#micareHomeStats strong{font-size:1.55rem}#micareMainNavigation .tile{min-height:92px;padding:14px;font-size:.92rem}}
 @media print{body{background:white}section{box-shadow:none}}
+
+/* Dashboard KPI drill-through: fully clickable, keyboard accessible, same visual identity */
+#micareHomeStats button.mi-stat-card{
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  width:100%;min-width:0;min-height:114px;text-align:left;cursor:pointer;
+  padding:18px 48px 18px 22px;
+  background:#fff!important;color:#355477!important;
+  border:1px solid #dce9f7;border-top:3px solid #2482e1;border-radius:13px;
+  box-shadow:0 5px 20px #145eaa0c!important;
+  transform:none;transition:border-color .15s,box-shadow .15s,background-color .15s
+}
+#micareHomeStats button.mi-stat-card strong{display:block;color:#0968cf;font-size:1.9rem;font-weight:740;line-height:1.2}
+#micareHomeStats button.mi-stat-card .mi-stat-label{font-size:.94rem;line-height:1.4;font-weight:450;margin-top:3px}
+#micareHomeStats button.mi-stat-card::after{
+  content:"›";position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  font-size:1.65rem;font-weight:400;color:#6a9cca
+}
+#micareHomeStats button.mi-stat-card:hover{
+  background:#f1f8ff!important;border-color:#8dbff0;box-shadow:0 9px 26px #145eaa1a!important
+}
+#micareHomeStats button.mi-stat-card:focus-visible{outline:3px solid #1473dc;outline-offset:3px}
+#micareHomeStats button.mi-stat-card:active{background:#e9f4ff!important}
+@media(max-width:540px){
+ #micareHomeStats button.mi-stat-card{min-height:90px;padding:12px 26px 12px 12px}
+ #micareHomeStats button.mi-stat-card strong{font-size:1.55rem}
+ #micareHomeStats button.mi-stat-card .mi-stat-label{font-size:.79rem}
+ #micareHomeStats button.mi-stat-card::after{right:9px;font-size:1.3rem}
+}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -335,10 +363,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 <h2>Übersicht</h2>
 <p class="hint">Kunden, Termine, Arbeitskarten und Rechnungen im Überblick.</p>
 <div class="grid" id="micareHomeStats" aria-live="polite">
-<div class="status"><strong id="homeCustomerCount">–</strong><div>Aktive Kunden</div></div>
-<div class="status"><strong id="homeAppointmentCount">–</strong><div>Geplante Termine</div></div>
-<div class="status"><strong id="homeEntryCount">–</strong><div>Dokumentierte Arbeiten</div></div>
-<div class="status"><strong id="homeOpenCount">–</strong><div>Geschäftsstellen / Objekte</div></div>
+<button type="button" class="status mi-stat-card" data-jump="customerOverviewScreen" aria-label="Aktive Kundenübersicht öffnen"><strong id="homeCustomerCount">–</strong><span class="mi-stat-label">Aktive Kunden</span></button>
+<button type="button" class="status mi-stat-card" data-jump="appointmentsPanel" aria-label="Aufträge und Termine öffnen"><strong id="homeAppointmentCount">–</strong><span class="mi-stat-label">Geplante Termine</span></button>
+<button type="button" class="status mi-stat-card" data-jump="history" aria-label="Dokumentierte Arbeiten und Auswertungen öffnen"><strong id="homeEntryCount">–</strong><span class="mi-stat-label">Dokumentierte Arbeiten</span></button>
+<button type="button" class="status mi-stat-card" data-jump="customerOverviewScreen" aria-label="Kunden und Geschäftsstellen öffnen"><strong id="homeOpenCount">–</strong><span class="mi-stat-label">Geschäftsstellen / Objekte</span></button>
 </div>
 <div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:12px 0;padding:12px"><strong>Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerungen beim Öffnen der App.</p></div>
 <h3>Arbeitsbereiche</h3><p class="hint">Kunde → Angebot → Auftrag → Arbeitskarte → Rechnung</p><p class="hint">Tipp: Erst Kunden anlegen, dann Angebot erstellen, nach Annahme die Termine bearbeiten und schließlich abrechnen.</p>
