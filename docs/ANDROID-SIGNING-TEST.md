@@ -31,3 +31,29 @@ Für einen öffentlichen/kommerziellen Release sind stattdessen ein separater si
 
 ## Status
 CI unterstützt den optionalen GitHub-Secret-Schlüssel und warnt, wenn er fehlt. **Das Repository-Secret wurde nicht automatisch eingerichtet.** Ohne Secret entstehen weiterhin neue temporäre Debug-Schlüssel.
+
+## Aktualisierte Build-Absicherung (27.10.2026)
+
+Der Android-Workflow unterscheidet jetzt eindeutig zwei Fälle:
+
+- **Ohne Repository-Secret:** Artefakt `M-iCare-TEST-1.9.14-NEUINSTALLATION`. Ein temporärer Runner-Schlüssel wird verwendet. Kein verlässliches Update über zuvor installierte APKs. Nur nach vollständiger externer JSON-Sicherung eine Neuinstallation vornehmen.
+- **Mit korrektem Repository-Secret:** Artefakt `M-iCare-UPDATE-1.9.14-FESTE-SIGNATUR`. Der Schlüssel wird vor dem Build gegen den festgelegten Zertifikat-Fingerabdruck überprüft. Zusätzlich verifiziert der Workflow die tatsächliche APK-Signatur mit `apksigner` und gleicht sie mit dem Keystore ab.
+- **Mit falschem/anderem Keystore:** Der Workflow bricht bewusst ab. So kann nicht unbemerkt ein neuer Schlüssel die Updatefähigkeit zerstören.
+
+Der festgelegte **Testzertifikat-SHA-256-Fingerabdruck** lautet:
+`422d32cd1b257b9519ca63d6c16dd7b736a8f02671e1010843d02ae450c1c5a5`
+
+Zu jedem Artefakt gehört jetzt `M-iCare-APK-Signaturstatus.txt` mit Signaturstatus, Zertifikat-Fingerabdruck und SHA-256 der erzeugten APK. Der Status muss vor Installation kontrolliert werden.
+
+### Einrichtung auf GitHub
+
+1. GitHub → `famulla89/m-icare-zeiterfassung` → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+2. Name genau `MICARE_DEBUG_KEYSTORE_BASE64`. Als Wert die Base64-Zeichenfolge des **zu obigem Fingerabdruck gehörenden** Test-Keystores einsetzen, ohne Anführungszeichen oder zusätzlichen Erklärungstext.
+3. Secret speichern. Den Original-Keystore getrennt und sicher langfristig aufbewahren, samt geprüftem Backup.
+4. GitHub → **Actions** → **M-iCare Android APK** → **Run workflow** → Branch `feature/structured-workflow-dashboard-20261027` → Run workflow.
+5. Nach erfolgreichem Lauf das Artefakt `M-iCare-UPDATE-1.9.14-FESTE-SIGNATUR` herunterladen und `M-iCare-APK-Signaturstatus.txt` prüfen. Erst diese Version gehört zur neuen stabilen Test-Updatekette.
+6. Alte mit anderem Zertifikat installierte APK: Erst **vollständige JSON-Datensicherung** außerhalb der App verifizieren, dann alte APK deinstallieren, neue installieren und Daten zurückspielen. Spätere Updates mit derselben Signatur und korrekt erhöhtem `versionCode` benötigen normalerweise keine Deinstallation mehr.
+
+**Sicherheit:** Nur ein Testschlüssel. Der Keystore oder dessen Base64 darf **nie** in öffentliche GitHub-Dateien, Kommentare, Logs oder Tickets kopiert werden. Auch ein öffentlich geteilter Download-Link zur Schlüsseldatei ist ungeeignet. Bei kommerzieller Veröffentlichung einen neuen, separat geschützten Release-Schlüssel und einen echten Release-Build verwenden.
+
+**Wichtige Grenze:** Der Workflow kann das Secret lesen, aber **nicht selbst anlegen**. Dieser einmalige Schritt muss durch jemanden mit Repository-Zugriff in den GitHub-Einstellungen erfolgen.
