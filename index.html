@@ -209,35 +209,23 @@ tbody tr:nth-child(even){background:#f8fbfe}
 <header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.9.11 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
 <section id="home" class="screen active">
-<h2>Mein Arbeitsbereich</h2><p class="hint">Wähle deine Ansicht. Du findest die tägliche Arbeit ohne Umwege; die Büroverwaltung bleibt getrennt.</p>
-<div class="row" id="micareModeSwitcher" style="margin:14px 0;gap:10px">
-<button id="micareOfficeMode" type="button">🏢 Büro / Verwaltung</button>
-<button id="micareEmployeeMode" type="button" class="secondary">🧹 Mitarbeiter</button>
-</div>
-<div id="micareOfficeHome">
-<h3>Arbeitszentrale</h3>
+<h2>🏢 M-iCare · Arbeitszentrale</h2>
+<p class="hint">Alles für deinen Ein-Mann-Betrieb. Du hast überall vollen Zugriff – ohne Büro-/Mitarbeiter-Umschaltung.</p>
 <div class="grid" id="micareHomeStats" aria-live="polite">
- <div class="status"><strong id="homeCustomerCount">–</strong><div>Aktive Kunden</div></div>
- <div class="status"><strong id="homeAppointmentCount">–</strong><div>Geplante Termine</div></div>
- <div class="status"><strong id="homeEntryCount">–</strong><div>Dokumentierte Arbeiten</div></div>
- <div class="status"><strong id="homeOpenCount">–</strong><div>Geschäftsstellen / Objekte</div></div>
+<div class="status"><strong id="homeCustomerCount">–</strong><div>Aktive Kunden</div></div>
+<div class="status"><strong id="homeAppointmentCount">–</strong><div>Geplante Termine</div></div>
+<div class="status"><strong id="homeEntryCount">–</strong><div>Dokumentierte Arbeiten</div></div>
+<div class="status"><strong id="homeOpenCount">–</strong><div>Geschäftsstellen / Objekte</div></div>
 </div>
 <div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:12px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerungen beim Öffnen der App.</p></div>
+<h3>Deine Bereiche</h3>
 <div class="tiles" id="micareMainNavigation">
-<button class="tile" data-jump="customerOverviewScreen">👥 Kunden<small>Kundenakte, Standorte und Kontakte</small></button>
-<button class="tile" data-jump="appointmentsPanel">📋 Aufträge<small>Angebote, Arbeitskarten und Kalender</small></button>
-<button class="tile" data-jump="billingScreen">🧾 Finanzen<small>Rechnungen und Abrechnungen</small></button>
-<button class="tile" data-jump="operationsHub">⚙️ Verwaltung & mehr<small>Reporting, Vorlagen, Mitarbeiter, Sicherung</small></button>
-</div></div>
-<div id="micareEmployeeHome" hidden>
-<h3>Meine Einsätze</h3><p class="hint">Nur die wichtigsten täglichen Schritte. Dies ist eine vereinfachte Oberfläche, noch keine technische Rechtebeschränkung.</p>
-<div class="tiles">
-<button class="tile" data-jump="plannedWorkScreen">📋 Arbeitskarten<small>Meine geplanten Einsätze öffnen</small></button>
-<button class="tile" data-jump="entryForm">⏱ Arbeitszeit erfassen<small>Arbeit dokumentieren, Zeiten korrigieren</small></button>
-<button class="tile" data-jump="dailyWorkOverview">📅 Tagesübersicht<small>Heutige und vergangene Einsätze</small></button>
-</div>
-</div>
-</section>
+<button class="tile" data-jump="customerOverviewScreen">👥 Kunden<small>Kunden, Geschäftsstellen und Kontaktdaten</small></button>
+<button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angebote, Aufträge, Termine und Arbeitskarten</small></button>
+<button class="tile" data-jump="plannedWorkScreen">🧹 Einsätze & Zeiten<small>Arbeit dokumentieren und Zeiten erfassen</small></button>
+<button class="tile" data-jump="billingScreen">🧾 Finanzen<small>Teil-/Schlussrechnung und Zahlungsübersicht</small></button>
+<button class="tile" data-jump="operationsHub">⚙️ Mehr & Verwaltung<small>Angebote, Reporting, Datensicherung, Einstellungen</small></button>
+</div></section>
 
 <section class="screen" id="quoteCalculator">
  <h2>🧮 Kostenvoranschläge</h2>
@@ -2324,18 +2312,6 @@ $('reportTableCsv').onclick=async()=>{
 };
 $('reportPrint').onclick=()=>MiCareReportPrint.print();
 
-function setMicareViewMode(mode){
- const employee=mode==='employee';
- try{localStorage.setItem('micare-ui-view-mode',employee?'employee':'office')}catch(_){}
- const office=document.getElementById('micareOfficeHome'),staff=document.getElementById('micareEmployeeHome');
- if(office)office.hidden=employee;
- if(staff)staff.hidden=!employee;
- document.getElementById('micareOfficeMode')?.classList.toggle('secondary',employee);
- document.getElementById('micareEmployeeMode')?.classList.toggle('secondary',!employee);
-}
-document.getElementById('micareOfficeMode')?.addEventListener('click',()=>setMicareViewMode('office'));
-document.getElementById('micareEmployeeMode')?.addEventListener('click',()=>setMicareViewMode('employee'));
-try{setMicareViewMode(localStorage.getItem('micare-ui-view-mode')||'office')}catch(_){setMicareViewMode('office')}
 function renderHomeOverview(){
  try{
   const count=(name)=>Array.isArray(state?.[name])?state[name].length:0;
