@@ -184,6 +184,41 @@ tbody tr:nth-child(even){background:#f8fbfe}
  button{transition:none}
 }
 
+
+/* M-iCare modern UI refresh: desktop + mobile; presentation-only. */
+:root{--mi-ink:#14213b;--mi-sub:#64748b;--mi-blue:#2563eb;--mi-border:#e2e8f0;--mi-surface:#fff;--mi-bg:#f4f7fb}
+body{background:var(--mi-bg);color:var(--mi-ink)}
+.wrap{max-width:1220px;padding:clamp(14px,2.6vw,32px)}
+header{background:linear-gradient(112deg,#102647 0%,#164983 62%,#2376bc 100%);color:#fff;border-radius:22px;padding:22px 26px;margin:6px 0 22px;box-shadow:0 14px 34px rgba(20,59,101,.18)}
+header img{border-radius:14px;padding:9px;width:clamp(115px,15vw,178px);max-height:100px}
+header .sub{color:#d8eaff}
+header button.secondary{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25)}
+section{border:1px solid var(--mi-border);border-radius:20px;box-shadow:0 10px 32px rgba(35,57,86,.055);padding:clamp(17px,2.4vw,26px)}
+h1{font-weight:780;letter-spacing:-.025em}
+h2{font-size:clamp(1.24rem,2vw,1.52rem);letter-spacing:-.025em}
+h3{letter-spacing:-.015em}
+button{border-radius:12px;transition:background .15s,transform .12s,box-shadow .15s}
+button:hover:not(:disabled){filter:brightness(.97);transform:translateY(-1px)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+button:not(.secondary):not(.danger):not(.tile){background:#1d65bd;box-shadow:0 3px 10px rgba(37,99,235,.12)}
+button.secondary{background:#eef4fc;color:#18477c}
+input,select,textarea{border-color:#ccd8e8;border-radius:11px}
+#home{background:transparent;border:0;box-shadow:none;padding:0}
+#home>h2{font-size:clamp(1.5rem,2.7vw,2rem);margin:0 0 6px}
+#home>.hint{margin:0 0 20px}
+#micareHomeStats{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+#micareHomeStats .status{background:#fff;border:1px solid var(--mi-border);box-shadow:0 6px 20px rgba(29,62,101,.055);padding:17px 19px;border-radius:17px;color:#516479}
+#micareHomeStats strong{display:block;font-size:1.8rem;line-height:1.2;color:#123867;letter-spacing:-.04em}
+#micareMainNavigation{gap:15px}
+#micareMainNavigation .tile{background:#fff;border:1px solid #dbe5f1;border-radius:17px;min-height:114px;padding:19px 20px;color:#16365d;box-shadow:0 6px 20px rgba(29,62,101,.045);font-weight:750}
+#micareMainNavigation .tile:hover{background:#eff7ff;border-color:#9fc9f3;box-shadow:0 10px 24px rgba(29,88,157,.10)}
+#micareMainNavigation .tile small{color:#667b93;font-size:.84rem;line-height:1.45}
+#micareContractReminders{border:1px solid #d9e6f8;background:#ecf5ff!important;border-radius:15px}
+.objectPanel,.quoteBox{border-radius:16px}
+.backbar{position:sticky;top:0;z-index:9;background:rgba(244,247,251,.94);backdrop-filter:blur(10px);padding:9px 0}
+@media(max-width:850px){#micareHomeStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){header{padding:14px;border-radius:16px;gap:10px}header img{width:108px;max-height:76px}#home .tiles{grid-template-columns:1fr}#micareHomeStats .status{padding:12px}#micareHomeStats strong{font-size:1.45rem}#micareMainNavigation .tile{min-height:85px}}
+@media print{header{box-shadow:none;background:#fff;color:#14213b;margin:0;padding:0}#home{display:none!important}}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
