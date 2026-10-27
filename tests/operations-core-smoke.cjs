@@ -1,0 +1,32 @@
+'use strict';
+const assert=require('node:assert/strict');
+const c=require('../operations-core.js');
+const invoice={id:'i1',kind:'invoice',finalizedAt:'2026-10-27',number:'RG-2026-0001',gross:1000.03,dueDate:'2026-11-10'};
+let payments=[];
+assert.deepEqual(c.paymentSummary(invoice,payments,'2026-10-27'),{grossCents:100003,paidCents:0,remainingCents:100003,overdue:false,status:'open'});
+const p1=c.addPayment(invoice,payments,{id:'p1',date:'2026-10-27',amount:250.02,reference:'Bank 42'});
+assert.equal(p1.amountCents,25002);payments.push(p1);
+assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').status,'partial');
+assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').remainingCents,75001);
+assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-11-12',amount:751}),/übersteigt/);
+assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-11-12',amount:0}),/positiv/);
+assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-02-30',amount:1}),/Datum/);
+const p2=c.addPayment(invoice,payments,{id:'p2',date:'2026-11-12',amount:750.01});payments.push(p2);
+assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').status,'paid');
+assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').remainingCents,0);
+assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-11-12',amount:1}),/übersteigt/);
+assert.throws(()=>c.voidPayment(p1,'x'),/mindestens/);
+payments[0]=c.voidPayment(p1,'Falscher Betrag','2026-11-12T00:00:00Z');
+assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').paidCents,75001);
+assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').status,'partial');
+assert.throws(()=>c.voidPayment(payments[0],'Falscher Betrag'),/nicht mehr aktiv/);
+assert.throws(()=>c.paymentSummary({...invoice,finalizedAt:''},[], '2026-11-12'),/endgültige/);
+assert.equal(c.paymentSummary(invoice,[], '2026-11-12').status,'overdue');
+assert.deepEqual(c.validateTemplate({id:'a',name:'Fensterreinigung Haus',scope:'windows',service:'Fenster putzen',area:0}).scope,'windows');
+assert.throws(()=>c.validateTemplate({name:'X',scope:'windows',service:'Glas'}),/Vorlagenname/);
+assert.equal(c.conflictsForDay([{appointment:{employee:'Inhaber'},start:'08:00',end:'10:00'},
+ {appointment:{employee:'Inhaber'},start:'09:00',end:'11:00'},
+ {appointment:{employee:'Andere'},start:'09:00',end:'11:00'}]).length,1);
+assert.equal(c.conflictsForDay([{appointment:{employee:'Inhaber'},start:'08:00',end:'09:00'},
+ {appointment:{employee:'Inhaber'},start:'09:00',end:'10:00'}]).length,0);
+console.log('OPERATIONS PASS: partial/full payments, precision, reversal audit, due dates, templates, calendar conflicts.');
