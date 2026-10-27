@@ -70,7 +70,7 @@ const server=http.createServer((req,res)=>{
   check('Fehler beim neuen Objekt verändert Kundendaten nicht',afterFailedObject.c===created.c.name,JSON.stringify(afterFailedObject));
 
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.locator('#appointmentCreatePanel summary').click();
   await page.locator('#appointmentCustomer').selectOption(created.c.id);
   await page.locator('#appointmentObject').selectOption(created.o.id);
