@@ -41,6 +41,14 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
    updateCustomerSelects();fillEmployees();refreshLinkedAppointments();
  },fixture);
  await page.waitForFunction(()=>state.customers.length===10);console.log('E2E step 2: fixture imported');
+ // New workflow dashboard must load without breaking existing navigation.
+ await page.evaluate(()=>renderHomeOverview());
+ assert.equal(await page.locator('#homeCustomerCount').textContent(),'10','Dashboard customer count');
+ assert.equal(await page.locator('#homeEntryCount').textContent(),String((await page.evaluate(()=>state.entries.length))),'Dashboard work entry count');
+ assert(await page.locator('#home [data-jump="appointmentsPanel"]').count()>=1,'Direct appointment shortcut present');
+ assert(await page.locator('#home [data-jump="billingScreen"]').count()>=1,'Direct billing shortcut present');
+ console.log('E2E: workflow dashboard counts and shortcuts passed');
+
  // Navigation and customer data
  await page.locator('[data-jump="customerOverviewScreen"]').click();
  assert(await page.locator('#customerOverviewScreen').isVisible());
