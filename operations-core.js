@@ -8,9 +8,9 @@
  const cents=value=>Math.round((Number(value)||0)*100);
  const amountCents=value=>{
   const n=Number(String(value).replace(',','.'));
-  if(!Number.isFinite(n)||n<=0||n>10000000||Math.round(n*100)!==Number((n*100).toFixed(0)))
+  if(!Number.isFinite(n)||n<=0||n>10000000||Math.abs(n*100-Math.round(n*100))>1e-7)
    throw Error('Betrag muss positiv und auf Cent genau sein');
-  return Math.round(n*100);
+  const result=Math.round(n*100);if(result<1)throw Error('Betrag muss mindestens einen Cent betragen');return result;
  };
  const assertDate=value=>{
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))throw Error('Gültiges Datum erforderlich');
