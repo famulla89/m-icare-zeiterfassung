@@ -38,6 +38,8 @@ const server=http.createServer((req,res)=>{
   await page.locator('#qPlanStart').fill('09:00');
   await page.locator('#qPlanEnd').fill('11:00');
   await page.locator('#qPlanEveryWeeks').selectOption('1');
+  await page.locator('#qPlanWeekdays input[value="2"]').check();
+  await page.locator('#qPlanWeekdays input[value="3"]').check();
   
    // A two-week order must not get a reminder before it starts.
    await page.locator('#qPlanEndDate').fill('2026-11-17');
@@ -62,8 +64,6 @@ const server=http.createServer((req,res)=>{
    assert((await page.locator('#qPlanReminderHint').innerText()).includes('03.11.2026'),'Month lead must be limited to first visit');
    await page.locator('#qPlanEndDate').fill('2026-12-31');
    await page.locator('#qPlanReminderDays').selectOption('30');
-  await page.locator('#qPlanWeekdays input[value="2"]').check();
-  await page.locator('#qPlanWeekdays input[value="3"]').check();
   await page.locator('#qPlanPreviewButton').click();
   assert.equal(await page.locator('#qVisits').inputValue(),'18');
   assert((await page.locator('#qPlanPreview').innerText()).includes('30.12.2026'));
