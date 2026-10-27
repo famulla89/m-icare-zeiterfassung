@@ -77,6 +77,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#miTemplateApply').click();
   assert.equal(await page.locator('#qService').inputValue(),'Fensterreinigung Standard');
   await page.evaluate(()=>showScreen('entryForm'));
+  await page.locator('.mi-op-checklist summary').click();
   await page.locator('#miChecklistOptions input').first().check();
   await page.locator('#miChecklistApply').click();
   assert((await page.locator('#workDone').inputValue()).includes('gereinigt'));
