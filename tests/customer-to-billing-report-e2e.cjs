@@ -67,7 +67,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   ok('Kunden- und Objektdaten nach Neustart persistent');
 
   // Plan one-time real AK on November 3.
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.locator('#appointmentCreatePanel summary').click();
   await page.locator('#appointmentCustomer').selectOption(created.customer.id);
   await page.locator('#appointmentObject').selectOption(created.object.id);
@@ -419,7 +419,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   ok('Kundenannahme erzeugt fünf OFFENE AK am Wunschtermin, mit je 100 EUR');
   await page.screenshot({path:path.join(out,'09_Angenommenes_Angebot.png'),fullPage:true});
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.evaluate(()=>{calendarMonth='2026-11';chosenDay='2026-11-10';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   const cal=await page.locator('#selectedDayList').innerText();
   assert(cal.includes('AK '+scheduled[0].akNumber),'Calendar must display real AK number');
@@ -440,7 +440,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   let entryStatus=await page.evaluate(id=>state.entries.find(e=>e.appointmentId===id)?.orderStatus,scheduled[0].id);
   assert.equal(entryStatus,'progress');
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   assert((await page.locator('#selectedDayList').innerText()).includes('In Bearbeitung'));
   assert(!(await page.locator('#selectedDayList').innerText()).includes('Rechnung erstellen'));
@@ -458,7 +458,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.waitForFunction(id=>state.entries.some(e=>e.appointmentId===id&&e.orderStatus==='done'),scheduled[0].id);
   acceptInvoicePrompt=false;
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.evaluate(()=>{chosenDay='2026-11-10';calendarMonth='2026-11';document.getElementById('appointmentCalendarPanel').open=true;renderAppointments()});
   const doneText=await page.locator('#selectedDayList').innerText();
   assert(doneText.includes('Erledigt')&&doneText.includes('Rechnung erstellen'));
@@ -512,7 +512,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
     await saveState();
   },firstTen[0].id);
   await page.locator('#goHome').click();
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.locator('#acceptedOrdersSearch').fill(tenQuote.number);
   await page.locator('#acceptedOrdersList summary').filter({hasText:'Arbeitskarten anzeigen'}).first().click();
   await page.locator('#acceptedOrdersList button').filter({hasText:'Teilrechnung 1/10'}).click();
@@ -720,7 +720,7 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   await page.locator('#goHome').click();
   assert(await page.locator('#home').isVisible(),'Startseite button returns home');
   assert(await page.locator('#backbar').isHidden(),'Navigation bar hides on home');
-  await page.locator('#home [data-jump="appointmentsPanel"]').click();
+  await page.locator('#micareMainNavigation [data-jump="appointmentsPanel"]').click();
   await page.locator('#goBack').click();
   assert(await page.locator('#home').isVisible(),'Back button returns to previous screen');
   await page.setViewportSize({width:1400,height:980});
