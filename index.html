@@ -214,7 +214,7 @@ tbody tr:nth-child(even){background:#f8fbfe}
  <div class="status"><strong id="homeCustomerCount">–</strong><div>Aktive Kunden</div></div>
  <div class="status"><strong id="homeAppointmentCount">–</strong><div>Geplante Termine</div></div>
  <div class="status"><strong id="homeEntryCount">–</strong><div>Dokumentierte Arbeiten</div></div>
- <div class="status"><strong id="homeOpenCount">–</strong><div>Offene Arbeitskarten</div></div>
+ <div class="status"><strong id="homeOpenCount">–</strong><div>Geschäftsstellen / Objekte</div></div>
 </div>
 <h3>Direkt loslegen</h3>
 <div class="row" style="margin:12px 0;flex-wrap:wrap">
@@ -2307,13 +2307,7 @@ function renderHomeOverview(){
   value('homeCustomerCount',Array.isArray(state?.customers)?state.customers.filter(c=>!c.archived).length:0);
   value('homeAppointmentCount',count('appointments'));
   value('homeEntryCount',count('entries'));
-  const now=isoDate();
-  let open=0;
-  for(const a of (state?.appointments||[])){
-   if(a.status==='done'||a.status==='cancelled')continue;
-   if(a.date&&a.date<=now)open++;
-  }
-  value('homeOpenCount',open);
+  value('homeOpenCount',Array.isArray(state?.objects)?state.objects.filter(o=>!o.archived).length:0);
  }catch(error){console.warn('Dashboard-Kennzahlen nicht verfügbar',error)}
 }
 function showScreen(id,remember=true){if(!screenIds.includes(id))id='home';if(id!==currentScreen&&!confirmDiscardChanges())return;if(remember&&id!==currentScreen&&screenHistory[screenHistory.length-1]!==currentScreen)screenHistory.push(currentScreen);if(currentScreen==='customersPanel'&&id!=='customersPanel'){newCustomerMode=false;$('selectedCustomer').disabled=false;if(lastSelectedCustomer)$('selectedCustomer').value=lastSelectedCustomer}
