@@ -57,6 +57,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#miPayAmount').fill('25.02');
   await page.locator('#miPayForm button[type="submit"]').click();
   await page.waitForFunction(()=>state.payments?.length===1);
+  await page.waitForFunction(()=>!document.getElementById('miPaySubmit').disabled);
   assert.equal(await page.evaluate(()=>MiCareOperationsCore.paymentSummary(state.quotes.find(x=>x.id==='qa-i'),state.payments,isoDate()).remainingCents),7501);
   await page.locator('#miPayAmount').fill('75.01');
   await page.locator('#miPayForm button[type="submit"]').click();
