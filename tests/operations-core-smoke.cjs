@@ -10,6 +10,7 @@ assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').status,'partial');
 assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').remainingCents,75001);
 assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-11-12',amount:751}),/übersteigt/);
 assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-11-12',amount:0}),/positiv/);
+assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-11-12',amount:0.001}),/Cent/);
 assert.throws(()=>c.addPayment(invoice,payments,{date:'2026-02-30',amount:1}),/Datum/);
 const p2=c.addPayment(invoice,payments,{id:'p2',date:'2026-11-12',amount:750.01});payments.push(p2);
 assert.equal(c.paymentSummary(invoice,payments,'2026-11-12').status,'paid');
