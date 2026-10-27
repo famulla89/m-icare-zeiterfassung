@@ -48,6 +48,31 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(await page.locator('#home [data-jump="appointmentsPanel"]').count()>=1,'Appointments present');
  assert(await page.locator('#home [data-jump="billingScreen"]').count()>=1,'Billing present');
  console.log('E2E: workflow dashboard counts and shortcuts passed');
+ // Regression: globally styled blue buttons must never erase calendar status colors.
+ const calendarColors=await page.evaluate(()=>{
+  const grid=document.getElementById('calendarGrid');
+  const classes=['','hasEvent','allDone','mixedStatus','draftEvent'];
+  return classes.map(kind=>{
+   const b=document.createElement('button');
+   b.type='button';b.className=kind;b.textContent='1';grid.append(b);
+   const styles=getComputedStyle(b);
+   const result={kind,background:styles.backgroundColor,color:styles.color};
+   b.remove();
+   return result;
+  });
+ });
+ const expectedCalendarColors=[
+  ['rgb(238, 245, 252)','rgb(21, 70, 113)'],
+  ['rgb(210, 242, 219)','rgb(21, 90, 42)'],
+  ['rgb(219, 234, 254)','rgb(23, 75, 140)'],
+  ['rgb(255, 228, 189)','rgb(133, 80, 0)'],
+  ['rgb(233, 224, 250)','rgb(84, 50, 122)']
+ ];
+ for(let i=0;i<calendarColors.length;i++){
+  assert.deepEqual([calendarColors[i].background,calendarColors[i].color],expectedCalendarColors[i],
+   'Calendar color regression for '+(calendarColors[i].kind||'free day'));
+ }
+ console.log('E2E: all original calendar status colors preserved');
  // Single-owner UI: all five operational areas visible; no role switch.
  assert.equal(await page.locator('#micareMainNavigation .tile').count(),5,'Five owner navigation areas');
  assert.equal(await page.locator('#micareModeSwitcher').count(),0,'No employee/office mode switch');
