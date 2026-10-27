@@ -43,7 +43,10 @@
    if(end&&st.paidNetCents+totalNet!==allNet)throw Error('Restbetrag weicht vom angenommenen Angebot ab; bitte AK-Preise prüfen');
    const first=selected[0],last=selected.at(-1),allDates=st.slots.map(s=>s.ak?.date||'').filter(Boolean).sort(),today=new Date(),iso=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
    const seller=profile||{},kind=end?'final':'partial';
-   const prior=st.invoices.map(d=>d.number+' ('+euros(d.net)+' netto)').join('; ');
+   const prior=st.invoices.map(d=>String(d.number||'ohne Nummer')+' | '+String(d.date||dateDE(String(d.createdAt||'').slice(0,10)))+' | '+euros(d.gross)+' brutto ('+euros(d.net)+' netto)').join('; ');
+   const priorNet=st.paidNetCents/100;
+   const overview=end?'Auftragswert: '+euros(quote.gross)+' brutto. Bereits in Teilrechnungen abgerechnet: '+euros(st.invoices.reduce((sum,d)=>sum+Number(d.gross||0),0))+' brutto. Mit dieser Schlussrechnung verbleibend: '+euros((totalNet+totalTax)/100)+' brutto.':'';
+   // "Abgerechnet" bedeutet hier fakturiert, nicht tatsächlich bezahlt.
    // Die Schlussrechnung erhält den vollständigen Leistungsnachweis auch für bereits abgerechnete AK.
    // Geld wird nur für die offenen AK berechnet.
    const performedWork=end?st.slots.map(slot=>{
@@ -59,7 +62,7 @@
      net:slot.netCents/100,priorInvoice:slot.invoice?.number||''
     };
    }):[];
-   const notes=end?(st.invoices.length?'Schlussabrechnung zum Angebot '+quote.number+'. Bisherige Teilrechnungen: '+prior+'. Diese Rechnung enthält ausschließlich die noch nicht berechneten Leistungen.':'Schlussabrechnung zum Angebot '+quote.number+' über sämtliche erledigten Leistungen.'):'Teilrechnung für AK '+(first.ak.akNumber||first.index)+' von '+st.total+'. Weitere Arbeitskarten werden erst nach Erledigung separat berechnet.';
+   const notes=end?(st.invoices.length?'Schlussabrechnung zum Angebot '+quote.number+'. Bisherige Teilrechnungen: '+prior+'. Diese Rechnung enthält ausschließlich die noch nicht berechneten Leistungen. '+overview+'':'Schlussabrechnung zum Angebot '+quote.number+' über sämtliche erledigten Leistungen.'):'Teilrechnung für AK '+(first.ak.akNumber||first.index)+' von '+st.total+'. Weitere Arbeitskarten werden erst nach Erledigung separat berechnet.';
    const fields={
     id:root.crypto?.randomUUID?.()||'bill-'+Date.now(),kind:'invoice',invoiceType:kind,
     number:'RG-ENTWURF',createdAt:iso,date:dateDE(iso),finalizedAt:'',
