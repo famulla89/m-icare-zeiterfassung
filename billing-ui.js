@@ -235,7 +235,15 @@
   for(const doc of docs){
    const row=make('div');row.className='objectItem';row.style.margin='8px 0';
    const name=make('strong',(doc.invoiceType==='final'?'Schlussrechnung':Number(doc.sourceVisitCount)>1?'Teilrechnung':'Rechnung')+' '+doc.number+' · '+doc.customerName+' · '+euros(doc.gross));row.append(name);
-   row.append(make('div',(doc.finalizedAt?'Endgültig · Zahlung nicht automatisch bestätigt':'Entwurf')+' · '+(doc.sourceQuoteNumber||'ohne Angebotsbezug')));
+   let paymentLabel='Zahlung nicht bestätigt';
+   if(doc.finalizedAt&&root.MiCareOperationsCore){
+    try{
+     const y=new Date(),today=[y.getFullYear(),String(y.getMonth()+1).padStart(2,'0'),String(y.getDate()).padStart(2,'0')].join('-');
+     const current=root.MiCareOperationsCore.paymentSummary(doc,state.payments||[],today);
+     paymentLabel=current.status==='paid'?'Bezahlt':current.status==='partial'?'Teilbezahlt · offen '+euros(current.remainingCents/100):current.status==='overdue'?'Überfällig · offen '+euros(current.remainingCents/100):'Offen · '+euros(current.remainingCents/100);
+    }catch(err){paymentLabel='Zahlungsstand bitte prüfen'}
+   }
+   row.append(make('div',(doc.finalizedAt?'Endgültig · '+paymentLabel:'Entwurf')+' · '+(doc.sourceQuoteNumber||'ohne Angebotsbezug')));
    const btn=make('button','📄 PDF');btn.type='button';btn.className='secondary smallbtn';btn.onclick=async()=>{try{await saveExport('M-iCare_Rechnung_'+doc.number+'.pdf',await MiCareQuote.pdf(doc),'Rechnungen')}catch(e){alert('PDF fehlgeschlagen: '+e.message)}};row.append(btn);
    if(doc.finalizedAt&&root.MiCareQuoteUI?.emailFinalInvoice){
     const mail=make('button','✉️ E-Mail mit PDF vorbereiten');mail.type='button';mail.className='secondary smallbtn';mail.onclick=()=>root.MiCareQuoteUI.emailFinalInvoice(doc,mail);row.append(mail)
