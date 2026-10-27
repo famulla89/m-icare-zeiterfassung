@@ -102,6 +102,25 @@ const wait=()=>new Promise(r=>server.listen(0,'127.0.0.1',r));
  assert(await page.locator('#customersPanel').isVisible());
  await page.locator('#goHome').click();
  console.log('E2E step 3: customer navigation passed');
+ // KPI cards are functional navigation, not static metrics. Test number click + keyboard.
+ for(const [counter,target] of [
+  ['homeCustomerCount','customerOverviewScreen'],
+  ['homeAppointmentCount','appointmentsPanel'],
+  ['homeEntryCount','history'],
+  ['homeOpenCount','customerOverviewScreen']
+ ]){
+  const button=page.locator('#micareHomeStats .mi-stat-card').filter({has:page.locator('#'+counter)});
+  assert.equal(await button.count(),1,'KPI card for '+counter+' exists');
+  assert(/^\\d+$/.test((await page.locator('#'+counter).innerText()).trim()),'KPI is numeric: '+counter);
+  await page.locator('#'+counter).click();
+  assert(await page.locator('#'+target).isVisible(),'KPI '+counter+' opens '+target);
+  await page.locator('#goHome').click();
+ }
+ await page.locator('#micareHomeStats .mi-stat-card').first().focus();
+ await page.keyboard.press('Enter');
+ assert(await page.locator('#customerOverviewScreen').isVisible(),'Keyboard Enter activates KPI card');
+ await page.locator('#goHome').click();
+ console.log('E2E step 3b: KPI cards open correct screens by click and keyboard');
 
  // Cloud handoff: actual AES-256-GCM file, restore preview and local rollback.
  await page.locator('#home [data-jump="backupSection"]').click();
