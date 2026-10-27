@@ -177,6 +177,19 @@
    return lines.length?lines:['–'];
   }
   const appendix=Array.isArray(d.performedWork)&&d.invoiceType==='final'?d.performedWork:[];
+  const compactFinal=d.kind==='invoice'&&d.invoiceType==='final'&&appendix.length>0;
+  // Compact AK descriptions for the invoice. Full original notes remain in stored AKs.
+  function shortWork(w){
+   const raw=String(w.workDone||'').trim().replace(/\s+/g,' ');
+   const service=String(w.service||'').trim();
+   if(!raw||raw.toLocaleLowerCase('de-DE')===service.toLocaleLowerCase('de-DE'))return '';
+   let parts=raw.split(/\s*\|\s*/).map(x=>x.trim()).filter(Boolean);
+   if(parts.length>1){
+    if(parts[0].toLocaleLowerCase('de-DE')===service.toLocaleLowerCase('de-DE'))parts.shift();
+    return parts.map(x=>x.split(/\s*·\s*/).slice(0,2).join(' · ')).join(' · ');
+   }
+   return raw;
+  }
   const detailItems=appendix.flatMap(w=>{
    const title=wrapDetail('AK '+w.akNumber+' · '+formatPdfDate(w.date)+' · '+String(w.service||''),1065,'bold 22px Arial');
    const detail=wrapDetail(String(w.workDone||'Leistung gemäß Arbeitskarte ausgeführt'),1060,'20px Arial');
@@ -316,11 +329,12 @@
     y=Math.max(y+35,420);
     write('Nr.: '+d.number,70,y,490,'bold 24px Arial');write('Datum: '+formatPdfDate(d.date),700,y,470,'23px Arial');y+=45;
     write('Leistungszeitraum: '+(formatPdfDate(d.serviceDate)||'bitte ergänzen'),70,y,1050);y+=42;
-    write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;
+    if(!compactFinal){write('Arbeitskarte: '+(d.orderNumber||'keine'),70,y,1100);y+=42;}
     if(d.kind==='invoice'&&d.sourceQuoteNumber){
-     y+=write('Angebot: '+d.sourceQuoteNumber+(d.invoiceType==='final'?' · Schlussrechnung über offene Restleistungen':Number(d.sourceVisitCount)>1?' · Teilrechnung '+d.sourceVisitNumber+' von '+d.sourceVisitCount:' · vollständig abgerechneter Einsatz'),70,y,1090,'20px Arial');
-     if(d.invoiceType==='final'){
-      y+=write('Auftrag gesamt netto: '+euros(d.orderNetTotal||d.net)+' · vorher berechnet netto: '+euros(d.alreadyInvoicedNet||0)+' · jetzt netto: '+euros(d.net),70,y,1090,'20px Arial');
+     if(compactFinal)y+=write('Angebot: '+d.sourceQuoteNumber,70,y,1090,'20px Arial');
+     else{
+      y+=write('Angebot: '+d.sourceQuoteNumber+(d.invoiceType==='final'?' · Schlussrechnung über offene Restleistungen':Number(d.sourceVisitCount)>1?' · Teilrechnung '+d.sourceVisitNumber+' von '+d.sourceVisitCount:' · vollständig abgerechneter Einsatz'),70,y,1090,'20px Arial');
+      if(d.invoiceType==='final')y+=write('Auftrag gesamt netto: '+euros(d.orderNetTotal||d.net)+' · vorher berechnet netto: '+euros(d.alreadyInvoicedNet||0)+' · jetzt netto: '+euros(d.net),70,y,1090,'20px Arial');
      }
     }
     if(d.kind==='quote'&&d.formValues?.PlanDate){
@@ -329,23 +343,34 @@
      y+=write('Wunschtermin: '+formatPdfDate(plan.PlanDate)+' · '+(plan.PlanStart||'–')+'–'+(plan.PlanEnd||'–')+' Uhr',70,y,1090,'20px Arial');
      if(Number(d.calculation?.visits)>1)y+=write('Geplant: '+d.calculation.visits+' Einsätze, '+cadence+' · verbindlich erst nach Annahme',70,y,1090,'20px Arial');
     }
-    y+=write(d.service,70,y,1080,'bold 25px Arial');
+    if(!compactFinal)y+=write(d.service,70,y,1080,'bold 25px Arial');
    }else{
     write('Nr.: '+d.number+'  ·  '+d.customerName,70,y,1080,'bold 25px Arial');
     y+=62;
    }
    y+=20;
    c.fillStyle='#e9f2fc';c.fillRect(70,y-10,1100,52);
-   write('Leistung',85,y+23,600,'bold 21px Arial',blue);
-   write('Menge',780,y+23,100,'bold 21px Arial',blue);
-   write('Gesamt',1010,y+23,170,'bold 21px Arial',blue);y+=65;
+   write(compactFinal?'AK · Datum · Leistung':'Leistung',85,y+23,660,'bold 21px Arial',blue);
+   write(compactFinal?'Abgerechnet':'Menge',780,y+23,160,'bold 21px Arial',blue);
+   write(compactFinal?'Netto':'Gesamt',1010,y+23,170,'bold 21px Arial',blue);y+=65;
    for(const row of rows){
     c.fillStyle='#f4f7fc';c.fillRect(70,y-6,1100,82);
-    write(row.title,84,y+22,670,'21px Arial');
-    write(row.quantity+' '+row.unit,777,y+22,170,'20px Arial');
+    if(compactFinal){
+     c.font='bold 20px Arial';c.fillStyle=dark;c.fillText(row.title,84,y+22,675);
+     if(row.detail){c.font='17px Arial';c.fillText(row.detail,84,y+52,680)}
+     c.font='18px Arial';c.fillText(row.quantity,780,y+22,205);
+    }else{
+     write(row.title,84,y+22,670,'21px Arial');
+     write(row.quantity+' '+row.unit,777,y+22,170,'20px Arial');
+    }
     write(euros(row.total),1005,y+22,170,'bold 20px Arial');y+=88;
    }
    if(pageIndex===standardPageCount-1){
+    if(compactFinal){
+     y+=16;
+     y+=write('Auftragswert netto: '+euros(d.orderNetTotal??d.net),70,y,610,'20px Arial');
+     y+=write('Bereits in Rechnung gestellt: − '+euros(d.alreadyInvoicedNet||0),70,y,610,'20px Arial');
+    }
     y+=25;c.strokeStyle='#bdcde0';c.beginPath();c.moveTo(70,y);c.lineTo(1170,y);c.stroke();y+=50;
     write('Netto',710,y,230);write(euros(d.net),1000,y,180,'bold 24px Arial');y+=49;
     if(d.taxMode==='small'){
@@ -359,7 +384,7 @@
      y+=write('Zahlbar bis: '+(formatPdfDate(d.dueDate)||'bitte ergänzen'),70,y,1030);
      y+=write('IBAN: '+(d.iban||'bitte ergänzen'),70,y,1030);
     }
-    y+=write(d.notes||'Leistungsumfang und Konditionen vor Versand überprüfen.',70,y+12,1075,'20px Arial');
+    if(!compactFinal)y+=write(d.notes||'Leistungsumfang und Konditionen vor Versand überprüfen.',70,y+12,1075,'20px Arial');
    }
    c.fillStyle=muted;c.font='19px Arial';c.fillText((d.finalizedAt?'Rechnung – Versand nicht automatisch bestätigt':'Entwurf – nicht automatisch versendet')+' · '+new Date().toLocaleDateString('de-DE'),70,H-65);
    if(d.kind==='invoice'&&!d.finalizedAt){
@@ -368,18 +393,25 @@
    }
    return encodeCanvas(canvas);
   }
-  // Maximal 6 Positionen pro Seite; zweite und weitere Seiten haben einen kompakten Kopf.
+  // Finale Rechnung: alle AK direkt auf der Rechnung, frühere Teilrechnungen nur als Abzug.
+  const displayRows=compactFinal?appendix.map(w=>({
+   title:'AK '+w.akNumber+' · '+formatPdfDate(w.date)+' · '+String(w.service||'Reinigung'),
+   detail:shortWork(w),quantity:String(w.priorInvoice||'Diese Rechnung'),
+   unit:'',total:Number(w.net||0)
+  })):d.rows;
   const allPages=[];
-  for(let start=0;start<d.rows.length;start+=6)allPages.push(d.rows.slice(start,start+6));
+  for(let start=0;start<displayRows.length;start+=(compactFinal?5:6))allPages.push(displayRows.slice(start,start+(compactFinal?5:6)));
   if(!allPages.length)allPages.push([]);
-  // Wenn 6 Zeilen auf der letzten Seite zu wenig Platz für Summen lassen: eigene Summenseite.
-  if(allPages[allPages.length-1].length>4)allPages.push([]);
-  const standardPageCount=allPages.length,pageCount=standardPageCount+overviewPages.length+detailPages.length;
-  // The UI preview uses the exact same canvas page renderer as the exported PDF.
+  if(!compactFinal&&allPages[allPages.length-1].length>4)allPages.push([]);
+  const standardPageCount=allPages.length;
+  const pageCount=standardPageCount+(compactFinal?0:overviewPages.length+detailPages.length);
+  // PDF-Vorschau und Export verwenden denselben Renderer.
   if(options.firstPageImage===true)return new Blob([render(0,allPages[0],pageCount)],{type:'image/jpeg'});
   allPages.forEach((rows,index)=>jpgs.push(render(index,rows,pageCount)));
-  overviewPages.forEach((item,i)=>jpgs.push(render(standardPageCount+i,[],pageCount,null,item)));
-  detailPages.forEach((items,i)=>jpgs.push(render(standardPageCount+overviewPages.length+i,[],pageCount,items)));
+  if(!compactFinal){
+   overviewPages.forEach((item,i)=>jpgs.push(render(standardPageCount+i,[],pageCount,null,item)));
+   detailPages.forEach((items,i)=>jpgs.push(render(standardPageCount+overviewPages.length+i,[],pageCount,items)));
+  }
   const enc=new TextEncoder(),parts=[],offsets=[0];let pos=0;
   function add(v){const b=typeof v==='string'?enc.encode(v):v;parts.push(b);pos+=b.length}
   function obj(id,value){offsets[id]=pos;add(id+' 0 obj\n'+value+'\nendobj\n')}
