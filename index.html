@@ -219,6 +219,27 @@ input,select,textarea{border-color:#ccd8e8;border-radius:11px}
 @media(max-width:850px){#micareHomeStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:540px){header{padding:14px;border-radius:16px;gap:10px}header img{width:108px;max-height:76px}#home .tiles{grid-template-columns:1fr}#micareHomeStats .status{padding:12px}#micareHomeStats strong{font-size:1.45rem}#micareMainNavigation .tile{min-height:85px}}
 @media print{header{box-shadow:none;background:#fff;color:#14213b;margin:0;padding:0}#home{display:none!important}}
+
+/* M-iCare Studio 2026 — restrained, editorial business UI */
+:root{--mi-bg:#f7f8fa;--mi-surface:#fff;--mi-border:#e2e7ec;--mi-ink:#15283b;--mi-muted:#68798a;--mi-accent:#1c5a80}
+body{background:#f7f8fa;color:#15283b;font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif}
+.wrap{max-width:1280px}
+header{background:#112f47;border:1px solid #22445d;box-shadow:0 14px 36px #19374b20;border-radius:20px}
+header img{border-radius:12px}
+section{border:1px solid #e1e7ec;border-radius:18px;box-shadow:0 4px 24px #23344909}
+h1,h2,h3{letter-spacing:-.025em}h2{font-weight:750}
+button{border-radius:10px}
+button:not(.secondary):not(.danger):not(.tile){background:#1b5c83;box-shadow:none}
+button.secondary{background:#f0f5f8;color:#214760;border:1px solid #d9e5ec}
+button:hover:not(:disabled){transform:none;filter:brightness(.975)}
+#home{background:transparent;box-shadow:none}
+#micareHomeStats .status{background:#fff;border:1px solid #e2e7ec;box-shadow:none}
+#micareHomeStats strong{color:#143d58}
+#micareMainNavigation .tile{background:#fff;border:1px solid #dee5ea;box-shadow:0 3px 16px #23344909;color:#173b53;min-height:112px}
+#micareMainNavigation .tile:hover{background:#f7fbfd;border-color:#b1cad9;box-shadow:0 6px 20px #23344912}
+#micareContractReminders{background:#f0f6f9!important;border:1px solid #d6e7ed}
+input,select,textarea{border:1px solid #cad6df}
+@media(max-width:540px){#micareMainNavigation .tile{min-height:84px}}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -1480,6 +1501,7 @@ function renderAcceptedOrders(){
  area.replaceChildren();
  const query=String($('acceptedOrdersSearch')?.value||'').trim().toLocaleLowerCase('de-DE');
  const filter=$('acceptedOrdersFilter')?.value||'all';
+ const searchedAk=/^(?:ak\s*[-#:]?\s*)?(\d+)$/i.exec(query)?.[1]||'';
  const orders=(state.quotes||[]).filter(q=>q.kind==='quote'&&q.acceptedAt)
   .map(q=>{
    const ids=q.appointmentIds||[];
@@ -1488,7 +1510,7 @@ function renderAcceptedOrders(){
    const invoiced=appointments.filter(a=>finalInvoiceForAk(a.id)).length;
    return {q,appointments,done,invoiced,total:ids.length};
   }).filter(item=>(filter==='all'||filter==='open'&&item.done<item.total||filter==='done'&&item.total>0&&item.done===item.total||filter==='invoiced'&&item.invoiced>0))
-    .filter(item=>!query||[item.q.customerName,item.q.number,item.q.service,item.q.objectName,item.q.customerNumber].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(query))||item.appointments.some(a=>{const n=String(a.akNumber||'');return n&&(query===n||query==='ak '+n||('ak '+n).includes(query)&&query.startsWith('ak '));}))
+    .filter(item=>!query||[item.q.customerName,item.q.number,item.q.service,item.q.objectName,item.q.customerNumber].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(query))||Boolean(searchedAk&&item.appointments.some(a=>String(a.akNumber||'')===searchedAk)))
     .sort((a,b)=>String(b.q.acceptedAt).localeCompare(String(a.q.acceptedAt)));
  summary.textContent=orders.length+' angenommene Aufträge angezeigt · '+orders.reduce((n,o)=>n+o.total,0)+' AK insgesamt · '+orders.reduce((n,o)=>n+o.done,0)+' erledigt.';
  if(!orders.length){area.append(el('p','Noch keine passenden angenommenen Aufträge. Angebote werden erst nach „Kunde hat angenommen“ zu verbindlichen Arbeitskarten.'));return}
@@ -1507,13 +1529,13 @@ function renderAcceptedOrders(){
    $('appointmentCalendarPanel').scrollIntoView({behavior:'smooth',block:'start'});
   };
   controls.append(calendar);
-  const expand=el('details','');expand.style.marginTop='8px';expand.dataset.quoteId=q.id;expand.open=expandedOrders.has(q.id)||Boolean(query&&appointments.some(a=>{const n=String(a.akNumber||'');return n&&(query===n||query==='ak '+n)}));
+  const expand=el('details','');expand.style.marginTop='8px';expand.dataset.quoteId=q.id;expand.open=expandedOrders.has(q.id)||Boolean(searchedAk&&appointments.some(a=>String(a.akNumber||'')===searchedAk));
   const open=el('summary','🗂 Arbeitskarten anzeigen ('+appointments.length+')');open.style.cursor='pointer';open.style.fontWeight='700';expand.append(open);
   for(const a of appointments){
    const entry=completedAppointmentEntry({appointment:a,originalDate:a.date});
    const completed=entry?.orderStatus==='done';
    const paid=Boolean(finalInvoiceForAk(a.id));
-   const row=el('div','');row.className='appt';row.style.margin='6px 0';row.style.padding='9px';
+   const row=el('div','');row.className='appt';row.style.margin='6px 0';row.style.padding='9px';if(searchedAk&&String(a.akNumber||'')===searchedAk){row.style.background='#e8f1ff';row.style.border='2px solid #4e91e8';row.style.borderRadius='12px';}
    row.append(el('strong',akLabel(a)+' · '+formatDate(a.date)+' · '+a.start+'–'+a.end+' · '+a.employee));
    row.append(el('div',(a.workInstructions||q.service)+' · '+(paid?'Rechnung erstellt':completed?'✅ Erledigt':entry?'⏳ In Bearbeitung':'🟢 Offen')));
    const actions=el('div','');actions.className='row';actions.style.gap='8px';
