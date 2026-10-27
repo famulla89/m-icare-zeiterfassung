@@ -581,6 +581,12 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert((await tenBilling.innerText()).includes('900,00'));
   await tenBilling.locator('button').filter({hasText:'Schlussrechnung'}).click();
   assert((await page.locator('#billEditorTitle').innerText()).includes('Schlussrechnung'));
+  const breakdown=page.locator('#billBreakdown');
+  assert(await breakdown.isVisible(),'Schlussrechnungsübersicht vor Ausstellung sichtbar');
+  assert.equal(await breakdown.locator('.mi-bill-table').count(),2,'AK und Teilrechnungen getrennt tabellarisch');
+  assert.equal(await breakdown.locator('.mi-bill-table').first().locator('tbody tr').count(),10,'Alle zehn Arbeitskarten vorab sichtbar');
+  assert((await breakdown.innerText()).includes(finalTen.number),'Vorherige Teilrechnung muss vorab sichtbar sein');
+  assert((await breakdown.innerText()).includes('900,00'),'Nur Restbetrag wird neu abgerechnet');
   const finalDoc=await page.evaluate(qId=>{
     const q=state.quotes.find(x=>x.id===qId);
     return MiCareBillingCore.prepare(state,q,q.appointmentIds[1],{dueDate:'2027-04-01'});
@@ -588,6 +594,8 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   assert.equal(finalDoc.net,900);
   assert.equal(finalDoc.invoiceType,'final');
   assert.equal(finalDoc.alreadyInvoicedNet,100);
+  assert.equal(finalDoc.precedingInvoices.length,1,'Tabellarische Teilrechnungsdaten für PDF');
+  assert.equal(finalDoc.precedingInvoices[0].number,finalTen.number);
   assert(finalDoc.serviceDate.includes(' – '),'Schlussrechnung nennt den Leistungszeitraum über mehrere AK');
   assert.equal(finalDoc.performedWork.length,10,'Complete work record must include all ten AKs');
   assert.equal(finalDoc.performedWork.filter(w=>w.priorInvoice).length,1,'Earlier partial invoice must be marked');
@@ -605,6 +613,8 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
       const all=rendered.join(' ');
       return {heading,header:String.fromCharCode(...bytes.slice(0,5)),
        appendixPages:rendered.filter(t=>t.startsWith('Ausgeführte Arbeiten – Anlage')).length,
+       overviewPages:rendered.filter(t=>t==='Abrechnungsübersicht zur Schlussrechnung').length,
+       hasTableHeaders:all.includes('Bereits ausgestellte Teilrechnungen')&&all.includes('Ausgeführte Arbeitskarten (10)'),
        akHeaders:rendered.filter(t=>/^AK \d+ ·/.test(t)),
        hasPrior:all.includes(doc.precedingInvoiceNumbers[0]),
        hasWorkDetails:all.includes('Fünf Testfenster')&&all.includes('Leistung erledigt'),
@@ -613,6 +623,8 @@ function ok(name,details){checkpoints.push({name,result:'PASS',details:details||
   },finalDoc);
   assert.equal(closingPdf.heading,'SCHLUSSRECHNUNG','Final invoice PDF must be clearly labeled');
   assert.equal(closingPdf.header,'%PDF-');
+  assert(closingPdf.overviewPages>=2,'Tabellarische Abrechnungsübersicht mit Teilrechnungen und AK vorhanden');
+  assert(closingPdf.hasTableHeaders,'PDF-Übersicht muss beide Tabellen zeigen');
   assert(closingPdf.appendixPages>=2,'All 10 AK should be on a legible multipage appendix');
   assert.equal(closingPdf.akHeaders.length,10,'Exactly 10 AK headings must be printed in PDF');
   assert(closingPdf.hasWorkDetails,'PDF must actually print all documented work');
