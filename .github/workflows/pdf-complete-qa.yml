@@ -55,12 +55,12 @@ jobs:
           node tests/cloud-transfer-smoke.cjs
           node tests/quote-calculator-smoke.cjs
           node tests/logic-fuzz-smoke.cjs
-      - name: Generate and audit 18 actual PDF exports
+      - name: Generate and audit 19 actual PDF exports
         run: node tests/pdf-all-exports-e2e.cjs
       - name: Check all PDFs with independent Poppler renderer
         run: |
           set -euo pipefail
-          test "$(find test-output/pdf -maxdepth 1 -name '*.pdf' | wc -l)" -eq 18
+          test "$(find test-output/pdf -maxdepth 1 -name '*.pdf' | wc -l)" -eq 19
           for f in test-output/pdf/*.pdf; do
             pdfinfo "$f" | grep -q '^Pages:'
             pages="$(pdfinfo "$f" | awk '/^Pages:/ {print $2}')"
@@ -74,7 +74,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: M-iCare-Alle-PDFs-QA-18-Ausdrucke
+          name: M-iCare-Alle-PDFs-QA-19-Ausdrucke
           path: test-output/pdf/
           if-no-files-found: warn
           retention-days: 30
