@@ -68,6 +68,21 @@ jobs:
         run: |
           mkdir -p android-app/app/src/main/assets
           cp index.html login-gate.js google-company-search.js schedule-planner.js cloud-transfer.js quote-calculator.js quote-ui.js billing-ui.js operations-core.js operations-ui.js voice-input.js report-print.js sw.js manifest.webmanifest icon.svg logo.svg android-app/app/src/main/assets/
+      - name: Use persistent debug signing key when configured
+        shell: bash
+        env:
+          MICARE_DEBUG_KEYSTORE_BASE64: ${{ secrets.MICARE_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MICARE_DEBUG_KEYSTORE_BASE64:-}" ]; then
+            echo "::warning::Kein fester Signaturschlüssel konfiguriert: Dieses Debug-APK ist für Neuinstallationen, nicht für sichere Updates über frühere CI-APKs geeignet."
+          else
+            mkdir -p "$HOME/.android"
+            printf '%s' "$MICARE_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+            chmod 600 "$HOME/.android/debug.keystore"
+            keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android >/dev/null
+            echo 'PASS: persistent Android test signing key configured'
+          fi
       - name: Build APK
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon
