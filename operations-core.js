@@ -66,5 +66,32 @@
   }
   return conflicts;
  }
- return {cents,assertDate,amountCents,paymentSummary,addPayment,voidPayment,validateTemplate,conflictsForDay};
+ function validateOperationsSnapshot(state){
+  const payments=state.payments===undefined?[]:state.payments;
+  const templates=state.quoteTemplates===undefined?[]:state.quoteTemplates;
+  if(!Array.isArray(payments)||payments.length>50000)throw Error('Ungültige Zahlungsliste');
+  if(!Array.isArray(templates)||templates.length>50)throw Error('Ungültige Vorlagenliste');
+  const invoices=new Map((state.quotes||[]).filter(x=>x?.kind==='invoice'&&x.finalizedAt).map(x=>[x.id,x]));
+  const paymentIds=new Set(),templateIds=new Set(),templateNames=new Set();
+  for(const p of payments){
+   if(!p||typeof p!=='object'||typeof p.id!=='string'||!p.id||p.id.length>100||paymentIds.has(p.id))
+    throw Error('Ungültige oder doppelte Zahlungs-ID');
+   paymentIds.add(p.id);
+   if(!invoices.has(p.invoiceId)||!Number.isSafeInteger(p.amountCents)||p.amountCents<1||p.amountCents>1000000000)throw Error('Zahlung ohne gültige Rechnung/Betrag');
+   assertDate(p.date);
+   if(typeof p.reference!=='string'||p.reference.length>160||typeof p.createdAt!=='string'||p.createdAt.length>70)throw Error('Ungültiger Buchungstext');
+   if(p.voidedAt!==undefined&&p.voidedAt!==''&&(!p.voidReason||String(p.voidReason).trim().length<5))throw Error('Storno ohne Begründung');
+  }
+  for(const id of invoices.keys())if(currentPayments(payments,id).reduce((n,p)=>n+p.amountCents,0)>cents(invoices.get(id).gross))
+   throw Error('Sicherung enthält eine Überzahlung für Rechnung '+String(invoices.get(id).number||id));
+  for(const raw of templates){
+   if(!raw||typeof raw.id!=='string'||!raw.id||raw.id.length>100||templateIds.has(raw.id))throw Error('Ungültige oder doppelte Vorlage');
+   templateIds.add(raw.id);
+   const t=validateTemplate(raw),name=t.name.toLocaleLowerCase('de-DE');
+   if(templateNames.has(name))throw Error('Doppelter Vorlagenname');
+   templateNames.add(name);
+  }
+  return state;
+ }
+ return {cents,assertDate,amountCents,paymentSummary,addPayment,voidPayment,validateTemplate,conflictsForDay,validateOperationsSnapshot};
 });
