@@ -44,7 +44,11 @@
    const first=selected[0],last=selected.at(-1),allDates=st.slots.map(s=>s.ak?.date||'').filter(Boolean).sort(),today=new Date(),iso=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
    const seller=profile||{},kind=end?'final':'partial';
    const prior=st.invoices.map(d=>String(d.number||'ohne Nummer')+' | '+String(d.date||dateDE(String(d.createdAt||'').slice(0,10)))+' | '+euros(d.gross)+' brutto ('+euros(d.net)+' netto)').join('; ');
-   const priorNet=st.paidNetCents/100;
+   const precedingInvoices=st.invoices.map(d=>({
+    number:String(d.number||'ohne Nummer'),
+    date:String(d.date||dateDE(String(d.createdAt||'').slice(0,10))),
+    net:Number(d.net||0),gross:Number(d.gross||0)
+   }));
    const overview=end?'Auftragswert: '+euros(quote.gross)+' brutto. Bereits in Teilrechnungen abgerechnet: '+euros(st.invoices.reduce((sum,d)=>sum+Number(d.gross||0),0))+' brutto. Mit dieser Schlussrechnung verbleibend: '+euros((totalNet+totalTax)/100)+' brutto.':'';
    // "Abgerechnet" bedeutet hier fakturiert, nicht tatsächlich bezahlt.
    // Die Schlussrechnung erhält den vollständigen Leistungsnachweis auch für bereits abgerechnete AK.
@@ -81,7 +85,7 @@
     rows:[{title:end?'Restleistungen / Schlussrechnung zum Auftrag':('AK '+(first.ak.akNumber||first.index)+' – '+(quote.service||'Reinigung')),
      quantity:selected.length,unit:'Einsatz',price:totalNet/100/selected.length,total:totalNet/100}],
     calculation:{visits:1},formValues:{},
-    performedWork,precedingInvoiceNumbers:st.invoices.map(d=>d.number),orderNetTotal:allNet/100,alreadyInvoicedNet:st.paidNetCents/100
+    performedWork,precedingInvoices,precedingInvoiceNumbers:st.invoices.map(d=>d.number),orderNetTotal:allNet/100,alreadyInvoicedNet:st.paidNetCents/100
    };
    return fields;
   },
@@ -124,6 +128,48 @@
    throw Error('Arbeitskartenstatus hat sich geändert. Rechnung neu öffnen.');
   return validate(doc);
  }
+ function showBreakdown(doc){
+  const host=$('billBreakdown');if(!host)return;
+  host.replaceChildren();host.classList.toggle('hidden',doc.invoiceType!=='final');
+  if(doc.invoiceType!=='final')return;
+  const heading=make('h4','Abrechnungsübersicht vor dem Ausstellen');
+  const info=make('p','Alle ausgeführten Arbeitskarten und bisherige Teilrechnungen. Beträge sind abgerechnet, nicht automatisch bezahlt.');
+  info.className='hint';host.append(heading,info);
+  const table=(headings,rows)=>{
+   const wrap=make('div');wrap.className='mi-bill-table-scroll';
+   const t=make('table');t.className='mi-bill-table';
+   const thead=make('thead'),tr=make('tr');
+   for(const title of headings)tr.append(make('th',title));
+   thead.append(tr);t.append(thead);
+   const tbody=make('tbody');
+   for(const values of rows){const line=make('tr');for(const value of values)line.append(make('td',String(value??'')));tbody.append(line)}
+   t.append(tbody);wrap.append(t);host.append(wrap);
+  };
+  host.append(make('h5','Ausgeführte Arbeiten ('+(doc.performedWork||[]).length+')'));
+  table(['Arbeitskarte','Datum','Leistung und Durchführung','Vereinbart netto','Abrechnung'],
+   (doc.performedWork||[]).map(w=>['AK '+w.akNumber,dateDE(w.date),
+    (w.service||'')+' · '+(w.workDone||'Leistung gemäß Arbeitskarte'),euros(w.net),
+    w.priorInvoice?'Bereits auf '+w.priorInvoice:'Diese Schlussrechnung']));
+  host.append(make('h5','Bereits ausgestellte Teilrechnungen'));
+  if(doc.precedingInvoices?.length){
+   table(['Rechnungsnummer','Datum','Netto','Brutto'],
+    doc.precedingInvoices.map(i=>[i.number,dateDE(i.date),euros(i.net),euros(i.gross)]));
+  }else{
+   const empty=make('p','Noch keine Teilrechnung ausgestellt.');empty.className='hint';host.append(empty);
+  }
+  const sums=make('div');sums.className='mi-bill-summary';
+  const line=(label,value,emphasis=false)=>{
+   const item=make('div');item.className=emphasis?'mi-bill-due':'';
+   item.append(make('span',label),make('strong',euros(value)));sums.append(item);
+  };
+  const grossBefore=(doc.precedingInvoices||[]).reduce((n,i)=>n+cents(i.gross),0)/100;
+  line('Auftragswert brutto',grossBefore+Number(doc.gross||0));
+  line('Bereits abgerechnet brutto',grossBefore);
+  line('Jetzt abzurechnen brutto',doc.gross,true);
+  host.append(sums);
+  const foot=make('p','Keine doppelte Berechnung: Frühere Teilrechnungen sind nur zur Information aufgeführt.');
+  foot.className='hint';host.append(foot);
+ }
  function prepare(quoteId,akId){
   const quote=quoteOf(quoteId);if(!quote)return alert('Angenommenes Angebot nicht gefunden');
   try{
@@ -136,6 +182,7 @@
    $('billEditor').classList.remove('hidden');
    $('billEditorTitle').textContent=draft.invoiceType==='final'?'🧾 Schlussrechnung prüfen':'🧾 Teilrechnung '+draft.sourceVisitNumber+' von '+draft.sourceVisitCount+' prüfen';
    $('billEditorInfo').textContent=quote.customerName+' · '+quote.number+' · '+draft.orderNumber+' · NETTO '+euros(draft.net)+' · GESAMT '+euros(draft.gross)+'. Rechnung wird erst nach Bestätigung endgültig erstellt.';
+   showBreakdown(draft);
    $('billEditor').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){alert('Rechnung nicht vorbereitet: '+e.message)}
  }
