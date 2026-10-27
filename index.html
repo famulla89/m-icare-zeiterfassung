@@ -240,6 +240,42 @@ button:hover:not(:disabled){transform:none;filter:brightness(.975)}
 #micareContractReminders{background:#f0f6f9!important;border:1px solid #d6e7ed}
 input,select,textarea{border:1px solid #cad6df}
 @media(max-width:540px){#micareMainNavigation .tile{min-height:84px}}
+
+/* Professional compact shell — administrative application, not a landing page */
+:root{--mi-bg:#f5f6f8;--mi-border:#dfe4e8;--mi-ink:#202d38;--mi-accent:#244f6c}
+body{background:var(--mi-bg);color:var(--mi-ink);font-family:"Segoe UI",Arial,sans-serif}
+.wrap{max-width:1320px;padding:clamp(12px,1.8vw,24px)}
+header.micareTopbar{display:flex;align-items:center;gap:15px;min-height:62px;padding:10px 16px;margin:0 0 16px;background:#fff;color:#202d38;border:1px solid #dfe4e8;border-radius:10px;box-shadow:none}
+header.micareTopbar img{width:76px;max-height:44px;padding:0;object-fit:contain;border-radius:0;flex-shrink:0}
+header.micareTopbar .micareBrand{flex:1;min-width:0}
+header.micareTopbar h1{font-size:1.12rem;font-weight:700;line-height:1.3;margin:0;letter-spacing:-.015em;color:#1e3546}
+header.micareTopbar .sub{font-size:.76rem;color:#657580;margin:2px 0 0}
+.micareAccountMenu{position:relative;margin-left:auto;flex-shrink:0;font-size:.84rem}
+.micareAccountMenu summary{list-style:none;cursor:pointer;padding:8px 11px;border:1px solid #d7e0e5;border-radius:7px;color:#344b5c;background:#fff;font-weight:600}
+.micareAccountMenu summary::-webkit-details-marker{display:none}
+.micareAccountMenu summary:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.micareAccountActions{position:absolute;right:0;top:calc(100% + 5px);min-width:198px;z-index:50;background:white;border:1px solid #dce3e8;border-radius:9px;box-shadow:0 9px 24px #162b4020;padding:8px}
+.micareAccountActions button{display:block;width:100%;text-align:left;margin:0 0 4px;background:white!important;color:#344b5c!important;box-shadow:none!important}
+section{border-radius:10px;box-shadow:none;padding:clamp(14px,1.8vw,22px)}
+#home>h2{font-size:1.42rem;margin:0 0 5px}
+#home>.hint{font-size:.88rem;margin:0 0 16px}
+#home h3{font-size:1rem;margin:18px 0 7px;font-weight:650}
+#micareHomeStats{gap:10px}
+#micareHomeStats .status{border-radius:9px;padding:14px 16px;box-shadow:none;background:#fff}
+#micareHomeStats strong{font-size:1.55rem;color:#253f52}
+#micareMainNavigation{gap:10px;grid-template-columns:repeat(auto-fit,minmax(205px,1fr))}
+#micareMainNavigation .tile{min-height:76px;border-radius:9px;padding:14px 16px;font-size:.96rem;font-weight:650;box-shadow:none;background:#fff;color:#263b4b;text-align:left}
+#micareMainNavigation .tile small{font-size:.8rem;color:#71808a;font-weight:400;margin-top:4px}
+#micareMainNavigation .tile:hover{background:#f8fafb;border-color:#aec3d0;box-shadow:none}
+#micareContractReminders{border-radius:8px;background:#fff!important;border:1px solid #dfe4e8}
+button{border-radius:7px}
+button:not(.secondary):not(.danger):not(.tile){background:#285c7c}
+button.secondary{background:#f5f7f8;color:#29465b;border-color:#d9e1e6}
+input,select,textarea{border-radius:7px}
+.backbar{background:#f5f6f8;border-bottom:1px solid #e4e8eb}
+@media(max-width:540px){header.micareTopbar{min-height:54px;padding:8px 11px;gap:10px}header.micareTopbar img{width:58px;max-height:38px}header.micareTopbar h1{font-size:1rem}.micareVersion{display:none}#micareHomeStats{gap:8px}#micareHomeStats .status{padding:11px}#micareHomeStats strong{font-size:1.34rem}#micareMainNavigation{grid-template-columns:1fr 1fr;gap:8px}#micareMainNavigation .tile{min-height:83px;padding:12px;font-size:.88rem}}
+@media(max-width:380px){#micareMainNavigation{grid-template-columns:1fr}}
+@media print{header.micareTopbar{display:none}}
 </style><script src="./login-gate.js"></script></head><body>
 <div id="micareLock" role="dialog" aria-modal="true" aria-labelledby="micareLoginTitle" hidden><div id="micareLoginCard">
   <img src="./logo.svg" alt="M-iCare Gebäudereinigung">
@@ -262,30 +298,30 @@ input,select,textarea{border:1px solid #cad6df}
   <p class="authFoot">Passwörter werden nicht im Klartext gespeichert. Die lokale Anmeldung ersetzt noch keine verschlüsselte Datenspeicherung und keine Synchronisation mehrerer Geräte.</p>
  </div></div>
 <div class="wrap">
-<header><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div><h1>M-iCare Zeiterfassung</h1><div class="sub">Gebäudereinigung · Version 1.9.12 <span class="badge">Offline-PWA</span></div><div class="row" style="margin-top:8px"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>🔒 Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">🔐 Sperren</button></div></div></header>
+<header class="micareTopbar"><img src="./logo.svg" alt="M-iCare Gebäudereinigung Logo"><div class="micareBrand"><h1>M-iCare</h1><div class="sub">Betriebsverwaltung <span class="micareVersion">· 1.9.12</span></div></div><details class="micareAccountMenu"><summary aria-label="Benutzermenü öffnen">Konto <span aria-hidden="true">⌄</span></summary><div class="micareAccountActions"><button class="secondary smallbtn" type="button" id="micareEnableBio" hidden>Fingerabdruck aktivieren</button><button class="secondary smallbtn" id="micareLogout" type="button">Sperren</button></div></details></header>
 <div id="backbar" class="backbar hidden"><button type="button" id="goBack">← Zurück</button><button type="button" class="secondary" id="goHome">⌂ Startseite</button></div>
 <section id="home" class="screen active">
-<h2>🏢 M-iCare · Arbeitszentrale</h2>
-<p class="hint">Alles für deinen Ein-Mann-Betrieb. Du hast überall vollen Zugriff – ohne Büro-/Mitarbeiter-Umschaltung.</p>
+<h2>Übersicht</h2>
+<p class="hint">Kunden, Termine, Arbeitskarten und Rechnungen im Überblick.</p>
 <div class="grid" id="micareHomeStats" aria-live="polite">
 <div class="status"><strong id="homeCustomerCount">–</strong><div>Aktive Kunden</div></div>
 <div class="status"><strong id="homeAppointmentCount">–</strong><div>Geplante Termine</div></div>
 <div class="status"><strong id="homeEntryCount">–</strong><div>Dokumentierte Arbeiten</div></div>
 <div class="status"><strong id="homeOpenCount">–</strong><div>Geschäftsstellen / Objekte</div></div>
 </div>
-<div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:12px 0;padding:12px"><strong>🔔 Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerungen beim Öffnen der App.</p></div>
-<h3>Deine Bereiche</h3><p class="hint">Empfohlener Ablauf: Kunden anlegen → Angebot kalkulieren → Auftrag planen → Einsatz erledigen → Rechnung erstellen.</p><p class="hint">Tipp: Erst Kunden anlegen, dann Angebot erstellen, nach Annahme die Termine bearbeiten und schließlich abrechnen.</p>
+<div id="micareContractReminders" class="status" role="status" aria-live="polite" style="margin:12px 0;padding:12px"><strong>Vertragsende & Kundenpflege</strong><p class="hint">Aktuelle Erinnerungen beim Öffnen der App.</p></div>
+<h3>Arbeitsbereiche</h3><p class="hint">Kunde → Angebot → Auftrag → Arbeitskarte → Rechnung</p><p class="hint">Tipp: Erst Kunden anlegen, dann Angebot erstellen, nach Annahme die Termine bearbeiten und schließlich abrechnen.</p>
 <div class="row" style="margin:10px 0;flex-wrap:wrap">
 <button type="button" data-jump="quoteCalculator">🧮 Neues Angebot</button>
 <button type="button" class="secondary" data-jump="customersPanel">➕ Kunde anlegen</button>
 <button type="button" class="secondary" data-jump="entryForm">⏱ Zeit erfassen</button>
 </div>
 <div class="tiles" id="micareMainNavigation">
-<button class="tile" data-jump="customerOverviewScreen">👥 Kunden<small>Kunden, Geschäftsstellen und Kontaktdaten</small></button>
-<button class="tile" data-jump="appointmentsPanel">📋 Aufträge & Kalender<small>Angebote, Aufträge, Termine und Arbeitskarten</small></button>
-<button class="tile" data-jump="plannedWorkScreen">🧹 Einsätze & Zeiten<small>Arbeit dokumentieren und Zeiten erfassen</small></button>
-<button class="tile" data-jump="billingScreen">🧾 Finanzen<small>Teil-/Schlussrechnung und Zahlungsübersicht</small></button>
-<button class="tile" data-jump="operationsHub">⚙️ Mehr & Verwaltung<small>Angebote, Reporting, Datensicherung, Einstellungen</small></button>
+<button class="tile" data-jump="customerOverviewScreen">Kunden<small>Kunden, Geschäftsstellen und Kontaktdaten</small></button>
+<button class="tile" data-jump="appointmentsPanel">Aufträge & Kalender<small>Angebote, Aufträge, Termine und Arbeitskarten</small></button>
+<button class="tile" data-jump="plannedWorkScreen">Einsätze & Zeiten<small>Arbeit dokumentieren und Zeiten erfassen</small></button>
+<button class="tile" data-jump="billingScreen">Rechnungen & Finanzen<small>Teil-/Schlussrechnung und Zahlungsübersicht</small></button>
+<button class="tile" data-jump="operationsHub">Verwaltung<small>Angebote, Reporting, Datensicherung, Einstellungen</small></button>
 </div></section>
 
 <section class="screen" id="quoteCalculator">
