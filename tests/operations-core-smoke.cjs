@@ -30,4 +30,11 @@ assert.equal(c.conflictsForDay([{appointment:{employee:'Inhaber'},start:'08:00',
  {appointment:{employee:'Andere'},start:'09:00',end:'11:00'}]).length,1);
 assert.equal(c.conflictsForDay([{appointment:{employee:'Inhaber'},start:'08:00',end:'09:00'},
  {appointment:{employee:'Inhaber'},start:'09:00',end:'10:00'}]).length,0);
-console.log('OPERATIONS PASS: partial/full payments, precision, reversal audit, due dates, templates, calendar conflicts.');
+const snapshot={quotes:[invoice],payments:[payments[0],payments[1]],quoteTemplates:[c.validateTemplate({id:'t1',name:'Büro Standard',scope:'rooms',service:'Reinigung',area:50})]};
+assert.equal(c.validateOperationsSnapshot(snapshot),snapshot,'Legitimate backup accepted');
+assert.throws(()=>c.validateOperationsSnapshot({...snapshot,payments:[{...p1,invoiceId:'nonexistent'}]}),/Rechnung/,'Unknown invoice reference rejected');
+assert.throws(()=>c.validateOperationsSnapshot({...snapshot,payments:[p2,p2]}),/Zahlungs-ID/,'Duplicate payment ID rejected');
+assert.throws(()=>c.validateOperationsSnapshot({...snapshot,payments:[{...p1,amountCents:200000}]}),/Überzahlung/,'Overpayment backup blocked');
+assert.throws(()=>c.validateOperationsSnapshot({...snapshot,payments:[{...p1,voidedAt:'2026-11-10'}]}),/Storno/,'Unexplained reversal blocked');
+assert.throws(()=>c.validateOperationsSnapshot({...snapshot,quoteTemplates:[snapshot.quoteTemplates[0],snapshot.quoteTemplates[0]]}),/Vorlage/);
+console.log('OPERATIONS PASS: partial/full payments, precision, reversals, due dates, templates, conflicts and corrupt backup rejection.');
